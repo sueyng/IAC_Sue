@@ -1,0 +1,142 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0074ef60bc08ced55"
+    },
+    {
+        "ParameterKey": "ECRImage",
+        "ParameterValue": "781576980265.dkr.ecr.ap-southeast-1.amazonaws.com/nginx-frontend:latest"
+    },
+    {
+        "ParameterKey": "ECSCpuArchitecture",
+        "ParameterValue": "X86_64"
+    },
+    {
+        "ParameterKey": "CPUUnits",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Memory",
+        "ParameterValue": "2048"
+    },
+    {
+        "ParameterKey": "ECSClusterName",
+        "ParameterValue": "fhir-nprd-fhirnexus"
+    },
+    {
+        "ParameterKey": "ECSServiceProtocol",
+        "ParameterValue": "HTTP"
+    },
+    {
+        "ParameterKey": "ServiceContainerPort",
+        "ParameterValue": "80"
+    },
+    {
+        "ParameterKey": "CreateNewTaskDefinition",
+        "ParameterValue": "true"
+    },
+    {
+        "ParameterKey": "ExistingTaskFamily",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "ECSDesiredTaskCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.53.0.32/27"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.53.0.64/27"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AppSubnetIds",
+        "ParameterValue": "subnet-047a2209f53b1fd49,subnet-06a61e9a2f3e40ae9"
+    },
+    {
+        "ParameterKey": "ECSALBListenerArn",
+        "ParameterValue": "arn:aws:elasticloadbalancing:ap-southeast-1:405894843861:listener/app/fhir-nprd-alb-ecs/0bce41ac510ce58e/bcebc9cbe492f9a5"
+    },
+    {
+        "ParameterKey": "PathPattern",
+        "ParameterValue": "/fhir/*"
+    },
+    {
+        "ParameterKey": "TargetGroupName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "TGHealthCheckPath",
+        "ParameterValue": "/health"
+    },
+    {
+        "ParameterKey": "ServiceName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "LogsRetentionInDays",
+        "ParameterValue": "7"
+    },
+    {
+        "ParameterKey": "RulePriority",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "EnvVar1Name",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvVar1Value",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvVar2Name",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvVar2Value",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvVar3Name",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvVar3Value",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnableAutoScaling",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "MinContainers",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "MaxContainers",
+        "ParameterValue": "4"
+    },
+    {
+        "ParameterKey": "CPUUtilizationThreshold",
+        "ParameterValue": "70"
+    },
+    {
+        "ParameterKey": "MemoryUtilizationThreshold",
+        "ParameterValue": "70"
+    }
+]

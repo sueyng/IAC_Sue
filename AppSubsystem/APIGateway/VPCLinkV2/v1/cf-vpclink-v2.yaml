@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision API Gateway VPC Link V2
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  VpcId:
+    Description: VPC ID for creating the VPC Link V2 security group
+    Type: AWS::EC2::VPC::Id
+
+  VpcLinkSubnetIds:
+    Description: Subnet IDs where API Gateway VPC Link V2 ENIs will be created
+    Type: List<AWS::EC2::Subnet::Id>
+
+  VpcLinkSubnetCidr1:
+    Description: Primary backend target subnet CIDR allowed for VPC Link V2 security group egress
+    Type: String
+
+  VpcLinkSubnetCidr2:
+    Description: Secondary backend target subnet CIDR allowed for VPC Link V2 security group egress
+    Type: String
+    Default: ""
+
+  VpcLinkSubnetCidr3:
+    Description: Tertiary backend target subnet CIDR allowed for VPC Link V2 security group egress
+    Type: String
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref EnvName, "prod"], !Equals [!Ref EnvName, "prod-a"], !Equals [!Ref EnvName, "prod-b"], !Equals [!Ref EnvName, "prod-c"]]
+  HasVpcLinkSubnetCidr2: !Not [!Equals [!Ref VpcLinkSubnetCidr2, ""]]
+  HasVpcLinkSubnetCidr3: !Not [!Equals [!Ref VpcLinkSubnetCidr3, ""]]
+
+Resources:
+  VpcLinkV2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${AppShortName}-${EnvName}-vpclink-v2-sg"
+      GroupDescription: !Sub "Security group for ${AppShortName}-${EnvName} API Gateway VPC Link V2"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcLinkSubnetCidr1
+          Description: Allow HTTPS egress to backend target subnet CIDR 1
+        - !If
+          - HasVpcLinkSubnetCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcLinkSubnetCidr2
+            Description: Allow HTTPS egress to backend target subnet CIDR 2
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcLinkSubnetCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcLinkSubnetCidr3
+            Description: Allow HTTPS egress to backend target subnet CIDR 3
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-vpclink-v2-sg"
+        - Key: IaCVersion
+          Value: AppSubsystem-VPCLinkV2-v1
+
+  VpcLinkV2:
+    Type: AWS::ApiGatewayV2::VpcLink
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-vpclink-v2"
+      SubnetIds: !Ref VpcLinkSubnetIds
+      SecurityGroupIds:
+        - !Ref VpcLinkV2SecurityGroup
+      Tags:
+        IaCVersion: AppSubsystem-VPCLinkV2-v1
+
+Outputs:
+  VpcLinkV2Id:
+    Description: ID of the API Gateway VPC Link V2
+    Value: !Ref VpcLinkV2
+
+  VpcLinkV2SecurityGroupId:
+    Description: Security group ID created for API Gateway VPC Link V2 ENIs
+    Value: !Ref VpcLinkV2SecurityGroup

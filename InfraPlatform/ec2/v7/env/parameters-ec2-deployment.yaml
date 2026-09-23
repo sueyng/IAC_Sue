@@ -1,0 +1,476 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment -
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Prerequisites -
+# - VPC with database subnets
+# - AMI ID for EC2 instance
+# - Subnet ID for EC2 placement
+#
+# Deployment -
+# - SINGLE template deployment (all resources in one stack)
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# General Parameters
+AppShortName: "<edit_here>"                      # 📝 e.g. xyz, myapp, demo
+EnvName: "<edit_here>"                           # 📝 nprd | nprd-dev | nprd-dev1 | nprd-dev2 | nprd-sit1 | nprd-sit2 | nprd-sit3 | nprd-sit | nprd-sit-a | nprd-sit-b | nprd-sit-c | nprd-uat | nprd-uat-a | nprd-uat-b | nprd-uat-c | nprd-pt | nprd-pp | nprd-pp-a | nprd-pp-b | nprd-pp-c | prod | prod-a | prod-b | prod-c
+
+# VPC and Network Parameters
+VpcId: "<edit_here>"                             # 📝 e.g. vpc-0d99a0c727b301d67
+EC2DeploymentSecurityGroupName: "<edit_here>"    # 📝 e.g. xyz-nprd-sg-ec2-deployment
+
+# Database Parameters (for egress rules)
+VPCSubnetCidrDBAZ1: "<edit_here>"                # 📝 e.g. 10.53.144.128/26
+VPCSubnetCidrDBAZ2: "<edit_here>"                # 📝 e.g. 10.53.144.192/26
+ProdDBPort: "53341"                              # 📝 Production DB port (default 53341)
+NProdDBPort: "53331"                             # 📝 Non-prod DB port (default 53331)
+
+# IAM Role Parameters
+EC2IAMRoleName: "<edit_here>"                    # 📝 e.g. xyz-nprd-ec2-role
+HasCustomEC2IAMRole: "no"                        # 📝 yes | no (default)
+EC2InstanceProfileName: "<edit_here>"            # 📝 e.g. xyz-nprd-ec2-profile
+
+# Key Pair and Launch Template
+EC2KeyPairName: "<edit_here>"                    # 📝 e.g. xyz-nprd-ec2-kp
+EC2LaunchTemplateName: "<edit_here>"             # 📝 e.g. xyz-nprd-ec2-launch-template
+
+# EC2 Instance Parameters
+AvailabilityZone: "<edit_here>"                  # 📝 ap-southeast-1a | ap-southeast-1b | ap-southeast-1c
+SubnetIdappAZ1: "<edit_here>"                    # 📝 e.g. subnet-08170d48a795103d2
+AMIId: "<edit_here>"                             # 📝 e.g. ami-0adcf082d85f6a445
+InstanceName: "<edit_here>"                      # 📝 e.g. CHIS3HHASUTL01
+InstanceType: "<edit_here>"                      # 📝 e.g. t3.medium, m5.large
+Function: "<edit_here>"                          # 📝 APP | WEB | DB | UTL | INT | RPT | SYS | DBS
+OSVolumeSize: "100"                              # 📝 e.g. 100, 200 (default 100)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# Optional Custom IAM Role
+CustomEC2IAMRoleName: ""                         # e.g. xyz-custom-role (required if HasCustomEC2IAMRole=yes)
+
+# Optional Data Volume
+DataVolumeSize: ""                               # e.g. 500 (leave empty to skip data volume)
+
+# Optional Infrastructure Egress Rules
+VpcCidr1: ""                                     # e.g. 10.0.0.0/16 (Infrastructure HTTPS egress)
+VpcCidr2: ""                                     # e.g. 10.1.0.0/16
+VpcCidr3: ""                                     # e.g. 10.2.0.0/16
+VpcCidr4: ""                                     # e.g. 10.3.0.0/16
+VpcCidr5: ""                                     # e.g. 10.4.0.0/16
+S3PrefixListId: ""                               # e.g. pl-xxxxxxxx (S3 HTTPS egress)
+HCCVpceCidr: ""                                  # e.g. 10.1.0.0/24 (HCC VPC Endpoint)
+
+# Optional Ansible Access
+AnsibleServerIP1: ""                             # e.g. 10.1.50.100/32 (WinRM access)
+AnsibleServerIP2: ""                             # e.g. 10.1.50.101/32
+
+# Optional Third Database Subnet
+VPCSubnetCidrDBAZ3: ""                           # e.g. 10.53.144.0/26
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName - Application identifier for resource naming
+#
+# Purpose -
+# - Creates resource names: {AppShortName}-{EnvName}-ec2-*
+# - Creates security group name: {AppShortName}-{EnvName}-sg-ec2-deployment
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: xyz, myapp, demo
+#
+# Finding Your Value -
+# - Use your organization's application naming convention
+
+# --- ENVIRONMENT NAME ---
+# EnvName - Environment designation for resource naming and configuration
+#
+# Purpose -
+# - Used in resource naming
+# - Determines deletion policy and termination protection
+# - Determines PostgreSQL port in database egress rules
+#
+# Allowed Values (Non-Production) -
+# - nprd, nprd-dev, nprd-dev1, nprd-dev2, nprd-sit1, nprd-sit2, nprd-sit3,
+#   nprd-sit, nprd-sit-a, nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a,
+#   nprd-uat-b, nprd-uat-c, nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production) -
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior -
+# Production (prod*) -
+# - DeletionPolicy: Retain (resources preserved on stack deletion)
+# - UpdateReplacePolicy: Retain
+# - DisableApiTermination: true
+# - PostgreSQL port 53341 (ProdDBPort)
+#
+# Non-Production (nprd*) -
+# - DeletionPolicy: Delete (resources terminated on stack deletion)
+# - UpdateReplacePolicy: Delete
+# - DisableApiTermination: false
+# - PostgreSQL port 53331 (NProdDBPort)
+#
+# Finding Your Value -
+# - Coordinate with your infrastructure team
+
+# --- VPC ID ---
+# VpcId - Virtual Private Cloud identifier
+#
+# Purpose -
+# - VPC where security group and EC2 instance will be created
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-0d99a0c727b301d67
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Select the VPC where EC2 will be deployed
+# 3. Copy VPC ID
+
+# --- EC2 DEPLOYMENT SECURITY GROUP NAME ---
+# EC2DeploymentSecurityGroupName - Primary deployment security group name
+#
+# Purpose -
+# - PRIMARY security group (always created)
+# - Contains infrastructure egress rules (HTTPS to VPC, S3, HCC VPCE)
+# - Contains Ansible ingress rules (WinRM port 5986)
+# - Contains database egress rules
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-sg-ec2-deployment
+#
+# Recommended Format: {AppShortName}-{EnvName}-sg-ec2-deployment
+#
+# Finding Your Value -
+# - Use consistent naming convention
+
+# --- VPC SUBNET CIDR DB AZ1 & AZ2 ---
+# VPCSubnetCidrDBAZ1, VPCSubnetCidrDBAZ2 - Database subnet CIDRs
+#
+# Purpose -
+# - Creates egress rules for database access from EC2
+# - Allows EC2 to connect to RDS databases
+#
+# Format: CIDR notation
+# Example: 10.53.144.128/26
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Subnets
+# 2. Filter by tag Name containing "database" or "db"
+# 3. Identify subnets by Availability Zone
+# 4. Copy IPv4 CIDR for AZ1 and AZ2
+
+# --- PRODUCTION & NON-PRODUCTION DATABASE PORTS ---
+# ProdDBPort, NProdDBPort - Database ports
+#
+# Purpose -
+# - Port used for database connections
+# - Template uses conditional logic based on EnvName
+#
+# Default: 53341 (prod), 53331 (nprd)
+# Format: Numeric port number
+#
+# Finding Your Value -
+# - Use defaults unless your DBA team specifies different ports
+# - Must match RDS database port configuration
+
+# --- EC2 IAM ROLE NAME ---
+# EC2IAMRoleName - Name for the EC2 IAM role
+#
+# Purpose -
+# - IAM role for EC2 instance with CloudWatch, SSM, and S3 read permissions
+# - Only created if HasCustomEC2IAMRole=no
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-role
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-role
+#
+# Managed Policies Attached -
+# - CloudWatchAgentAdminPolicy
+# - CloudWatchAgentServerPolicy
+# - AmazonSSMFullAccess
+# - AmazonS3ReadOnlyAccess
+
+# --- HAS CUSTOM EC2 IAM ROLE ---
+# HasCustomEC2IAMRole - Control custom IAM role usage
+#
+# Purpose -
+# - Controls whether to use existing custom IAM role or create new one
+#
+# Available Options -
+#
+# no (default) -
+# - Template creates new IAM role with managed policies
+# - Use EC2IAMRoleName and EC2InstanceProfileName parameters
+#
+# yes -
+# - Use existing custom IAM role
+# - Requires CustomEC2IAMRoleName parameter
+# - Template creates instance profile only
+
+# --- CUSTOM EC2 IAM ROLE NAME (OPTIONAL) ---
+# CustomEC2IAMRoleName - Existing custom IAM role name
+#
+# Purpose -
+# - Name of pre-existing custom IAM role
+# - Only used if HasCustomEC2IAMRole=yes
+#
+# Format: Alphanumeric and hyphens or empty string
+# Example: xyz-custom-ec2-role or ""
+#
+# Finding Your Value -
+# - Leave empty ("") if HasCustomEC2IAMRole=no
+# - Contact your IAM team for custom role name
+
+# --- EC2 INSTANCE PROFILE NAME ---
+# EC2InstanceProfileName - Instance profile name
+#
+# Purpose -
+# - Instance profile that wraps the IAM role
+# - Allows EC2 to assume the IAM role
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-profile
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-profile
+
+# --- EC2 KEY PAIR NAME ---
+# EC2KeyPairName - EC2 key pair name
+#
+# Purpose -
+# - Key pair automatically created by template
+# - Private key automatically stored in SSM Parameter Store
+# - Used for Windows Administrator password decryption
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-kp
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-kp
+#
+# Retrieving Private Key -
+# 1. Navigate to CloudFormation stack Outputs tab
+# 2. Copy EC2KeyPairID value (e.g., key-06978ef9ff98107e6)
+# 3. Navigate to Systems Manager → Parameter Store
+# 4. Search for /ec2/keypair/{KeyPairId}
+# 5. Click "Show" to reveal private key
+
+# --- EC2 LAUNCH TEMPLATE NAME ---
+# EC2LaunchTemplateName - Launch template name
+#
+# Purpose -
+# - Launch template with IMDSv2 enforcement and tagging
+# - Contains key pair, instance profile, and metadata options
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-launch-template
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-launch-template
+
+# --- AVAILABILITY ZONE ---
+# AvailabilityZone - EC2 instance placement
+#
+# Purpose -
+# - Determines which AZ the EC2 instance is launched in
+# - Must match the AZ of SubnetIdappAZ1
+#
+# Allowed Values: ap-southeast-1a | ap-southeast-1b | ap-southeast-1c
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Subnets
+# 2. Find the subnet where EC2 will be placed
+# 3. Copy the Availability Zone value
+
+# --- SUBNET ID APP AZ1 ---
+# SubnetIdappAZ1 - Subnet for EC2 instance
+#
+# Purpose -
+# - VPC subnet where EC2 instance will be launched
+# - Must be in the same AZ as AvailabilityZone parameter
+#
+# Format: subnet-xxxxxxxxxxxxxxxxx
+# Example: subnet-08170d48a795103d2
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Subnets
+# 2. Filter by VPC ID
+# 3. Select application subnet in desired AZ
+# 4. Copy Subnet ID
+
+# --- AMI ID ---
+# AMIId - Amazon Machine Image ID
+#
+# Purpose -
+# - AMI used to launch EC2 instance
+# - Should be HCC-hardened AMI
+#
+# Format: ami-xxxxxxxxxxxxxxxxx
+# Example: ami-0adcf082d85f6a445
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to EC2 Console → AMIs
+# 2. Filter by your organization's AMI naming convention
+# 3. Copy AMI ID
+
+# --- INSTANCE NAME ---
+# InstanceName - EC2 instance name tag
+#
+# Purpose -
+# - Name tag for EC2 instance
+# - Used for identification in EC2 console
+#
+# Format: Alphanumeric and hyphens
+# Example: CHIS3HHASUTL01
+#
+# Finding Your Value -
+# - Use your organization's server naming convention
+
+# --- INSTANCE TYPE ---
+# InstanceType - EC2 instance type
+#
+# Purpose -
+# - Determines CPU, memory, and network capacity
+#
+# Common Values: t3.micro, t3.small, t3.medium, m5.large, m5.xlarge
+#
+# Finding Your Value -
+# - Size based on application requirements
+# - Coordinate with your infrastructure team
+
+# --- FUNCTION ---
+# Function - Server function classification
+#
+# Purpose -
+# - Identifies server role for tagging and organization
+#
+# Allowed Values: APP | WEB | DB | UTL | INT | RPT | SYS | DBS
+#
+# APP - Application server
+# WEB - Web server
+# DB - Database server
+# UTL - Utility server
+# INT - Integration server
+# RPT - Reporting server
+# SYS - System server
+# DBS - Database services
+
+# --- OS VOLUME SIZE ---
+# OSVolumeSize - Root volume size
+#
+# Purpose -
+# - Size of root EBS volume in GiB
+# - Encrypted with gp3 volume type
+#
+# Default: 100
+# Format: Numeric (GiB)
+#
+# Finding Your Value -
+# - Size based on OS and application requirements
+# - Minimum 100 GiB recommended
+
+# --- DATA VOLUME SIZE (OPTIONAL) ---
+# DataVolumeSize - Optional additional data volume
+#
+# Purpose -
+# - Optional separate data volume for application data
+# - Encrypted with gp3 volume type
+# - Attached as /dev/sdm
+#
+# Format: Numeric (GiB) or empty string
+# Example: 500 or ""
+#
+# Finding Your Value -
+# - Size based on data storage requirements
+# - Leave empty ("") to skip data volume creation
+
+# --- VPC CIDR 1, 2, 3, 4, 5 (OPTIONAL) ---
+# VpcCidr1, VpcCidr2, VpcCidr3, VpcCidr4, VpcCidr5 - VPC CIDR ranges for infrastructure egress
+#
+# Purpose -
+# - Creates HTTPS (443) egress rules to VPC endpoints
+# - Allows EC2 to access ECR, S3, CloudWatch, Secrets Manager, SSM via VPC endpoints
+# - Supports multi-VPC peering, hybrid cloud connectivity, and cross-region networking
+#
+# Format: CIDR notation or empty string
+# Example: 10.0.0.0/16 or ""
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Copy IPv4 CIDR blocks
+# 3. For peered VPCs: Navigate to VPC Peering → Find peered VPC CIDRs
+# 4. Leave empty ("") if VPC endpoints are not used or additional CIDRs not needed
+
+# --- S3 PREFIX LIST ID (OPTIONAL) ---
+# S3PrefixListId - AWS-managed prefix list for S3 endpoints
+#
+# Purpose -
+# - Creates HTTPS (443) egress rule to S3 service endpoints
+# - More efficient than using CIDR ranges for S3 access
+#
+# Format: pl-xxxxxxxx or empty string
+# Example: pl-6ca54005 (ap-southeast-1 S3 prefix list)
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Managed Prefix Lists
+# 2. Filter by name: "com.amazonaws.{region}.s3"
+# 3. Copy Prefix List ID
+# 4. Leave empty ("") if not using S3 gateway endpoints
+
+# --- HCC VPC ENDPOINT CIDR (OPTIONAL) ---
+# HCCVpceCidr - HCC VPC Endpoint subnet CIDR range
+#
+# Purpose -
+# - Creates HTTPS (443) egress rule to HCC VPC endpoints
+# - Required for hybrid cloud connectivity (HCC = Hybrid Cloud Connectivity)
+#
+# Format: CIDR notation or empty string
+# Example: 10.1.0.0/24 or ""
+#
+# Finding Your Value -
+# - Contact your network team for HCC VPC endpoint subnet CIDR
+# - Leave empty ("") if not using HCC
+
+# --- ANSIBLE SERVER IP1 & IP2 (OPTIONAL) ---
+# AnsibleServerIP1, AnsibleServerIP2 - Ansible control node IP addresses
+#
+# Purpose -
+# - Allows inbound WinRM HTTPS (5986) from Ansible to Windows EC2
+# - Used for automated deployments and configuration management
+#
+# Format: IP address with /32 CIDR or empty string
+# Example: 10.1.50.100/32 or ""
+#
+# Finding Your Value -
+# - Contact your deployment team for Ansible server IPs
+# - Use CIDR notation with /32 for single IP
+# - Leave empty ("") if not using Ansible
+
+# --- VPC SUBNET CIDR DB AZ3 (OPTIONAL) ---
+# VPCSubnetCidrDBAZ3 - Database subnet CIDR for Availability Zone 3
+#
+# Purpose -
+# - Creates egress rule for database access from EC2
+# - Optional - only needed if database subnets span 3 AZs
+#
+# Format: CIDR notation or empty string
+# Example: 10.53.144.0/26 or ""
+#
+# Finding Your Value (AWS Console) -
+# 1. Navigate to VPC Console → Subnets
+# 2. Filter by tag Name containing "database" or "db"
+# 3. Identify subnets by Availability Zone
+# 4. Copy IPv4 CIDR for AZ3
+# 5. Leave empty ("") if only using 2 AZs

@@ -1,0 +1,878 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation Template for ECS CloudWatch Alarms and Monitoring with Critical and Important Alerts V1
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    
+  EnvName:
+    Type: String
+    Description: Environment Name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+      
+  ECSClusterName:
+    Type: String
+    Description: ECS Cluster name for monitoring
+    
+  ECSService1Name:
+    Type: String
+    Description: ECS Service 1 name for monitoring
+    
+  ECSService2Name:
+    Type: String
+    Description: ECS Service 2 name for monitoring (optional)
+    Default: ""
+    
+  ECSService3Name:
+    Type: String
+    Description: ECS Service 3 name for monitoring (optional)
+    Default: ""
+    
+  CPUUtilizationCriticalThreshold:
+    Type: Number
+    Description: CPU utilization critical threshold (%)
+    Default: 90
+    MinValue: 50
+    MaxValue: 100
+    
+  CPUUtilizationWarningThreshold:
+    Type: Number
+    Description: CPU utilization warning threshold (%)
+    Default: 80
+    MinValue: 50
+    MaxValue: 100
+    
+  MemoryUtilizationCriticalThreshold:
+    Type: Number
+    Description: Memory utilization critical threshold (%)
+    Default: 90
+    MinValue: 50
+    MaxValue: 100
+    
+  MemoryUtilizationWarningThreshold:
+    Type: Number
+    Description: Memory utilization warning threshold (%)
+    Default: 80
+    MinValue: 50
+    MaxValue: 100
+    
+  DesiredCountThreshold:
+    Type: Number
+    Description: Minimum desired count threshold for running tasks
+    Default: 1
+    MinValue: 1
+    
+  RunningTaskCountThreshold:
+    Type: Number
+    Description: Minimum running task count threshold
+    Default: 1
+    MinValue: 1
+    
+  Team1SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 1 notifications (e.g., L2 Operations)
+    Default: ""
+    
+  Team2SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 2 notifications (e.g., L3 Support/Development)
+    Default: ""
+    
+  Team3SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 3 notifications (e.g., Infrastructure/Platform)
+    Default: ""
+    
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasTeam1Topic: !Not [!Equals [!Ref Team1SNSTopicArn, ""]]
+  HasTeam2Topic: !Not [!Equals [!Ref Team2SNSTopicArn, ""]]
+  HasTeam3Topic: !Not [!Equals [!Ref Team3SNSTopicArn, ""]]
+  HasECSService2: !Not [!Equals [!Ref ECSService2Name, ""]]
+  HasECSService3: !Not [!Equals [!Ref ECSService3Name, ""]]
+
+Resources:
+  # ========================================
+  # ECS Service 1 Alarms - CRITICAL
+  # ========================================
+  
+  # CPU Utilization Critical Alarm
+  ECSService1CPUCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-CPU-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service CPU utilization is critically high for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-CPU-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Critical Alarm
+  ECSService1MemoryCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-Memory-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service memory utilization is critically high for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref MemoryUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-Memory-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Service Running Task Count Critical Alarm
+  ECSService1RunningTaskCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-RunningTaskCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service running task count is below threshold for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: RunningTaskCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref RunningTaskCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-RunningTaskCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Service Desired Count Critical Alarm
+  ECSService1DesiredCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-DesiredCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service desired count is below threshold for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: DesiredCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DesiredCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-DesiredCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Service 1 Alarms - IMPORTANT
+  # ========================================
+  
+  # CPU Utilization Warning Alarm
+  ECSService1CPUWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-CPU-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service CPU utilization is high for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref CPUUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-CPU-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Warning Alarm
+  ECSService1MemoryWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-Memory-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service memory utilization is high for ${AppShortName}-${EnvName}-${ECSService1Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref MemoryUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService1Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService1Name}-Memory-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Cluster Level Alarms - IMPORTANT
+  # ========================================
+  
+  # Cluster CPU Reservation High Alarm
+  ECSClusterCPUReservationHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSClusterName}-CPUReservation-High"
+      AlarmDescription: !Sub "IMPORTANT: ECS Cluster CPU reservation is high for ${AppShortName}-${EnvName}-${ECSClusterName}"
+      MetricName: CPUReservation
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSClusterName}-CPUReservation-High-Alarm"
+        - Key: Severity
+          Value: "Important"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Cluster Memory Reservation High Alarm
+  ECSClusterMemoryReservationHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSClusterName}-MemoryReservation-High"
+      AlarmDescription: !Sub "IMPORTANT: ECS Cluster memory reservation is high for ${AppShortName}-${EnvName}-${ECSClusterName}"
+      MetricName: MemoryReservation
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSClusterName}-MemoryReservation-High-Alarm"
+        - Key: Severity
+          Value: "Important"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Service 2 Alarms (Conditional)
+  # ========================================
+  
+  # CPU Utilization Critical Alarm - Service 2
+  ECSService2CPUCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-CPU-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service CPU utilization is critically high for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-CPU-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Critical Alarm - Service 2
+  ECSService2MemoryCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-Memory-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service memory utilization is critically high for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref MemoryUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-Memory-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Running Task Count Critical Alarm - Service 2
+  ECSService2RunningTaskCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-RunningTaskCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service running task count is below threshold for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: RunningTaskCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref RunningTaskCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-RunningTaskCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Desired Count Critical Alarm - Service 2
+  ECSService2DesiredCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-DesiredCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service desired count is below threshold for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: DesiredCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DesiredCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-DesiredCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Service 2 Alarms - IMPORTANT
+  # ========================================
+  
+  # CPU Utilization Warning Alarm - Service 2
+  ECSService2CPUWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-CPU-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service CPU utilization is high for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref CPUUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-CPU-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Warning Alarm - Service 2
+  ECSService2MemoryWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-Memory-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service memory utilization is high for ${AppShortName}-${EnvName}-${ECSService2Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref MemoryUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService2Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService2Name}-Memory-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Service 3 Alarms (Conditional)
+  # ========================================
+  
+  # CPU Utilization Critical Alarm - Service 3
+  ECSService3CPUCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-CPU-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service CPU utilization is critically high for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-CPU-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Critical Alarm - Service 3
+  ECSService3MemoryCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-Memory-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service memory utilization is critically high for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref MemoryUtilizationCriticalThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-Memory-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Running Task Count Critical Alarm - Service 3
+  ECSService3RunningTaskCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-RunningTaskCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service running task count is below threshold for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: RunningTaskCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref RunningTaskCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-RunningTaskCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Desired Count Critical Alarm - Service 3
+  ECSService3DesiredCountCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-DesiredCount-Critical"
+      AlarmDescription: !Sub "CRITICAL: ECS Service desired count is below threshold for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: DesiredCount
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DesiredCountThreshold
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-DesiredCount-Critical-Alarm"
+        - Key: Severity
+          Value: "Critical"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # ========================================
+  # ECS Service 3 Alarms - IMPORTANT
+  # ========================================
+  
+  # CPU Utilization Warning Alarm - Service 3
+  ECSService3CPUWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-CPU-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service CPU utilization is high for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref CPUUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-CPU-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+  # Memory Utilization Warning Alarm - Service 3
+  ECSService3MemoryWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasECSService3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-Memory-Warning"
+      AlarmDescription: !Sub "WARNING: ECS Service memory utilization is high for ${AppShortName}-${EnvName}-${ECSService3Name}"
+      MetricName: MemoryUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref MemoryUtilizationWarningThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServiceName
+          Value: !Ref ECSService3Name
+        - Name: ClusterName
+          Value: !Ref ECSClusterName
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ECSService3Name}-Memory-Warning-Alarm"
+        - Key: Severity
+          Value: "Warning"
+        - Key: IaCVersion
+          Value: Observability-ECS-v1
+
+Outputs:
+  ECSService1CriticalAlarms:
+    Description: "Critical alarms for ECS Service 1"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService1CPUCriticalAlarm
+        - !Ref ECSService1MemoryCriticalAlarm
+        - !Ref ECSService1RunningTaskCountCriticalAlarm
+        - !Ref ECSService1DesiredCountCriticalAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService1-Critical-Alarms"
+
+  ECSService1ImportantAlarms:
+    Description: "Important alarms for ECS Service 1"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService1CPUWarningAlarm
+        - !Ref ECSService1MemoryWarningAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService1-Important-Alarms"
+
+  ECSService2CriticalAlarms:
+    Condition: HasECSService2
+    Description: "Critical alarms for ECS Service 2"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService2CPUCriticalAlarm
+        - !Ref ECSService2MemoryCriticalAlarm
+        - !Ref ECSService2RunningTaskCountCriticalAlarm
+        - !Ref ECSService2DesiredCountCriticalAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService2-Critical-Alarms"
+
+  ECSService2ImportantAlarms:
+    Condition: HasECSService2
+    Description: "Important alarms for ECS Service 2"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService2CPUWarningAlarm
+        - !Ref ECSService2MemoryWarningAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService2-Important-Alarms"
+
+  ECSService3CriticalAlarms:
+    Condition: HasECSService3
+    Description: "Critical alarms for ECS Service 3"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService3CPUCriticalAlarm
+        - !Ref ECSService3MemoryCriticalAlarm
+        - !Ref ECSService3RunningTaskCountCriticalAlarm
+        - !Ref ECSService3DesiredCountCriticalAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService3-Critical-Alarms"
+
+  ECSService3ImportantAlarms:
+    Condition: HasECSService3
+    Description: "Important alarms for ECS Service 3"
+    Value: !Join
+      - ", "
+      - - !Ref ECSService3CPUWarningAlarm
+        - !Ref ECSService3MemoryWarningAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSService3-Important-Alarms"
+
+  ECSClusterAlarms:
+    Description: "Cluster level alarms"
+    Value: !Join
+      - ", "
+      - - !Ref ECSClusterCPUReservationHighAlarm
+        - !Ref ECSClusterMemoryReservationHighAlarm
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSCluster-Alarms"

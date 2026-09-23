@@ -1,0 +1,14 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xyz"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "Function",
+        "ParameterValue": "APP"
+    }
+]

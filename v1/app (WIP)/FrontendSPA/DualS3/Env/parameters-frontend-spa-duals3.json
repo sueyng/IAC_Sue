@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "hxis"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd-stg"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:533267434948:certificate/2f491a72-f346-4404-8a5a-083f5fc05632"
+  },
+  {
+    "ParameterKey": "DefaultPage",
+    "ParameterValue": "index.html"
+  },
+  {
+    "ParameterKey": "CustomDomainName",
+    "ParameterValue": "apidocs-stg.healthx.sg"
+  },
+  {
+    "ParameterKey": "PrimaryBucketName",
+    "ParameterValue": "apidocs-stg"
+  },
+  {
+    "ParameterKey": "SecondaryBucketName",
+    "ParameterValue": "swagger.apidocs-stg"
+  },
+  {
+    "ParameterKey": "GeoLocation",
+    "ParameterValue": "SG"
+  }
+]

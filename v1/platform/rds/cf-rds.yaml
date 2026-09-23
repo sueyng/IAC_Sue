@@ -1,0 +1,295 @@
+AWSTemplateFormatVersion: 2010-09-09
+#Description:
+Description: Pre-requisites Setup for RDS Cluster
+Parameters:
+
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-uat
+      - nprd-pt
+      - prod
+  
+  VpcId:
+    Type: String
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+
+# Subnet CIDR parameters
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: AZ1 App Subnet
+  
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: AZ2 App Subnet
+
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: AZ3 App Subnet
+
+  # DB Subnet ID parameters
+  VPCSubnetIdDBAZ1:
+    Type: String
+    Description: VPC Subnet id for DB AZ1
+
+  VPCSubnetIdDBAZ2:
+    Type: String
+    Description: VPC Subnet id for DB AZ2
+
+  VPCSubnetIdDBAZ3:
+    Type: String
+    Description: VPC Subnet id for DB AZ3
+  
+  DeploymentServer:
+    Type: String
+    Description: AIC Deployment Server IP
+
+# DB Port
+  DBPort:
+    Type: String
+    Description: DB Port Number
+
+Conditions:
+  IsProduction: !Equals
+    - !Ref EnvName
+    - prod
+
+Resources:
+# KMS Key for encrypt the RDS backups and DB related Files (new)
+  RDSEncryptionKmsKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: 'KMS key to encrypt DB related files and native backups'
+      EnableKeyRotation: false
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+            
+# Alias for the KMS key (new)
+  RDSEncryptionKmsKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-rdssqlserver-encryption'
+      TargetKeyId: !Ref RDSEncryptionKmsKey
+
+## S3 bucket
+  DBAuditS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub '${AppShortName}-${EnvName}-db-audit'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  DBNativeBackupS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub '${AppShortName}-${EnvName}-db-nativebackup'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+#IAM Roles and Policies
+  DBEnhancedMonitoringRole:  #hsar-prd-rds-EnhancedMonitoring-Role
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - monitoring.rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+      RoleName: !Sub '${AppShortName}-${EnvName}-rds-EnhancedMonitoring-Role'
+
+  DBAuditPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action: s3:ListAllMyBuckets
+          Resource: "*"
+        - Effect: Allow
+          Action:
+          - s3:GetBucketLocation
+          - s3:GetBucketACL
+          - s3:ListBucket
+          Resource:
+          - !GetAtt DBAuditS3Bucket.Arn
+        - Effect: Allow
+          Action:
+          - s3:ListMultipartUploadParts
+          - s3:AbortMultipartUpload
+          - s3:PutObject
+          Resource:
+          - !Sub '${DBAuditS3Bucket.Arn}/*'
+      ManagedPolicyName: !Sub '${AppShortName}-${EnvName}-sqlAudit-policy'
+
+  DBANativeBackupPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:DescribeKey
+          - kms:GenerateDataKey
+          Resource:
+          - !GetAtt RDSEncryptionKmsKey.Arn
+        - Effect: Allow
+          Action:
+          - s3:ListBucket
+          - s3:GetBucketLocation
+          Resource:
+          - !GetAtt DBNativeBackupS3Bucket.Arn
+        - Effect: Allow
+          Action:
+          - s3:GetObjectMetaData
+          - s3:GetObject
+          - s3:PutObject
+          - s3:ListMultipartUploadParts
+          - s3:AbortMultipartUpload
+          Resource:
+          - !Sub '${DBNativeBackupS3Bucket.Arn}/*'
+      ManagedPolicyName: !Sub '${AppShortName}-${EnvName}-sqlNativeBackup-policy'
+
+  DBAuditS3WriteRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref DBAuditPolicy
+      RoleName: !Sub '${AppShortName}-${EnvName}-db-AuditS3-WriteRole'
+
+  DBNativebackupS3Role:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref DBANativeBackupPolicy
+      RoleName: !Sub '${AppShortName}-${EnvName}-db-nativebackupS3-Role'
+
+  RdsDBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Security Group for RDS DB
+      GroupName: !Sub 'sg_${AppShortName}-${EnvName}-Rds-DB-Cluster'
+      Tags:
+        - Key: Name
+          Value: !Sub 'sg_${AppShortName}-${EnvName}-Rds-DB-Cluster'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: Allow App AZ1 Subnet
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: Allow App AZ2 Subnet
+        - !If
+          - IsProduction
+          - IpProtocol: tcp
+            FromPort: !Ref DBPort
+            ToPort: !Ref DBPort
+            CidrIp: !Ref VPCSubnetCidrAppAZ3
+            Description: Allow App Subnet AZ3
+          - !Ref "AWS::NoValue"
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: !Ref DeploymentServer
+          Description: Allow Deployment Server to Access the RDS instance      
+
+  RdsDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      DBSubnetGroupDescription: RDS-DB-SubnetGroup
+      DBSubnetGroupName: RDS-DB-SubnetGroup
+      SubnetIds: 
+        - !Ref VPCSubnetIdDBAZ1
+        - !Ref VPCSubnetIdDBAZ2
+        - !If [IsProduction, !Ref VPCSubnetIdDBAZ3, !Ref "AWS::NoValue"]   
+        #- !Ref VPCSubnetIdDBAZ3

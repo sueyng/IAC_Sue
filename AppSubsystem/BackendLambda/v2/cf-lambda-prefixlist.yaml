@@ -1,0 +1,457 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation template for a single Managed Prefix List with configurable entries'
+
+Parameters:
+  # Core Application Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Prefix List Configuration
+  PrefixListPurpose:
+    Type: String
+    Description: "Purpose/name suffix for the prefix list (e.g., 'dynamodb', 's3', 'external-api')"
+    Default: "services"
+
+  PrefixListDescription:
+    Type: String
+    Description: "Description for the prefix list purpose"
+    Default: "External services access for Lambda functions"
+
+  MaxEntries:
+    Type: Number
+    Description: "Maximum number of entries the prefix list can hold"
+    Default: 50
+    MinValue: 1
+    MaxValue: 1000
+
+  # Number of entries to create
+  NumberOfEntries:
+    Type: Number
+    Description: "Number of CIDR entries to create (1-50)"
+    Default: 1
+    MinValue: 1
+    MaxValue: 50
+
+  # CIDR Entries (20 configurable entries)
+  CidrEntry01:
+    Type: String
+    Description: "CIDR Entry 1"
+    Default: ""
+
+  CidrEntry02:
+    Type: String
+    Description: "CIDR Entry 2"
+    Default: ""
+
+  CidrEntry03:
+    Type: String
+    Description: "CIDR Entry 3"
+    Default: ""
+
+  CidrEntry04:
+    Type: String
+    Description: "CIDR Entry 4"
+    Default: ""
+
+  CidrEntry05:
+    Type: String
+    Description: "CIDR Entry 5"
+    Default: ""
+
+  CidrEntry06:
+    Type: String
+    Description: "CIDR Entry 6"
+    Default: ""
+
+  CidrEntry07:
+    Type: String
+    Description: "CIDR Entry 7"
+    Default: ""
+
+  CidrEntry08:
+    Type: String
+    Description: "CIDR Entry 8"
+    Default: ""
+
+  CidrEntry09:
+    Type: String
+    Description: "CIDR Entry 9"
+    Default: ""
+
+  CidrEntry10:
+    Type: String
+    Description: "CIDR Entry 10"
+    Default: ""
+
+  CidrEntry11:
+    Type: String
+    Description: "CIDR Entry 11"
+    Default: ""
+
+  CidrEntry12:
+    Type: String
+    Description: "CIDR Entry 12"
+    Default: ""
+
+  CidrEntry13:
+    Type: String
+    Description: "CIDR Entry 13"
+    Default: ""
+
+  CidrEntry14:
+    Type: String
+    Description: "CIDR Entry 14"
+    Default: ""
+
+  CidrEntry15:
+    Type: String
+    Description: "CIDR Entry 15"
+    Default: ""
+
+  CidrEntry16:
+    Type: String
+    Description: "CIDR Entry 16"
+    Default: ""
+
+  CidrEntry17:
+    Type: String
+    Description: "CIDR Entry 17"
+    Default: ""
+
+  CidrEntry18:
+    Type: String
+    Description: "CIDR Entry 18"
+    Default: ""
+
+  CidrEntry19:
+    Type: String
+    Description: "CIDR Entry 19"
+    Default: ""
+
+  CidrEntry20:
+    Type: String
+    Description: "CIDR Entry 20"
+    Default: ""
+
+  # Description Parameters for each entry
+  EntryDescription01:
+    Type: String
+    Description: "Description for CIDR Entry 1"
+    Default: ""
+
+  EntryDescription02:
+    Type: String
+    Description: "Description for CIDR Entry 2"
+    Default: ""
+
+  EntryDescription03:
+    Type: String
+    Description: "Description for CIDR Entry 3"
+    Default: ""
+
+  EntryDescription04:
+    Type: String
+    Description: "Description for CIDR Entry 4"
+    Default: ""
+
+  EntryDescription05:
+    Type: String
+    Description: "Description for CIDR Entry 5"
+    Default: ""
+
+  EntryDescription06:
+    Type: String
+    Description: "Description for CIDR Entry 6"
+    Default: ""
+
+  EntryDescription07:
+    Type: String
+    Description: "Description for CIDR Entry 7"
+    Default: ""
+
+  EntryDescription08:
+    Type: String
+    Description: "Description for CIDR Entry 8"
+    Default: ""
+
+  EntryDescription09:
+    Type: String
+    Description: "Description for CIDR Entry 9"
+    Default: ""
+
+  EntryDescription10:
+    Type: String
+    Description: "Description for CIDR Entry 10"
+    Default: ""
+
+  EntryDescription11:
+    Type: String
+    Description: "Description for CIDR Entry 11"
+    Default: ""
+
+  EntryDescription12:
+    Type: String
+    Description: "Description for CIDR Entry 12"
+    Default: ""
+
+  EntryDescription13:
+    Type: String
+    Description: "Description for CIDR Entry 13"
+    Default: ""
+
+  EntryDescription14:
+    Type: String
+    Description: "Description for CIDR Entry 14"
+    Default: ""
+
+  EntryDescription15:
+    Type: String
+    Description: "Description for CIDR Entry 15"
+    Default: ""
+
+  EntryDescription16:
+    Type: String
+    Description: "Description for CIDR Entry 16"
+    Default: ""
+
+  EntryDescription17:
+    Type: String
+    Description: "Description for CIDR Entry 17"
+    Default: ""
+
+  EntryDescription18:
+    Type: String
+    Description: "Description for CIDR Entry 18"
+    Default: ""
+
+  EntryDescription19:
+    Type: String
+    Description: "Description for CIDR Entry 19"
+    Default: ""
+
+  EntryDescription20:
+    Type: String
+    Description: "Description for CIDR Entry 20"
+    Default: ""
+
+Conditions:
+  # Environment conditions
+  IsProduction: !Or 
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+  # Number conditions (cascading)
+  NumberEntry20: !Equals [20, !Ref NumberOfEntries]
+  NumberEntry19: !Or [!Equals [19, !Ref NumberOfEntries], !Condition NumberEntry20]
+  NumberEntry18: !Or [!Equals [18, !Ref NumberOfEntries], !Condition NumberEntry19]
+  NumberEntry17: !Or [!Equals [17, !Ref NumberOfEntries], !Condition NumberEntry18]
+  NumberEntry16: !Or [!Equals [16, !Ref NumberOfEntries], !Condition NumberEntry17]
+  NumberEntry15: !Or [!Equals [15, !Ref NumberOfEntries], !Condition NumberEntry16]
+  NumberEntry14: !Or [!Equals [14, !Ref NumberOfEntries], !Condition NumberEntry15]
+  NumberEntry13: !Or [!Equals [13, !Ref NumberOfEntries], !Condition NumberEntry14]
+  NumberEntry12: !Or [!Equals [12, !Ref NumberOfEntries], !Condition NumberEntry13]
+  NumberEntry11: !Or [!Equals [11, !Ref NumberOfEntries], !Condition NumberEntry12]
+  NumberEntry10: !Or [!Equals [10, !Ref NumberOfEntries], !Condition NumberEntry11]
+  NumberEntry9: !Or [!Equals [9, !Ref NumberOfEntries], !Condition NumberEntry10]
+  NumberEntry8: !Or [!Equals [8, !Ref NumberOfEntries], !Condition NumberEntry9]
+  NumberEntry7: !Or [!Equals [7, !Ref NumberOfEntries], !Condition NumberEntry8]
+  NumberEntry6: !Or [!Equals [6, !Ref NumberOfEntries], !Condition NumberEntry7]
+  NumberEntry5: !Or [!Equals [5, !Ref NumberOfEntries], !Condition NumberEntry6]
+  NumberEntry4: !Or [!Equals [4, !Ref NumberOfEntries], !Condition NumberEntry5]
+  NumberEntry3: !Or [!Equals [3, !Ref NumberOfEntries], !Condition NumberEntry4]
+  NumberEntry2: !Or [!Equals [2, !Ref NumberOfEntries], !Condition NumberEntry3]
+  NumberEntry1: !Or [!Equals [1, !Ref NumberOfEntries], !Condition NumberEntry2]
+
+  # Final deployment conditions combining number check and CIDR check
+  DeployEntry01: !And [!Condition NumberEntry1, !Not [!Equals [!Ref CidrEntry01, ""]]]
+  DeployEntry02: !And [!Condition NumberEntry2, !Not [!Equals [!Ref CidrEntry02, ""]]]
+  DeployEntry03: !And [!Condition NumberEntry3, !Not [!Equals [!Ref CidrEntry03, ""]]]
+  DeployEntry04: !And [!Condition NumberEntry4, !Not [!Equals [!Ref CidrEntry04, ""]]]
+  DeployEntry05: !And [!Condition NumberEntry5, !Not [!Equals [!Ref CidrEntry05, ""]]]
+  DeployEntry06: !And [!Condition NumberEntry6, !Not [!Equals [!Ref CidrEntry06, ""]]]
+  DeployEntry07: !And [!Condition NumberEntry7, !Not [!Equals [!Ref CidrEntry07, ""]]]
+  DeployEntry08: !And [!Condition NumberEntry8, !Not [!Equals [!Ref CidrEntry08, ""]]]
+  DeployEntry09: !And [!Condition NumberEntry9, !Not [!Equals [!Ref CidrEntry09, ""]]]
+  DeployEntry10: !And [!Condition NumberEntry10, !Not [!Equals [!Ref CidrEntry10, ""]]]
+  DeployEntry11: !And [!Condition NumberEntry11, !Not [!Equals [!Ref CidrEntry11, ""]]]
+  DeployEntry12: !And [!Condition NumberEntry12, !Not [!Equals [!Ref CidrEntry12, ""]]]
+  DeployEntry13: !And [!Condition NumberEntry13, !Not [!Equals [!Ref CidrEntry13, ""]]]
+  DeployEntry14: !And [!Condition NumberEntry14, !Not [!Equals [!Ref CidrEntry14, ""]]]
+  DeployEntry15: !And [!Condition NumberEntry15, !Not [!Equals [!Ref CidrEntry15, ""]]]
+  DeployEntry16: !And [!Condition NumberEntry16, !Not [!Equals [!Ref CidrEntry16, ""]]]
+  DeployEntry17: !And [!Condition NumberEntry17, !Not [!Equals [!Ref CidrEntry17, ""]]]
+  DeployEntry18: !And [!Condition NumberEntry18, !Not [!Equals [!Ref CidrEntry18, ""]]]
+  DeployEntry19: !And [!Condition NumberEntry19, !Not [!Equals [!Ref CidrEntry19, ""]]]
+  DeployEntry20: !And [!Condition NumberEntry20, !Not [!Equals [!Ref CidrEntry20, ""]]]
+
+Resources:
+  #============================================================================
+  # SINGLE MANAGED PREFIX LIST
+  #============================================================================
+  
+  ManagedPrefixList:
+    Type: AWS::EC2::PrefixList
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries
+      Entries:
+        - !If
+          - DeployEntry01
+          - Cidr: !Ref CidrEntry01
+            Description: !Ref EntryDescription01
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry02
+          - Cidr: !Ref CidrEntry02
+            Description: !Ref EntryDescription02
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry03
+          - Cidr: !Ref CidrEntry03
+            Description: !Ref EntryDescription03
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry04
+          - Cidr: !Ref CidrEntry04
+            Description: !Ref EntryDescription04
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry05
+          - Cidr: !Ref CidrEntry05
+            Description: !Ref EntryDescription05
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry06
+          - Cidr: !Ref CidrEntry06
+            Description: !Ref EntryDescription06
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry07
+          - Cidr: !Ref CidrEntry07
+            Description: !Ref EntryDescription07
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry08
+          - Cidr: !Ref CidrEntry08
+            Description: !Ref EntryDescription08
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry09
+          - Cidr: !Ref CidrEntry09
+            Description: !Ref EntryDescription09
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry10
+          - Cidr: !Ref CidrEntry10
+            Description: !Ref EntryDescription10
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry11
+          - Cidr: !Ref CidrEntry11
+            Description: !Ref EntryDescription11
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry12
+          - Cidr: !Ref CidrEntry12
+            Description: !Ref EntryDescription12
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry13
+          - Cidr: !Ref CidrEntry13
+            Description: !Ref EntryDescription13
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry14
+          - Cidr: !Ref CidrEntry14
+            Description: !Ref EntryDescription14
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry15
+          - Cidr: !Ref CidrEntry15
+            Description: !Ref EntryDescription15
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry16
+          - Cidr: !Ref CidrEntry16
+            Description: !Ref EntryDescription16
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry17
+          - Cidr: !Ref CidrEntry17
+            Description: !Ref EntryDescription17
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry18
+          - Cidr: !Ref CidrEntry18
+            Description: !Ref EntryDescription18
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry19
+          - Cidr: !Ref CidrEntry19
+            Description: !Ref EntryDescription19
+          - !Ref "AWS::NoValue"
+        - !If
+          - DeployEntry20
+          - Cidr: !Ref CidrEntry20
+            Description: !Ref EntryDescription20
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose}"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+Outputs:
+  # Prefix List Outputs
+  PrefixListId:
+    Description: "ID of the Managed Prefix List"
+    Value: !Ref ManagedPrefixList
+    Export:
+      Name: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose}-id"
+
+  PrefixListArn:
+    Description: "ARN of the Managed Prefix List"
+    Value: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:prefix-list/${ManagedPrefixList}"
+
+  PrefixListName:
+    Description: "Name of the Managed Prefix List"
+    Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose}"

@@ -1,0 +1,171 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Template: cf-prefixlist.yaml
+# IaCVersion: InfraPlatform-PrefixList-v1
+# Provisions: Up to 10 Managed Prefix Lists (empty containers — entries
+#             managed by project team via AWS Console)
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"                     # 📝 e.g. myapp, gms, webapp (lowercase alphanumeric)
+EnvName: "<edit_here>"                          # 📝 e.g. nprd, nprd-dev, prod, prod-a
+
+# NUMBER OF PREFIX LISTS
+NumberOfPrefixLists: "1"                        # 📝 How many prefix lists to create (1-10)
+
+# PREFIX LIST 01 (Required)
+PrefixListPurpose01: "<edit_here>"              # 📝 e.g. db-subnets, vpce, external-api, cache-subnets
+MaxEntries01: "50"                              # Max entries the prefix list can hold (plan for growth)
+
+# ========================================================================
+# OPTIONAL PREFIX LISTS (fill if NumberOfPrefixLists > 1)
+# ========================================================================
+
+# PREFIX LIST 02
+PrefixListPurpose02: ""
+MaxEntries02: "50"
+
+# PREFIX LIST 03
+PrefixListPurpose03: ""
+MaxEntries03: "50"
+
+# PREFIX LIST 04
+PrefixListPurpose04: ""
+MaxEntries04: "50"
+
+# PREFIX LIST 05
+PrefixListPurpose05: ""
+MaxEntries05: "50"
+
+# PREFIX LIST 06
+PrefixListPurpose06: ""
+MaxEntries06: "50"
+
+# PREFIX LIST 07
+PrefixListPurpose07: ""
+MaxEntries07: "50"
+
+# PREFIX LIST 08
+PrefixListPurpose08: ""
+MaxEntries08: "50"
+
+# PREFIX LIST 09
+PrefixListPurpose09: ""
+MaxEntries09: "50"
+
+# PREFIX LIST 10
+PrefixListPurpose10: ""
+MaxEntries10: "50"
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates prefix list name: {AppShortName}-{EnvName}-pl-{PrefixListPurpose}
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, gms, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in resource naming
+# - Determines DeletionPolicy (Retain for prod, Delete for nprd)
+#
+# Common Values:
+# - nprd: Base non-production
+# - nprd-dev, nprd-dev1, nprd-dev2: Development
+# - nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a, nprd-sit-b, nprd-sit-c: SIT environments
+# - nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c: UAT environments
+# - nprd-pt: Performance testing
+# - nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c: Pre-production
+# - prod, prod-a, prod-b, prod-c: Production
+#
+# Impact on Resource Lifecycle:
+# Production (prod*): DeletionPolicy=Retain, UpdateReplacePolicy=Retain
+# Non-Production (nprd*): DeletionPolicy=Delete, UpdateReplacePolicy=Delete
+
+# --- NUMBER OF PREFIX LISTS ---
+# NumberOfPrefixLists: How many prefix lists to create in this stack
+#
+# Range: 1-10
+# Default: 1
+#
+# Notes:
+# - Prefix List 01 is always created
+# - Prefix Lists 02-10 are only created if NumberOfPrefixLists >= that number
+# - Fill in PrefixListPurpose for each prefix list you create
+
+# --- PREFIX LIST PURPOSE ---
+# PrefixListPurpose01-10: Name suffix identifying each prefix list's purpose
+#
+# Purpose:
+# - Included in prefix list name: {AppShortName}-{EnvName}-pl-{PrefixListPurpose}
+# - Allows multiple prefix lists per application/environment
+#
+# Format: Lowercase with hyphens
+# Example: db-subnets, vpce, external-api, cache-subnets, hcc-proxy
+#
+# Common Use Cases:
+# - db-subnets: Database subnet CIDRs
+# - vpce: VPC endpoint interface CIDRs
+# - external-api: External API endpoint CIDRs
+# - cache-subnets: ElastiCache subnet CIDRs
+# - hcc-proxy: HCC Forward Proxy CIDRs
+
+# --- MAX ENTRIES ---
+# MaxEntries01-10: Maximum number of entries each prefix list can hold
+#
+# Default: 50
+#
+# Important Notes:
+# - MaxEntries CANNOT be decreased after creation (only increased)
+# - Plan for future growth when setting this value
+# - Each entry in a prefix list counts towards security group rule limits
+# - When used in a security group, 1 prefix list reference = MaxEntries rules consumed
+# - AWS default security group limit: 60 inbound + 60 outbound rules
+#
+# Recommendations:
+# - Small (5-10 CIDRs): Set to 20 (room for growth)
+# - Medium (10-20 CIDRs): Set to 50
+# - Large (20+ CIDRs): Set to 100
+
+# --- MANAGING PREFIX LIST ENTRIES ---
+# After deployment, add CIDR entries to each prefix list via AWS Console:
+#
+# 1. Go to AWS Console → VPC → Managed Prefix Lists
+# 2. Find the prefix list by name: {AppShortName}-{EnvName}-pl-{PrefixListPurpose}
+# 3. Select the prefix list → Entries tab → Modify
+# 4. Add CIDR entries with descriptions
+# 5. Save changes
+#
+# Or via AWS CLI:
+#   aws ec2 modify-managed-prefix-list \
+#     --prefix-list-id pl-xxxxxxxxx \
+#     --add-entries Cidr=10.55.53.0/24,Description="VPC primary CIDR"
+
+# --- RESOURCES CREATED ---
+# Per prefix list (up to 10):
+#   Managed Prefix List: {AppShortName}-{EnvName}-pl-{PrefixListPurpose}
+#     - Address Family: IPv4
+#     - Max Entries: {MaxEntries}
+#     - Entries: Empty (managed by project team via AWS Console)

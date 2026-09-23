@@ -1,0 +1,50 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "Lambda1Name",
+    "ParameterValue": "myapp-prod-processor"
+  },
+  {
+    "ParameterKey": "Lambda2Name",
+    "ParameterValue": "myapp-prod-scheduler"
+  },
+  {
+    "ParameterKey": "Lambda3Name",
+    "ParameterValue": "myapp-prod-notifier"
+  },
+  {
+    "ParameterKey": "ErrorThreshold",
+    "ParameterValue": "5"
+  },
+  {
+    "ParameterKey": "DurationThreshold",
+    "ParameterValue": "30000"
+  },
+  {
+    "ParameterKey": "ThrottleThreshold",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "ConcurrentExecutionThreshold",
+    "ParameterValue": "800"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

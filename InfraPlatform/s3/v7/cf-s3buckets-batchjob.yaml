@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS S3 Buckets Template v7 - Added versioning to batch job buckets'
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  EnableS3Versioning:
+    Type: String
+    Description: Enable S3 bucket versioning for all batch job buckets
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  S3CurrentVersionExpirationDays:
+    Type: Number
+    Description: Days before current (live) objects are deleted (0 to disable lifecycle rule). Default 365 preserves previous hardcoded behavior.
+    Default: 365
+    MinValue: 0
+    MaxValue: 3650
+
+  S3NoncurrentVersionExpirationDays:
+    Type: Number
+    Description: Days to retain noncurrent object versions before deletion (0 to disable)
+    Default: 14
+    MinValue: 0
+    MaxValue: 365
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  EnableVersioning: !Equals [!Ref EnableS3Versioning, "true"]
+  HasCurrentExpiration: !Not [!Equals [!Ref S3CurrentVersionExpirationDays, 0]]
+  HasNoncurrentExpiration: !And
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref S3NoncurrentVersionExpirationDays, 0]]
+  HasAnyLifecycleRule: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
+
+Resources:
+  DataloadS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-dataload
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: !If
+        - EnableVersioning
+        - Status: Enabled
+        - !Ref "AWS::NoValue"
+      LifecycleConfiguration: !If
+        - HasAnyLifecycleRule
+        - Rules:
+            - !If
+              - HasCurrentExpiration
+              - Id: CurrentVersionExpiration
+                Status: Enabled
+                ExpirationInDays: !Ref S3CurrentVersionExpirationDays
+                Prefix: ""
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasNoncurrentExpiration
+              - Id: NoncurrentVersionCleanup
+                Status: Enabled
+                NoncurrentVersionExpiration:
+                  NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+              - !Ref "AWS::NoValue"
+        - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-s3-v7
+
+  DataloadS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref DataloadS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt DataloadS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataloadS3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource:
+              - !GetAtt DataloadS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataloadS3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  DataExtractionS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-data-extraction
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: !If
+        - EnableVersioning
+        - Status: Enabled
+        - !Ref "AWS::NoValue"
+      LifecycleConfiguration: !If
+        - HasAnyLifecycleRule
+        - Rules:
+            - !If
+              - HasCurrentExpiration
+              - Id: CurrentVersionExpiration
+                Status: Enabled
+                ExpirationInDays: !Ref S3CurrentVersionExpirationDays
+                Prefix: ""
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasNoncurrentExpiration
+              - Id: NoncurrentVersionCleanup
+                Status: Enabled
+                NoncurrentVersionExpiration:
+                  NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+              - !Ref "AWS::NoValue"
+        - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-s3-v7
+
+  DataExtractionS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref DataExtractionS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt DataExtractionS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataExtractionS3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource:
+              - !GetAtt DataExtractionS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataExtractionS3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'

@@ -1,0 +1,309 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AWSRegion:
+    Type: String
+    Description: AppShortName
+    AllowedValues: 
+      - ap-southeast-1
+    Default: ap-southeast-1
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-dev-b
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c 
+    Description: Environment
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: VPC Subnet ids for App
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: AZ1 App Subnet
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: AZ2 App Subnet
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: AZ3 App Subnet
+  # Prefix List for Additional Application Networks
+  AdditionalAppPrefixList:
+    Type: String
+    Description: Optional Prefix List ID for additional application networks (optional)
+    Default: ""
+
+  MaxCacheDataStorage:
+    Description: Maximum Limit for Cache Data Storage
+    Type: Number
+    Default: 0
+  MaxCacheECPUPerSecond:
+    Description: Maximum ECPU for Cache Limits
+    Type: Number
+    Default: 0
+  Engine:
+    Description: Engine type (valkey)
+    Type: String
+    Default: valkey
+    NoEcho: true
+  SnapshotRetentionLimit:
+    Description: How many snapshots do we need to retain
+    Type: Number
+    Default: 5
+  DailySnapshotTime:
+    Description: Schedule on when to take snapshot
+    Type: String
+    Default: "14:00"
+  CreateCacheUserAndGroup:
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Default: 'yes'
+    Description: Create cache user and group?
+
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+  CacheUsageLimits: !And [!Not [!Equals [!Ref MaxCacheDataStorage, 0]], !Not [!Equals [!Ref MaxCacheECPUPerSecond, 0]]]
+  ShouldCreateCacheUserAndGroup: !Equals [!Ref CreateCacheUserAndGroup, 'yes']
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, '']]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, '']]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, '']]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, '']]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasAdditionalAppPrefixList: !Not [!Equals [!Ref AdditionalAppPrefixList, '']]
+
+Resources:
+# IAM Policy
+  PolicyElasticacheConnect:
+    Type: AWS::IAM::ManagedPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'elasticache:Connect'
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:elasticache:${AWSRegion}:${AWS::AccountId}:serverlesscache:${ValKeyServerless}
+              - !If 
+                - ShouldCreateCacheUserAndGroup
+                - !GetAtt ValKeyUser.Arn
+                - !Ref "AWS::NoValue"
+        Version: 2012-10-17
+      ManagedPolicyName: !Sub ${AppShortName}-${EnvName}-ValKeyConnect
+      Description: Policy to grant access for Valkey serverless Cluster
+
+# Security Group
+  ValKeySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-valkey
+      GroupDescription: Security Group for Valkey Serverless Cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6380
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: App Subnet AZ1
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6380
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: App Subnet AZ2
+        - !If 
+            - "HasVPCSubnetCidrAppAZ3"
+            - IpProtocol: tcp
+              FromPort: 6379
+              ToPort: 6380
+              CidrIp: !Ref VPCSubnetCidrAppAZ3
+              Description: App Subnet AZ3
+            - !Ref AWS::NoValue
+        - !If
+          - HasAdditionalAppPrefixList
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            SourcePrefixListId: !Ref AdditionalAppPrefixList
+            Description: Allow Additional Application Networks
+          - !Ref "AWS::NoValue"
+
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - !If 
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: VPC CIDR 4 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: VPC CIDR 5 IP Range
+          - !Ref "AWS::NoValue"     
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"
+
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ValKeyServerless-v4
+
+# CREATE VALKEY USER
+  ValKeyUser:
+    Type: AWS::ElastiCache::User
+    Condition: ShouldCreateCacheUserAndGroup
+    Properties:
+      AccessString: "on ~* +@all"
+      AuthenticationMode:
+        Type: iam
+      Engine: !Ref Engine
+      NoPasswordRequired: False
+      UserId: !Sub ${AppShortName}-${EnvName}-valkeycacheadmin
+      UserName: !Sub ${AppShortName}-${EnvName}-valkeycacheadmin
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ValKeyServerless-v4
+
+# VALKEY USERGROUP MANAGEMENT
+  ValKeyUserGroup:
+    Type: AWS::ElastiCache::UserGroup
+    Condition: ShouldCreateCacheUserAndGroup
+    Properties:
+      Engine: !Ref Engine
+      UserGroupId: !Sub ${AppShortName}-${EnvName}-valkeycacheadmins
+      UserIds: 
+      - !Ref ValKeyUser
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ValKeyServerless-v4
+
+# VALKEY SERVERLESS RESOURCE
+  ValKeyServerless:
+    Type: AWS::ElastiCache::ServerlessCache
+    Properties:
+      CacheUsageLimits:
+# IF Max data storage and ECPU has value, activate cache usage limits
+        !If
+        - CacheUsageLimits
+        -  
+          DataStorage: 
+            Maximum: !Ref MaxCacheDataStorage
+            Unit: GB
+          ECPUPerSecond: 
+            Maximum: !Ref MaxCacheECPUPerSecond
+        - !Ref "AWS::NoValue"
+      DailySnapshotTime: !Ref DailySnapshotTime
+      Description: Valkey cache deployed as serverless application
+      Engine: !Ref Engine
+      SecurityGroupIds:
+      - !GetAtt ValKeySecurityGroup.GroupId
+      ServerlessCacheName: !Sub ${AppShortName}-${EnvName}-valkey-serverless
+      SnapshotRetentionLimit: !Ref SnapshotRetentionLimit
+      SubnetIds: !Ref AppSubnetIds
+      UserGroupId: !If 
+      - ShouldCreateCacheUserAndGroup
+      - !Ref ValKeyUserGroup
+      - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ValKeyServerless-v4

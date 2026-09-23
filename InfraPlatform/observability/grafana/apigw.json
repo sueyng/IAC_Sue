@@ -1,0 +1,1115 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 83,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The total number API requests in a given period. The SampleCount statistic represents this metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Count",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "SampleCount"
+        }
+      ],
+      "title": "API Request Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The number of server-side errors captured in a given period. The Sum statistic represents this metric, namely, the total count of the 5XXError errors in the given period. The Average statistic represents the 5XXError error rate, namely, the total count of the 5XXError errors divided by the total number of requests during the period. The denominator corresponds to the Count metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Count",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5XXError",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "5XX Error",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The number of client-side errors captured in a given period. API Gateway counts modified gateway response status codes as 4XXError errors. The Sum statistic represents this metric, namely, the total count of the 4XXError errors in the given period. The Average statistic represents the 4XXError error rate, namely, the total count of the 4XXError errors divided by the total number of requests during the period. The denominator corresponds to the Count metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Count",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5XXError",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "4XX Error",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The time between when API Gateway receives a request from a client and when it returns a response to the client. The latency includes the integration latency and other API Gateway overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Latency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The time difference between API Gateway sending the request to the integration and API Gateway receiving the response from the integration. Suppressed for callbacks and mock integrations with WebSocket APIs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "IntegrationLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Integration Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The number of requests served from the API cache in a given period. The Sum statistic represents this metric, namely, the total count of the cache hits in the given period. The Average statistic represents the cache hit rate, namely, the total count of the cache hits divided by the total number of requests during the period. The denominator corresponds to the Count metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheHitCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Cache Hit Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "The number of requests served from the backend in a given period, when API caching is enabled. The Sum statistic represents this metric, namely, the total count of the cache misses in the given period. The Average statistic represents the cache miss rate, namely, the total count of the cache misses divided by the total number of requests during the period. The denominator corresponds to the Count metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheMissCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Cache Miss Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "count",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheHitCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "ApiName": "$apiname"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheMissCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Cache Hit Count vs Miss Count",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "revision": 1,
+  "schemaVersion": 39,
+  "tags": [
+    "cloudwatch",
+    "toolkit"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "CloudWatch",
+          "value": "b8sFz8dNk"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "cloudwatch",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": false,
+          "text": "ap-southeast-1",
+          "value": "ap-southeast-1"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${datasource}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Region",
+        "multi": false,
+        "name": "region",
+        "options": [],
+        "query": {
+          "queryType": "regions",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${datasource}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "API Name",
+        "multi": false,
+        "name": "apiname",
+        "options": [],
+        "query": {
+          "dimensionKey": "ApiName",
+          "metricName": "Count",
+          "namespace": "AWS/ApiGateway",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "$region"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "05-TOOLKIT - API Gateway",
+  "uid": "aetjpav9c2mtcd",
+  "version": 3,
+  "weekStart": ""
+}

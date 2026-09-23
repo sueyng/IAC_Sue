@@ -1,0 +1,406 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation Template for API Gateway CloudWatch Alarms and Monitoring with Multi-Target Group Backend Integration Support V1
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    
+  EnvName:
+    Type: String
+    Description: Environment Name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+      
+  ApiGateway1Name:
+    Type: String
+    Description: API Gateway 1 Name for monitoring
+    
+  ApiGateway1Stage:
+    Type: String
+    Description: API Gateway 1 Stage for monitoring
+    Default: "prod"
+    
+  ApiGateway2Name:
+    Type: String
+    Description: API Gateway 2 Name for monitoring (optional)
+    Default: ""
+    
+  ApiGateway2Stage:
+    Type: String
+    Description: API Gateway 2 Stage for monitoring (optional)
+    Default: "prod"
+    
+  ResourcePath1:
+    Type: String
+    Description: API Gateway Resource path for monitoring (e.g., /api/v1/users, /users, or specific route)
+    Default: ""
+    
+  ResourcePath2:
+    Type: String
+    Description: API Gateway Resource path for monitoring (e.g., /api/v1/orders, /orders, or specific route)
+    Default: ""
+    
+  ResourcePath3:
+    Type: String
+    Description: API Gateway Resource path for monitoring (e.g., /api/v1/products, /products, or specific route)
+    Default: ""
+    
+  Team1SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 1 notifications (e.g., L2 Operations)
+    Default: ""
+    
+  Team2SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 2 notifications (e.g., L3 Support/Development)
+    Default: ""
+    
+  Team3SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 3 notifications (e.g., Infrastructure/Platform)
+    Default: ""
+    
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  HasTeam1Topic: !Not [!Equals [!Ref Team1SNSTopicArn, ""]]
+  HasTeam2Topic: !Not [!Equals [!Ref Team2SNSTopicArn, ""]]
+  HasTeam3Topic: !Not [!Equals [!Ref Team3SNSTopicArn, ""]]
+  HasApiGateway2: !Not [!Equals [!Ref ApiGateway2Name, ""]]
+  HasResourcePath1: !Not [!Equals [!Ref ResourcePath1, ""]]
+  HasResourcePath2: !Not [!Equals [!Ref ResourcePath2, ""]]
+  HasResourcePath3: !Not [!Equals [!Ref ResourcePath3, ""]]
+
+Resources:
+  # API Gateway 1 Alarms
+  # API Gateway 1 5XX Error Alarm
+  ApiGateway1FiveXXErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-5XXError"
+      AlarmDescription: !Sub "API Gateway 5XX errors for ${AppShortName}-${EnvName}-${ApiGateway1Name}"
+      MetricName: 5XXError
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway1Name
+        - Name: Stage
+          Value: !Ref ApiGateway1Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-5XX-Error-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 1 4XX Error Alarm
+  ApiGateway1FourXXErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-4XXError"
+      AlarmDescription: !Sub "API Gateway 4XX errors for ${AppShortName}-${EnvName}-${ApiGateway1Name}"
+      MetricName: 4XXError
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 50
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway1Name
+        - Name: Stage
+          Value: !Ref ApiGateway1Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-4XX-Error-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 1 Latency Alarm
+  ApiGateway1LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-Latency"
+      AlarmDescription: !Sub "API Gateway high latency for ${AppShortName}-${EnvName}-${ApiGateway1Name}"
+      MetricName: Latency
+      Namespace: AWS/ApiGateway
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway1Name
+        - Name: Stage
+          Value: !Ref ApiGateway1Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-Latency-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 1 Integration Latency Alarm
+  ApiGateway1IntegrationLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-IntegrationLatency"
+      AlarmDescription: !Sub "API Gateway high integration latency for ${AppShortName}-${EnvName}-${ApiGateway1Name}"
+      MetricName: IntegrationLatency
+      Namespace: AWS/ApiGateway
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 4000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway1Name
+        - Name: Stage
+          Value: !Ref ApiGateway1Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-IntegrationLatency-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 1 Count (Request Count) High Traffic Alarm - CRITICAL
+  ApiGateway1CountHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-Count-High"
+      AlarmDescription: !Sub "API Gateway unusually high request count for ${AppShortName}-${EnvName}-${ApiGateway1Name}"
+      MetricName: Count
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 2000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway1Name
+        - Name: Stage
+          Value: !Ref ApiGateway1Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway1Name}-CountHigh-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 2 Alarms (Conditional)
+  # API Gateway 2 5XX Error Alarm
+  ApiGateway2FiveXXErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApiGateway2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-5XXError"
+      AlarmDescription: !Sub "API Gateway 5XX errors for ${AppShortName}-${EnvName}-${ApiGateway2Name}"
+      MetricName: 5XXError
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway2Name
+        - Name: Stage
+          Value: !Ref ApiGateway2Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-5XX-Error-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 2 4XX Error Alarm
+  ApiGateway2FourXXErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApiGateway2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-4XXError"
+      AlarmDescription: !Sub "API Gateway 4XX errors for ${AppShortName}-${EnvName}-${ApiGateway2Name}"
+      MetricName: 4XXError
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 50
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway2Name
+        - Name: Stage
+          Value: !Ref ApiGateway2Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-4XX-Error-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 2 Latency Alarm
+  ApiGateway2LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApiGateway2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-Latency"
+      AlarmDescription: !Sub "API Gateway high latency for ${AppShortName}-${EnvName}-${ApiGateway2Name}"
+      MetricName: Latency
+      Namespace: AWS/ApiGateway
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway2Name
+        - Name: Stage
+          Value: !Ref ApiGateway2Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-Latency-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 2 Integration Latency Alarm
+  ApiGateway2IntegrationLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApiGateway2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-IntegrationLatency"
+      AlarmDescription: !Sub "API Gateway high integration latency for ${AppShortName}-${EnvName}-${ApiGateway2Name}"
+      MetricName: IntegrationLatency
+      Namespace: AWS/ApiGateway
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 4000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway2Name
+        - Name: Stage
+          Value: !Ref ApiGateway2Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-IntegrationLatency-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1
+
+  # API Gateway 2 Count (Request Count) High Traffic Alarm - CRITICAL
+  ApiGateway2CountHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApiGateway2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-Count-High"
+      AlarmDescription: !Sub "API Gateway unusually high request count for ${AppShortName}-${EnvName}-${ApiGateway2Name}"
+      MetricName: Count
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 2000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref ApiGateway2Name
+        - Name: Stage
+          Value: !Ref ApiGateway2Stage
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${ApiGateway2Name}-CountHigh-Alarm"
+        - Key: IaCVersion
+          Value: Observability-APIGateway-v1

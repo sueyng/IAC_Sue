@@ -1,0 +1,228 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"             # 📝 e.g. mimo, myapp, webapp (must match S3 buckets)
+AppEnvName: "<edit_here>"               # 📝 e.g. dev, sit, uat, prod
+AWSEnvName: "<edit_here>"               # 📝 e.g. nprd, prod
+
+# VPC CONFIGURATION (mandatory — TISO compliance: Lambda must run inside VPC)
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0abc12345def67890
+SubnetIds: "<edit_here>"                # 📝 Comma-separated private subnet IDs, e.g. subnet-0aaa111,subnet-0bbb222 (min 2 for HA)
+VpcCidr1: "<edit_here>"                 # 📝 Primary VPC CIDR, e.g. 10.193.0.0/16
+VpcCidr2: ""                            # Secondary VPC CIDR (optional, leave blank if not applicable)
+VpcCidr3: ""                            # Tertiary VPC CIDR (optional, leave blank if not applicable)
+VpcCidr4: ""                            # Quaternary VPC CIDR (optional, leave blank if not applicable)
+VpcCidr5: ""                            # Quinary VPC CIDR (optional, leave blank if not applicable)
+S3PrefixListId: ""                      # S3 Gateway Endpoint Prefix List ID, e.g. pl-xxxxxxxx (leave blank if S3 uses Interface Endpoint)
+
+# ARTIFACT CONFIGURATION
+LambdaPackageName: "<edit_here>"        # 📝 e.g. lambda_function.zip
+LambdaLayerZipfileKey: "<edit_here>"    # 📝 e.g. lambda_layer_v1.1.zip (Pyarrow dependency V1.1)
+GluePackageName: "<edit_here>"          # 📝 e.g. audit_convert_iceberg.py
+StepFunctionFileName: "auditlog_state_machine.json"  # Step Functions definition (default - auditlog_state_machine.json)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (leave empty if not needed)
+# ========================================================================
+# SQS Batch Processing
+SQSBatchWindowSize: "1000"                # Max messages per batch (1-10000, default - 1000)
+SQSBatchWindowInterval: "300"             # Batch window in seconds (0-300, default - 300)
+
+# Glue Job Configuration
+NumberOfWorkers: "2"                      # Glue workers (1-100, default - 2)
+GlueWorkerType: "G.1X"                    # Worker type - G.1X, G.2X, G.4X, G.8X (default - G.1X)
+MaxConcurrentRuns: "1"                    # Max concurrent runs (1-10, default - 1)
+MaxRetries: "0"                           # Retry attempts (0-3, default - 0)
+
+# Iceberg Table Management
+SnapshotExpiryHours: "168"                # Snapshot retention hours (168 = 7 days)
+MinSnapshotsToKeep: "2"                   # Min snapshots to retain (1-10, default - 2)
+CompactionStrategy: "copy-on-write"       # Compaction - copy-on-write or merge-on-read
+
+# Scheduling
+CronExpressionRaw: "cron(0 17 * * ? *)"   # ETL schedule (17:00 UTC = 1:00 AM SGT daily)
+
+# Observability
+EnableXRayTracing: "true"                 # Enable X-Ray tracing (Active or PassThrough mode)
+
+# Job Identifier (optional, leave default for audit logs)
+JobIdentifier: "auditlog"               # Job identifier (default - auditlog)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application identifier (e.g. mimo, myapp, webapp)
+#   Creates resources: {AppShortName}-{AppEnvName}-auditlog-*
+#   Must match S3 buckets from cf_s3buckets.yaml
+#   Format: Lowercase alphanumeric
+
+# AppEnvName
+#   Allowed Values: dev, sit, sit1, sit2, sit3, sit-a, sit-b, sit-c, uat, uat-a, uat-b, uat-c, pt, pp, pp-a, pp-b, pp-c, prod, prod-a, prod-b, prod-c
+#   Purpose: Environment designation, used in resource naming and S3 paths
+#   Creates Glue database: {AppShortName}_{AppEnvName}_auditlog_raw_db
+
+# AWSEnvName
+#   Allowed Values: nprd, prod
+#   Purpose: S3 bucket prefix, must match cf_s3buckets.yaml deployment
+#   Determines DeletionPolicy (prod: Retain, nprd: Delete)
+
+# --- ARTIFACT CONFIGURATION ---
+# LambdaPackageName
+#   Value: Lambda deployment package filename (e.g. lambda_function.zip)
+#   Location: s3://{AppShortName}-{AWSEnvName}-app-artifact/{AppEnvName}/lambda/{LambdaPackageName}
+#   Runtime: Python 3.13
+#   Handler: lambda_function.lambda_handler (default)
+#   Requirements: SQS batch processing, Parquet writing with Pyarrow
+
+# LambdaLayerZipfileKey
+#   Value: Lambda layer filename (e.g. lambda_layer.zip)
+#   Location: s3://{AppShortName}-{AWSEnvName}-app-artifact/{AppEnvName}/lambda/{LambdaLayerZipfileKey}
+#   Purpose: Pyarrow library for Parquet serialization
+#   Compatible runtime: Python 3.13
+
+# GluePackageName
+#   Value: Glue ETL script filename (e.g. audit_convert_iceberg.py)
+#   Location: s3://{AppShortName}-{AWSEnvName}-app-runtime/{AppEnvName}/glue-script/{GluePackageName}
+#   Purpose: Transform raw Parquet to Iceberg format with schema evolution
+
+# StepFunctionFileName
+#   Value: Step Functions state machine definition (JSON)
+#   Location: s3://{AppShortName}-{AWSEnvName}-app-artifact/{AppEnvName}/sf-script/{StepFunctionFileName}
+#   Default: auditlog_state_machine.json
+#   Purpose: Orchestrates Crawler → Glue Job → SNS notification
+
+# --- SQS BATCH PROCESSING ---
+# SQSBatchWindowSize
+#   Range: 1-10000
+#   Default: 1000
+#   Purpose: Max messages Lambda processes per invocation
+#   Recommendations:
+#     - Low traffic (< 100 msgs/min): 100-500
+#     - Medium traffic (100-1000 msgs/min): 500-1000
+#     - High traffic (> 1000 msgs/min): 1000-10000
+
+# SQSBatchWindowInterval
+#   Range: 0-300 seconds
+#   Default: 300 (5 minutes)
+#   Purpose: Max wait time before processing batch
+#   Lambda triggers when EITHER batch size OR interval is reached
+#   Recommendations:
+#     - Real-time: 0-60 seconds
+#     - Standard: 60-300 seconds
+
+# --- GLUE JOB CONFIGURATION ---
+# NumberOfWorkers
+#   Range: 1-100
+#   Default: 2
+#   Recommendations:
+#     - Small datasets (< 1 GB): 2 workers
+#     - Medium datasets (1-10 GB): 2-5 workers
+#     - Large datasets (> 10 GB): 5-20 workers
+
+# GlueWorkerType
+#   Options:
+#     - G.1X: 4 vCPU, 16 GB RAM (best for most workloads)
+#     - G.2X: 8 vCPU, 32 GB RAM (large datasets 10-100 GB)
+#     - G.4X: 16 vCPU, 64 GB RAM (very large datasets > 100 GB)
+#     - G.8X: 32 vCPU, 128 GB RAM (extra large datasets)
+
+# MaxConcurrentRuns
+#   Range: 1-10
+#   Default: 1 (sequential processing, prevents conflicts)
+#   Use 2+ for parallel processing of independent partitions
+
+# MaxRetries
+#   Range: 0-3
+#   Default: 0 (no retries, fail immediately)
+#   Production: 1-2 for transient error handling
+#   Note: Only for idempotent jobs
+
+# --- ICEBERG TABLE MANAGEMENT ---
+# SnapshotExpiryHours
+#   Range: Any positive integer (hours)
+#   Default: 168 (7 days)
+#   Purpose: Snapshot retention for time-travel queries
+#   Recommendations:
+#     - Development: 24-72 hours
+#     - Production: 168 hours (7 days)
+#     - Compliance: 720+ hours (30+ days)
+#   Time-travel query example:
+#     SELECT * FROM audit_logs FOR SYSTEM_TIME AS OF '2024-01-15 10:00:00'
+
+# MinSnapshotsToKeep
+#   Range: 1-10
+#   Default: 2 (current + previous)
+#   Purpose: Safety net to prevent deletion of recent snapshots
+#   Protects against accidental data loss
+
+# CompactionStrategy
+#   Options:
+#     - copy-on-write: Rewrites entire files (better read performance, slower writes)
+#     - merge-on-read: Delta files merged at query time (faster writes, slower reads)
+#   Recommendation: copy-on-write for audit logs (mostly append, read-heavy)
+
+# --- SCHEDULING ---
+# CronExpressionRaw
+#   Format: cron(minute hour day-of-month month day-of-week year)
+#   All times in UTC
+#   Examples:
+#     - Daily 1 AM SGT: cron(0 17 * * ? *)
+#     - Every 6 hours: cron(0 */6 * * ? *)
+#     - Weekdays 1 AM SGT: cron(0 17 * * MON-FRI *)
+#     - Hourly: cron(0 */1 * * ? *)
+
+# --- JOB IDENTIFIER ---
+# JobIdentifier
+#   Value: Unique job identifier (e.g. auditlog, resident-master)
+#   Default: auditlog
+#   Format: Letters, numbers, hyphens only
+#   Purpose: Used in SQS queue names, S3 paths, table names
+
+# --- VPC CONFIGURATION ---
+# VpcId
+#   Value: VPC ID where Lambda ENIs and Security Group will be created
+#   Format: vpc-xxxxxxxxxxxxxxxxx
+#   Requirement: Mandatory (TISO compliance — Lambda must run inside VPC)
+
+# SubnetIds
+#   Value: Comma-separated list of private subnet IDs
+#   Format: subnet-xxxxxxxxx,subnet-yyyyyyyyy
+#   Requirement: Mandatory, minimum 2 subnets for high availability
+#   Note: Subnets must be in the same VPC as VpcId and must have routes to
+#         required AWS service VPC Endpoints (CloudWatch Logs, X-Ray, S3)
+
+# VpcCidr1
+#   Value: Primary VPC CIDR block
+#   Format: x.x.x.x/x (e.g., 10.193.0.0/16)
+#   Purpose: Lambda SG egress rule — allows HTTPS to Interface VPC Endpoints
+#            (CloudWatch Logs, X-Ray) whose ENIs are addressed within this CIDR
+#   Requirement: Mandatory
+
+# VpcCidr2 / VpcCidr3 / VpcCidr4 / VpcCidr5
+#   Value: Additional VPC CIDR blocks (secondary, tertiary, etc.)
+#   Format: x.x.x.x/x
+#   Requirement: Optional — provide only if the VPC has additional CIDR ranges
+#                that host Interface Endpoint ENIs
+
+# S3PrefixListId
+#   Value: Managed prefix list ID for the S3 Gateway Endpoint in this region
+#   Format: pl-xxxxxxxx
+#   Purpose: Lambda SG egress rule — allows HTTPS to S3 via Gateway Endpoint
+#   Requirement: Optional — provide when S3 access is via a Gateway Endpoint;
+#                leave blank when S3 traffic is routed through an Interface
+#                Endpoint whose ENI is within one of the VpcCidr1-5 ranges

@@ -1,0 +1,727 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# S3 ORIGIN CONFIGURATION
+NumberOfBuckets: "<edit_here>"          # 📝 1, 2, 3, or 4 (number of S3 bucket origins)
+DefaultPage: "index.html"               # Default page for SPA routing and error responses
+
+# CUSTOM DOMAIN CONFIGURATION
+UseCustomDomain: "<edit_here>"          # 📝 true or false
+CustomDomainName: "<edit_here>"         # 📝 e.g. app.example.com (only if UseCustomDomain=true)
+CloudFrontCertArn: "<edit_here>"        # 📝 e.g. arn:aws:acm:us-east-1:123456789012:certificate/abc123 (⚠️ MUST be us-east-1)
+
+# GEO-RESTRICTION
+GeoLocation: "<edit_here>"              # 📝 e.g. SG, SG,MY,TH,VN (comma-separated country codes, or "" for all countries)
+
+# WAF WEB ACL (optional, leave empty for initial deployment)
+WAFWebACLArn: ""                        # 📝 e.g. arn:aws:wafv2:us-east-1:123456789012:global/webacl/myapp-waf/... (HCC team enables manually first)
+
+# TLS SECURITY POLICY (NEW in v4 — was hardcoded TLSv1.2_2021 in v3)
+CloudFrontSecurityPolicy: "TLSv1.2_2021"  # TLSv1.2_2021 (default, preserves v3 behavior), TLSv1.2_2025, TLSv1.3_2025
+
+# CLOUDFRONT LOGGING V2 MANUAL SETUP ACKNOWLEDGEMENT
+CloudFrontLoggingV2ManualSetupRequired: "CONFIRM"  # Acknowledge logging v2 is NOT configured by this template and must be enabled manually from CloudFront console after deployment
+
+# ========================================
+# BUCKET 1 - PRIMARY ORIGIN (REQUIRED)
+# ========================================
+Bucket1Name: "<edit_here>"              # 📝 e.g. myapp-nprd-dev-main-content
+Bucket1FunctionEnabled: "<edit_here>"   # 📝 true or false (enable CloudFront Function for URL rewriting)
+Bucket1FunctionName: "<edit_here>"      # 📝 e.g. myapp-nprd-dev-main-url-rewrite (only if Bucket1FunctionEnabled=true)
+# Serves: /* (default catch-all path)
+# Common use: Main SPA application
+
+# ========================================
+# BUCKET 2 - SECONDARY ORIGIN (optional, only if NumberOfBuckets >= 2)
+# ========================================
+Bucket2Name: ""                         # 📝 e.g. myapp-nprd-dev-api-docs
+Bucket2PathPattern: ""                  # 📝 e.g. /api/*, /docs/*, /assets/*
+Bucket2FunctionEnabled: false           # true or false
+Bucket2FunctionName: ""                 # 📝 e.g. myapp-nprd-dev-api-auth (only if Bucket2FunctionEnabled=true)
+# Common uses: API docs (/api/*), assets (/assets/*), admin (/admin/*)
+
+# ========================================
+# BUCKET 3 - TERTIARY ORIGIN (optional, only if NumberOfBuckets >= 3)
+# ========================================
+Bucket3Name: ""                         # 📝 e.g. myapp-nprd-dev-assets
+Bucket3PathPattern: ""                  # 📝 e.g. /assets/*, /media/*
+Bucket3FunctionEnabled: false           # true or false
+Bucket3FunctionName: ""                 # 📝 Function name (only if Bucket3FunctionEnabled=true)
+
+# ========================================
+# BUCKET 4 - QUATERNARY ORIGIN (optional, only if NumberOfBuckets = 4)
+# ========================================
+Bucket4Name: ""                         # 📝 e.g. myapp-nprd-dev-downloads
+Bucket4PathPattern: ""                  # 📝 e.g. /downloads/*, /files/*
+Bucket4FunctionEnabled: false           # true or false
+Bucket4FunctionName: ""                 # 📝 Function name (only if Bucket4FunctionEnabled=true)
+
+# ========================================
+# RESPONSE HEADERS POLICY (NEW in v4 — built-in OWASP-aligned defaults)
+# ========================================
+# Set EnableResponseHeadersPolicy=false to skip the entire policy (preserves v3 behavior)
+# All defaults below are OWASP-aligned. Only relax if your SPA needs to.
+
+EnableResponseHeadersPolicy: "true"     # Master toggle (true = attach policy to all cache behaviors)
+
+# --- SECURITY HEADERS (native CloudFront SecurityHeadersConfig) ---
+EnableHSTS: "true"                      # HTTP Strict-Transport-Security
+HSTSMaxAge: "31536000"                  # HSTS max-age in seconds (31536000 = 1 year, OWASP recommended)
+HSTSIncludeSubdomains: "true"           # Apply HSTS to subdomains
+HSTSPreload: "false"                    # ⚠️ irreversible at browser level — only enable for stable prod domain
+
+EnableXContentTypeOptions: "true"       # X-Content-Type-Options: nosniff (prevents MIME sniffing)
+
+EnableXFrameOptions: "true"             # X-Frame-Options (clickjacking protection)
+XFrameOptionsValue: "DENY"              # DENY (strictest) or SAMEORIGIN (allow same-origin iframes)
+
+EnableReferrerPolicy: "true"            # Referrer-Policy
+ReferrerPolicyValue: "strict-origin-when-cross-origin"  # OWASP recommended
+
+EnableXSSProtection: "false"            # X-XSS-Protection (deprecated — modern browsers ignore; CSP is the replacement)
+
+EnableCSP: "true"                       # Content-Security-Policy
+CSPValue: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+# ⚠️ Default CSP blocks ALL external resources. If your SPA loads from CDNs (Google Fonts, FontAwesome,
+#    external APIs), you MUST loosen this — see PARAMETER REFERENCE below for examples.
+
+# --- OWASP CROSS-ORIGIN HEADERS (CustomHeadersConfig) ---
+EnableCOOP: "true"                      # Cross-Origin-Opener-Policy
+COOPValue: "same-origin"                # same-origin (strictest), same-origin-allow-popups, unsafe-none
+
+EnableCOEP: "true"                      # Cross-Origin-Embedder-Policy
+COEPValue: "require-corp"               # ⚠️ require-corp blocks 3rd-party assets without CORP headers — disable if SPA uses external CDN images/fonts
+
+EnableCORP: "true"                      # Cross-Origin-Resource-Policy
+CORPValue: "same-origin"                # same-origin, same-site, cross-origin
+
+EnablePermissionsPolicy: "true"         # Permissions-Policy (browser feature restrictions)
+PermissionsPolicyValue: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+# Default denies all listed features. Allowlist if SPA needs camera/mic/geolocation.
+
+# --- CUSTOM HEADERS (up to 5 — leave Name empty to skip slot) ---
+CustomHeader1Name: ""                   # 📝 e.g. X-App-Version
+CustomHeader1Value: ""                  # 📝 e.g. 1.2.3
+CustomHeader1Override: "true"           # true = override origin headers, false = only add if not present
+CustomHeader2Name: ""
+CustomHeader2Value: ""
+CustomHeader2Override: "true"
+CustomHeader3Name: ""
+CustomHeader3Value: ""
+CustomHeader3Override: "true"
+CustomHeader4Name: ""
+CustomHeader4Value: ""
+CustomHeader4Override: "true"
+CustomHeader5Name: ""
+CustomHeader5Value: ""
+CustomHeader5Override: "true"
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates CloudFront distribution name: {AppShortName}-{EnvName}-cloudfront
+# - Creates CloudFront Function names: {AppShortName}-{EnvName}-{function-purpose}
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose: Used in resource naming and configuration
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- NUMBER OF BUCKETS ---
+# NumberOfBuckets: Number of S3 bucket origins for CloudFront
+#
+# Purpose: Defines how many S3 buckets serve content through CloudFront
+#
+# Valid Values: 1, 2, 3, 4
+#
+# Single Bucket (NumberOfBuckets=1):
+# - Use case: Simple SPA with all content in one bucket
+# - Bucket1: Main application (serves /* paths)
+# - Example: Basic React/Vue/Angular app
+#
+# Two Buckets (NumberOfBuckets=2):
+# - Use case: Main app + documentation/assets separation
+# - Bucket1: Main SPA application (/* catch-all)
+# - Bucket2: API docs (/api/*), assets (/assets/*), or admin (/admin/*)
+# - Example: Main app + Swagger/OpenAPI docs
+#
+# Three Buckets (NumberOfBuckets=3):
+# - Use case: Microfrontend architecture
+# - Bucket1: Main shell application (/* catch-all)
+# - Bucket2: Feature A microfrontend (/feature-a/*)
+# - Bucket3: Feature B microfrontend (/feature-b/*)
+# - Example: Multi-team microfrontend architecture
+#
+# Four Buckets (NumberOfBuckets=4):
+# - Use case: Complex multi-origin setup
+# - Bucket1: Main application (/* catch-all)
+# - Bucket2: API documentation (/api/*)
+# - Bucket3: Static assets (/assets/*)
+# - Bucket4: Admin interface (/admin/*)
+# - Example: Enterprise application with multiple content sources
+
+# --- DEFAULT PAGE ---
+# DefaultPage: Default document for SPA routing
+#
+# Purpose: Defines which file CloudFront serves for root requests and error responses
+#
+# Default: index.html
+# Example: index.html, home.html, app.html
+#
+# SPA Behavior:
+# - Root request (/) → serves /index.html
+# - Error responses (404) → serves /index.html (client-side routing handles route)
+# - Direct file requests (/assets/style.css) → serves file as-is
+#
+# Requirements:
+# - File must exist in S3 bucket
+# - Typically the entry point for SPA frameworks (React, Vue, Angular)
+
+# --- USE CUSTOM DOMAIN ---
+# UseCustomDomain: Whether to use custom domain or CloudFront default domain
+#
+# Purpose: Controls domain configuration
+#
+# Values:
+# - true: Use custom domain (requires CustomDomainName and CloudFrontCertArn)
+# - false: Use CloudFront default domain (d1234...cloudfront.net)
+#
+# When to use "true":
+# ✅ Production environments
+# ✅ User-facing applications
+# ✅ Branded URLs needed (app.company.com)
+#
+# When to use "false":
+# ❌ Development/testing environments
+# ❌ Internal tools without domain requirements
+# ❌ Quick prototypes
+
+# --- CUSTOM DOMAIN NAME ---
+# CustomDomainName: Custom domain for CloudFront distribution
+#
+# Purpose: User-friendly domain name for application (only if UseCustomDomain=true)
+#
+# Format: Fully qualified domain name
+# Example: app.example.com, www.example.com, portal.company.sg
+#
+# Requirements (if UseCustomDomain=true):
+# - Domain must be owned or controlled
+# - ACM certificate must include this domain
+# - DNS must be configured to point to CloudFront distribution
+# - Leave empty ("") if UseCustomDomain=false
+#
+# DNS Configuration Required:
+# - Create Route53 Alias or CNAME record pointing to CloudFront domain
+# - See "DNS CONFIGURATION" section below for details
+
+# --- CLOUDFRONT CERT ARN ---
+# CloudFrontCertArn: ACM certificate ARN for custom domain
+#
+# Purpose: Enables HTTPS for custom domain (only if UseCustomDomain=true)
+#
+# Format: arn:aws:acm:us-east-1:{account}:certificate/{id}
+# Example: arn:aws:acm:us-east-1:123456789012:certificate/abc123-def456-...
+#
+# ⚠️ CRITICAL REQUIREMENTS:
+# 1. Certificate MUST be in us-east-1 region (CloudFront requirement)
+# 2. Certificate status must be "Issued"
+# 3. Certificate must include CustomDomainName in Subject Alternative Names
+# 4. Leave empty ("") if UseCustomDomain=false
+#
+# Creating Certificate in us-east-1:
+# 1. Switch to us-east-1 region in AWS Console
+# 2. Navigate to: Certificate Manager → Request certificate
+# 3. Add domain names:
+#    - Exact domain: app.example.com
+#    - Or wildcard: *.example.com (recommended for flexibility)
+# 4. Choose validation method: DNS (recommended) or Email
+# 5. Complete DNS validation (add CNAME records to DNS)
+# 6. Wait for status to change to "Issued"
+# 7. Copy certificate ARN
+# 8. Update CloudFrontCertArn parameter
+#
+# Finding Existing Certificate:
+# AWS Console (us-east-1 only) → Certificate Manager → List certificates
+# - Verify domain matches CustomDomainName
+# - Copy ARN
+#
+# Common Mistakes:
+# ❌ Certificate in wrong region (ap-southeast-1, eu-west-1, etc.)
+# ❌ Certificate status "Pending validation"
+# ❌ Domain name mismatch between certificate and CustomDomainName
+# ✅ Certificate in us-east-1, status "Issued", domain matches
+
+# --- GEO LOCATION ---
+# GeoLocation: Geographic restriction for content access
+#
+# Purpose: Restrict access to CloudFront distribution by country
+#
+# Format: Comma-separated ISO 3166-1 alpha-2 country codes (no spaces)
+# Example: SG, SG,MY,TH,VN, SG,MY,TH,VN,PH,ID
+#
+# Common Country Codes:
+# - SG: Singapore
+# - MY: Malaysia
+# - TH: Thailand
+# - VN: Vietnam
+# - PH: Philippines
+#
+# Examples:
+# GeoLocation: "SG"                    # Singapore only
+# GeoLocation: "SG,MY,TH,VN,PH,ID"    # Southeast Asia
+# GeoLocation: "SG,MY,GB,US"          # Singapore, Malaysia, UK, US
+# GeoLocation: ""                      # All countries (no restriction)
+#
+# How It Works:
+# - CloudFront uses IP geolocation to determine user's country
+# - Users from allowed countries can access content
+# - Users from blocked countries receive HTTP 403 Forbidden
+#
+# Use Cases:
+# - Compliance with regional data regulations
+# - Licensing restrictions
+# - Content localization
+# - Security requirements (limit to specific regions)
+#
+# Leave empty ("") for no restrictions (worldwide access)
+
+# --- WAF WEB ACL ARN ---
+# WAFWebACLArn: AWS WAF Web ACL ARN for CloudFront protection
+#
+# Purpose: Adds Web Application Firewall protection to CloudFront distribution
+#
+# Format: arn:aws:wafv2:us-east-1:{account}:global/webacl/{name}/{id}
+# Example: arn:aws:wafv2:us-east-1:123456789012:global/webacl/myapp-waf/a1b2c3d4-...
+#
+# ⚠️ IMPORTANT: Two-Phase WAF Deployment Process
+#
+# Phase 1: Initial Deployment (No WAF)
+# - Set WAFWebACLArn: ""
+# - Deploy CloudFormation stack
+# - CloudFront distribution created without WAF
+#
+# Phase 2: WAF Enablement (After Deployment)
+# 1. Contact HCC team to enable WAF
+# 2. HCC team manually enables WAF from AWS Console
+# 3. Wait for HCC team confirmation
+# 4. Get WAF Web ACL ARN from AWS WAF Console
+# 5. Update WAFWebACLArn parameter with ARN
+# 6. Update CloudFormation stack
+#
+# Why This Process:
+# - Prevents WAF disassociation during future stack updates
+# - Maintains consistency between manual enablement and CloudFormation
+# - HCC team controls WAF configuration before CloudFormation takeover
+#
+# WAF Features:
+# - Protection against common web exploits (SQL injection, XSS, CSRF)
+# - Rate limiting (DDoS protection)
+# - IP whitelist/blacklist
+# - Bot detection and mitigation
+# - Custom rules for application-specific threats
+# - Real-time monitoring and logging
+#
+# Finding WAF Web ACL ARN (after HCC enablement):
+# AWS Console → WAF & Shield → Web ACLs (us-east-1 region)
+# - Select Web ACL associated with CloudFront distribution
+# - Copy ARN from summary page
+#
+# Leave empty ("") for initial deployment or if WAF not needed
+
+# --- TLS SECURITY POLICY (NEW in v4) ---
+# CloudFrontSecurityPolicy: Minimum TLS protocol version for viewer connections
+#
+# Purpose: Controls the minimum TLS version browsers must use to connect to CloudFront
+#
+# Allowed Values:
+# - TLSv1.2_2021 (default — preserves v3 behavior, was hardcoded in v3)
+# - TLSv1.2_2025 (TLS 1.2+ with updated cipher suites for 2025 baseline)
+# - TLSv1.3_2025 (TLS 1.3 only — most secure, may block older clients)
+#
+# When to upgrade:
+# ✅ TLSv1.2_2025: when you want updated cipher suites without dropping TLS 1.2 clients
+# ✅ TLSv1.3_2025: production with modern client base only (no IE11, no old Android)
+# ❌ Do not change to TLSv1.3_2025 if SPA serves enterprise users on legacy systems
+#
+# Backward compatibility: Default keeps v3 behavior — no client impact unless you change it
+
+# --- CLOUDFRONT LOGGING V2 MANUAL SETUP ACKNOWLEDGEMENT (NEW in v4) ---
+# CloudFrontLoggingV2ManualSetupRequired
+#
+# Purpose:
+# - Confirms the project team understands CloudFront logging v2 is not configured by this template.
+# - Prevents silent deployment without a logging-v2 follow-up action.
+#
+# Required Value:
+# - CONFIRM
+#
+# Required follow-up after stack deployment:
+# 1. Create or select a compliant S3 log bucket separately.
+# 2. Enable CloudFront logging v2 manually from the CloudFront console.
+# 3. Select the prepared S3 bucket as the logging destination.
+#
+# Upgrade note:
+# - v4 removes legacy CloudFront logging from the distribution.
+# - For v3 upgrades, deploy the v3 retain patch first so the legacy log bucket is retained when removed from stack control.
+# - Reusing the old v3 log bucket is possible only after manual cleanup of legacy ACL grants and conversion to the current S3 ownership/security baseline.
+
+# --- BUCKET 1 NAME ---
+# Bucket1Name: Primary S3 bucket name (required)
+#
+# Purpose: Main S3 bucket for content hosting
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: myapp-nprd-dev-main-content, webapp-prod-app
+#
+# Requirements:
+# - Bucket must exist before CloudFormation deployment OR template will create it
+# - Bucket will be configured with:
+#   - Public access blocked
+#   - Origin Access Control (OAC) for CloudFront-only access
+#   - Versioning enabled (recommended)
+# - Bucket serves /* (catch-all) path pattern
+#
+# Common Uses:
+# - Main SPA application (React, Vue, Angular)
+# - Single-page application entry point
+# - Default content for all paths not matched by other buckets
+
+# --- BUCKET 1 FUNCTION ENABLED ---
+# Bucket1FunctionEnabled: Enable CloudFront Function for Bucket1
+#
+# Purpose: Controls whether CloudFront Function is attached to Bucket1 origin
+#
+# Values:
+# - true: Attach CloudFront Function (requires Bucket1FunctionName)
+# - false: No function attached
+#
+# When to use "true":
+# ✅ SPA routing (rewrite all routes to /index.html)
+# ✅ URL manipulation (add/remove trailing slashes)
+# ✅ Security headers (Content-Security-Policy, X-Frame-Options)
+# ✅ A/B testing or feature flags
+#
+# When to use "false":
+# ❌ Static site with no routing logic
+# ❌ Simple file serving
+
+# --- BUCKET 1 FUNCTION NAME ---
+# Bucket1FunctionName: CloudFront Function name for Bucket1
+#
+# Purpose: Identifies CloudFront Function for URL rewriting/manipulation (only if Bucket1FunctionEnabled=true)
+#
+# Format: 1-64 characters, letters, numbers, hyphens, underscores
+# Example: myapp-nprd-dev-main-url-rewrite, webapp-prod-spa-router
+#
+# Requirements (if Bucket1FunctionEnabled=true):
+# - Function name must be unique within account
+# - Template creates placeholder function (update code in AWS Console after deployment)
+# - Leave empty ("") if Bucket1FunctionEnabled=false
+#
+# Common Function: SPA URL Rewrite
+# Purpose: Serve index.html for all routes without file extensions
+#
+# Example Code:
+# function handler(event) {
+#     var request = event.request;
+#     var uri = request.uri;
+#
+#     // Serve index.html for routes without file extensions
+#     if (!uri.includes('.')) {
+#         request.uri = '/index.html';
+#     }
+#
+#     return request;
+# }
+#
+# Updating Function Code:
+# 1. AWS Console → CloudFront → Functions
+# 2. Select function name
+# 3. Edit function code
+# 4. Test with CloudFront test runner
+# 5. Publish function
+# 6. Wait 5-10 minutes for global propagation
+
+# --- BUCKET 2/3/4 CONFIGURATION ---
+# Bucket2/3/4Name, Bucket2/3/4PathPattern, Bucket2/3/4FunctionEnabled, Bucket2/3/4FunctionName
+#
+# Purpose: Additional S3 bucket origins for path-based routing (optional)
+#
+# Only configure if NumberOfBuckets >= 2, 3, or 4
+#
+# Path Pattern Examples:
+# - /api/*: API documentation (Swagger, OpenAPI)
+# - /docs/*: User documentation
+# - /assets/*: Static assets (images, fonts, CSS)
+# - /admin/*: Admin interface
+# - /legacy/v1/*: Legacy content
+# - /feature-a/*: Microfrontend feature A
+# - /feature-b/*: Microfrontend feature B
+# - /downloads/*: Downloadable files
+# - /media/*: Images, videos, media files
+#
+# Path Pattern Priority:
+# - CloudFront evaluates specific path patterns (Bucket2-4) BEFORE default (Bucket1)
+# - More specific patterns take precedence
+# - Bucket1 (/*) is catch-all for unmatched paths
+#
+# Example Multi-Bucket Setup:
+# NumberOfBuckets: 3
+# Bucket1: myapp-nprd-main (serves /*)
+# Bucket2: myapp-nprd-api-docs (serves /api/*)
+# Bucket3: myapp-nprd-assets (serves /assets/*)
+#
+# Request Routing:
+# - https://app.example.com/api/v1/docs → Bucket2
+# - https://app.example.com/assets/logo.png → Bucket3
+# - https://app.example.com/dashboard → Bucket1 (catch-all)
+#
+# Best Practices:
+# - Use specific patterns to avoid conflicts
+# - Avoid overlapping patterns (e.g., /api/* and /api/v1/*)
+# - Test with CloudFront pattern matching tool
+# - Document path routing in team wiki
+#
+# Leave empty ("") if not using additional buckets
+
+# --- RESPONSE HEADERS POLICY (NEW in v4) ---
+# Adds an OWASP-aligned set of HTTP response headers to all CloudFront responses.
+# Master toggle: EnableResponseHeadersPolicy="false" disables the entire policy
+# (preserves v3 behavior — no headers attached).
+#
+# Headers added (when enabled, with default values):
+# - Strict-Transport-Security: max-age=31536000; includeSubDomains
+# - X-Content-Type-Options: nosniff
+# - X-Frame-Options: DENY
+# - Referrer-Policy: strict-origin-when-cross-origin
+# - Content-Security-Policy: default-src 'self'; ... ; frame-ancestors 'none'
+# - Cross-Origin-Opener-Policy: same-origin
+# - Cross-Origin-Embedder-Policy: require-corp
+# - Cross-Origin-Resource-Policy: same-origin
+# - Permissions-Policy: accelerometer=(), camera=(), geolocation=(), ...
+#
+# Verify after deploy:
+#   curl -I https://<cloudfront-domain>/
+#
+# ===== Common SPA scenarios — what to change from defaults =====
+#
+# Scenario: SPA loads Google Fonts / FontAwesome / external CDN
+# - CSPValue: Add CDN hosts to script-src, style-src, font-src
+#   Example: "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net;
+#            style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+#            font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;
+#            connect-src 'self'; frame-ancestors 'none'"
+#
+# Scenario: SPA calls external API (3rd-party REST/GraphQL)
+# - CSPValue: Add API host to connect-src
+#   Example: connect-src 'self' https://api.example.com
+#
+# Scenario: SPA embedded in iframe (corporate portal, partner site)
+# - XFrameOptionsValue: "SAMEORIGIN" (or EnableXFrameOptions: "false" to remove)
+# - CSPValue: change frame-ancestors 'none' to frame-ancestors 'self' or specific origin
+#
+# Scenario: SPA loads third-party images / videos / scripts
+# - EnableCOEP: "false"   # require-corp blocks 3rd-party assets without CORP headers
+#
+# Scenario: SPA needs camera, microphone, or geolocation
+# - PermissionsPolicyValue: "camera=(self), microphone=(self), geolocation=(self), ..."
+#   (allowlist needed features instead of denying all)
+#
+# Scenario: Add app version header for support / debugging
+# - CustomHeader1Name: "X-App-Version"
+# - CustomHeader1Value: "1.2.3"
+# - CustomHeader1Override: "true"
+#
+# Scenario: Disable entire policy temporarily (debugging)
+# - EnableResponseHeadersPolicy: "false"
+#
+# ===== Operational notes =====
+#
+# - CSP `default-src 'self'` blocks ALL external resources by default. Most CSP
+#   violations show up in the browser DevTools Console as
+#   "Content Security Policy: ..." messages. Always test in non-prod first.
+#
+# - COEP `require-corp` is the strictest setting. Most third-party CDNs do NOT
+#   send CORP headers, so embedded images/fonts/scripts from external origins
+#   will be blocked. If your SPA pulls from third-party CDNs, set
+#   EnableCOEP: "false".
+#
+# - HSTS preload (HSTSPreload="true") submits your domain to browser preload
+#   lists — IRREVERSIBLE at browser level. Only enable for production with
+#   stable, long-term domain.
+#
+# - CloudFront caches responses including headers. After changing any header
+#   parameter and redeploying, run:
+#     aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
+#   Otherwise old headers serve until TTL expires.
+#
+# - X-XSS-Protection is intentionally OFF (deprecated). Modern browsers ignore
+#   it; CSP is the replacement.
+
+# --- DNS CONFIGURATION ---
+# After CloudFormation deployment, configure DNS to point to CloudFront distribution.
+#
+# Step 1: Get CloudFront Domain Name
+# AWS Console → CloudFormation → Stacks → Select stack → Outputs
+# - Copy CloudFrontDomainName (e.g., d1234abcd5678.cloudfront.net)
+#
+# Step 2: Configure DNS
+#
+# Option 1: Route53 Alias Record (Recommended)
+# - Navigate to: Route53 → Hosted zones → Select domain
+# - Create record:
+#   - Record name: app (for app.example.com) or blank (for example.com)
+#   - Record type: A - IPv4 address
+#   - Alias: Yes
+#   - Route traffic to: Alias to CloudFront distribution
+#   - Select CloudFront distribution from dropdown
+#   - Routing policy: Simple
+#   - Evaluate target health: No
+# - Benefits:
+#   - Free (no query charges)
+#   - Supports apex domain (example.com)
+#   - Automatic IP updates
+#
+# Option 2: CNAME Record (External DNS or non-Route53)
+# - Create record:
+#   - Record type: CNAME
+#   - Name: app.example.com
+#   - Value: d1234abcd5678.cloudfront.net
+#   - TTL: 300 seconds (5 minutes)
+# - Limitation: Cannot use for apex domain (example.com)
+#
+# Step 3: Verify DNS Propagation
+# - Use DNS checker: https://www.whatsmydns.net/
+# - Enter domain name (app.example.com)
+# - Check global DNS propagation
+# - Propagation time: 5 minutes to 48 hours (typically < 1 hour)
+#
+# Step 4: Test Access
+# - Open browser: https://app.example.com
+# - Verify SPA loads correctly
+# - Check HTTPS certificate (should show valid)
+# - Test routing (if SPA uses client-side routing)
+
+# --- CLOUDFRONT FUNCTIONS ---
+# CloudFront Functions are lightweight, serverless functions that run at CloudFront edge locations.
+#
+# Common Use Cases:
+#
+# 1. SPA URL Rewrite (Viewer Request):
+#    - Serve index.html for all routes without file extensions
+#    - Enables client-side routing (React Router, Vue Router, Angular Router)
+#
+# 2. Security Headers (Viewer Response):
+#    - Add Content-Security-Policy
+#    - Add X-Frame-Options: DENY
+#    - Add X-Content-Type-Options: nosniff
+#    - Add Strict-Transport-Security
+#    NOTE in v4: Response Headers Policy is now built-in — use that instead of
+#    a Function for standard security headers. Reserve Functions for
+#    path-specific overrides.
+#
+# 3. URL Redirects (Viewer Request):
+#    - HTTP to HTTPS redirect
+#    - www to non-www redirect
+#    - Trailing slash normalization
+#
+# 4. A/B Testing (Viewer Request):
+#    - Route requests to different origins based on cookies/headers
+#    - Feature flag routing
+#
+# 5. Request Manipulation (Viewer Request):
+#    - Add custom headers
+#    - Modify request URI
+#    - Query string manipulation
+#
+# Function Limitations:
+# - Maximum execution time: 1 millisecond
+# - Maximum memory: 2 MB
+# - No external network calls
+# - JavaScript runtime only (ECMAScript 5.1)
+# - Maximum function size: 10 KB
+#
+# Template Behavior:
+# - Template creates placeholder functions
+# - Update function code in AWS Console after deployment
+# - Publish function to activate changes
+# - Wait 5-10 minutes for global propagation
+
+# --- ORIGIN ACCESS CONTROL (OAC) ---
+# Template automatically configures Origin Access Control for S3 security.
+#
+# What is OAC:
+# - Successor to Origin Access Identity (OAI)
+# - Restricts S3 bucket access to CloudFront only
+# - Prevents direct S3 URL access
+# - Supports S3 bucket encryption (SSE-S3, SSE-KMS)
+#
+# Security Benefits:
+# - Users cannot bypass CloudFront and access S3 directly
+# - Centralized access control through CloudFront
+# - Supports modern S3 features (SSE-KMS, cross-region replication)
+#
+# Template Configuration:
+# - OAC created automatically for each S3 origin
+# - S3 bucket policy updated to allow CloudFront access only
+# - Public access blocked on S3 buckets
+#
+# User Access Flow:
+# ✅ User → CloudFront → S3 (allowed)
+# ❌ User → S3 directly (denied)
+
+# --- RESOURCES CREATED ---
+
+# S3 Bucket Policies: CloudFront OAC access, TLS 1.2+, HTTPS-only
+# CloudFront OAC: Origin Access Control for {Bucket1/2/3/4Name}
+# CloudFront Cache Policy: {AppShortName}-{EnvName}-CacheDisabledPolicy (TTL=0)
+# CloudFront Functions: {Bucket1/2/3/4FunctionName} (if enabled, placeholder code)
+# CloudFront Response Headers Policy: OWASP-aligned headers (NEW in v4, attached to all behaviors when EnableResponseHeadersPolicy=true)
+# CloudFront Distribution:
+#   - Origins: Bucket1 (/*), Bucket2-4 ({PathPattern})
+#   - Protocol: HTTP/2, HTTP/3, HTTPS redirect, {CloudFrontSecurityPolicy} minimum TLS
+#   - Custom Domain: {CustomDomainName} with {CloudFrontCertArn} (if UseCustomDomain=true)
+#   - Error Responses: 403/404 → /{DefaultPage} (SPA routing)
+#   - Geo-Restriction: {GeoLocation}, WAF: {WAFWebACLArn}
+# CloudFront logging v2: not configured by this template; enable manually from the CloudFront console after deployment
+
+# --- STACK OUTPUTS (NEW in v4) ---
+# After deployment, stack outputs:
+# - CloudFrontDistributionId: e.g., E11SDFSRCKE17U (use for cache invalidations)
+# - CloudFrontDomainName: e.g., d7i37itou8u0a.cloudfront.net (DNS target)
+# - ResponseHeadersPolicyId: ID of the auto-created Response Headers Policy

@@ -1,0 +1,316 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Setup for RDS Event Trigger Monitoring V1
+#Description: EventBridge + Lambda + SNS for selected RDS downtime/action events with UTC+8 time conversion.
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Short name of the application (e.g. billing, orders).
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+  
+  SnsTopicArn:
+    Type: String
+    Description: Existing SNS Topic ARN for SMS alerts.
+
+  SnsKmsKeyArn:
+    Type: String
+    Description: KMS key ARN used to encrypt the SNS topic (if topic uses KMS).
+
+  RdsInstanceIds:
+    Type: CommaDelimitedList
+    Description: >
+      Comma-separated list of RDS DB Instance Identifiers to monitor
+      (must exactly match the DB identifier in RDS, e.g. mydb-prod-1,mydb-prod-2).
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+
+Resources:
+
+  # ----------------------------------------------------------
+  # Lambda Role
+  # ----------------------------------------------------------
+  RdsAlertLambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RoleName: !Sub "${AppShortName}-${EnvName}-rds-alert-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+      Policies:
+        - PolicyName: RdsAlertPublishToSnsAndUseKms
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "sns:Publish"
+                Resource: !Ref SnsTopicArn
+              - Effect: Allow
+                Action:
+                  - "kms:GenerateDataKey"
+                  - "kms:Decrypt"
+                  - "kms:Encrypt"
+                  - "kms:DescribeKey"
+                Resource: !Ref SnsKmsKeyArn
+
+      Tags:
+        - Key: App
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-rds-alert-lambda-role"
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdseventtrigger-v1"
+
+  # ----------------------------------------------------------
+  # Lambda Function
+  # ----------------------------------------------------------
+  RdsAlertLambda:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Sub "${AppShortName}-${EnvName}-rds-alert-lambda"
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt RdsAlertLambdaRole.Arn
+      Timeout: 10
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref SnsTopicArn
+          TIME_OFFSET_HOURS: "8"   # Hard-coded UTC+8
+      Code:
+        ZipFile: |
+          import os
+          import json
+          from datetime import datetime, timedelta
+          import boto3
+
+          sns = boto3.client("sns")
+
+          def lambda_handler(event, context):
+              # Log event for debugging
+              print("Received event:", json.dumps(event))
+
+              detail = event.get("detail", {})
+              event_id = detail.get("EventID", "UNKNOWN")
+              message = detail.get("Message", "No message")
+
+              # Instance identifier (or Arn as fallback)
+              db = detail.get("SourceIdentifier") or detail.get("SourceArn") or "UNKNOWN"
+
+              # Prefer detail.EventTime, fallback to top-level time
+              event_time_utc = detail.get("EventTime") or event.get("time", "")
+              print(f"Raw event_time_utc: {event_time_utc}")
+
+              # Hard-coded UTC+8 via env var
+              try:
+                  offset_hours = int(os.environ.get("TIME_OFFSET_HOURS", "8"))
+              except ValueError:
+                  offset_hours = 8
+
+              time_str_local = event_time_utc
+              try:
+                  # Handle:
+                  #  - "YYYY-MM-DDTHH:MM:SSZ"
+                  #  - "YYYY-MM-DDTHH:MM:SS.sssZ"
+                  raw = event_time_utc
+
+                  if not raw:
+                      raise ValueError("Empty event_time_utc")
+
+                  if raw.endswith("Z"):
+                      raw = raw[:-1]  # drop trailing Z
+
+                  dt_utc = None
+                  for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+                      try:
+                          dt_utc = datetime.strptime(raw, fmt)
+                          break
+                      except ValueError:
+                          continue
+
+                  if dt_utc is None:
+                      raise ValueError(f"Unrecognized datetime format: {event_time_utc}")
+
+                  dt_local = dt_utc + timedelta(hours=offset_hours)
+                  time_str_local = dt_local.strftime("%Y-%m-%d %H:%M:%S") + f" UTC+{offset_hours}"
+              except Exception as e:
+                  print(f"Time parse/convert failed: {e}")
+                  time_str_local = event_time_utc + " (original UTC)"
+
+              final_message = (
+                  f"RDS Alert\n"
+                  f"Instance: {db}\n"
+                  f"EventID: {event_id}\n"
+                  f"Description: {message}\n"
+                  f"Time: {time_str_local}"
+              )
+
+              print("Final message to SNS:", final_message)
+
+              sns.publish(
+                  TopicArn=os.environ["SNS_TOPIC_ARN"],
+                  Message=final_message
+              )
+
+              return {"status": "ok"}
+
+      Tags:
+        - Key: App
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-rds-alert-lambda"
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdseventtrigger-v1"
+
+  # ----------------------------------------------------------
+  # CloudWatch Log Group with retention
+  # ----------------------------------------------------------
+  RdsAlertLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AppShortName}-${EnvName}-rds-alert-lambda"
+      RetentionInDays: 30
+      Tags:
+        - Key: App
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-rds-alert-lambda-logs"
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdseventtrigger-v1"
+
+  # ----------------------------------------------------------
+  # EventBridge Rule (filtered by instance + EventIDs)
+  # ----------------------------------------------------------
+  RDSDowntimeEventRule:
+    Type: AWS::Events::Rule
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-rds-downtime-rule"
+      State: ENABLED
+      Description: >
+        Capture selected RDS DB Instance events (downtime/reboot/failover/maintenance)
+        for specific instances, invoke Lambda to convert UTC time to UTC+8 and publish
+        formatted alert to SNS.
+      EventPattern:
+        source:
+          - "aws.rds"
+        detail-type:
+          - "RDS DB Instance Event"
+        detail:
+          # Filter ONLY these DB instance identifiers
+          SourceIdentifier: !Ref RdsInstanceIds
+          # Filter ONLY these downtime/impactful EventIDs
+          EventID:
+            # Reboot / restart / shutdown
+            - "RDS-EVENT-0004"   # DB instance shutdown
+            - "RDS-EVENT-0006"   # DB instance restarted
+
+            # Failover / Multi-AZ
+            - "RDS-EVENT-0013"   # Multi-AZ failover started
+            - "RDS-EVENT-0015"   # Multi-AZ failover completed
+          
+            # Instance failure / bad state
+            - "RDS-EVENT-0031"   # DB instance failure
+            - "RDS-EVENT-0035"   # Bad parameter state
+            - "RDS-EVENT-0036"   # Incompatible network ? not available
+
+            # KMS / encryption access issues
+            - "RDS-EVENT-0418"   # KMS access problem (may become inaccessible)
+            - "RDS-EVENT-0419"   # KMS access problem, DB made inaccessible
+
+            # Maintenance / patching / engine upgrades
+            - "RDS-EVENT-0026"   # Applying offline patches ? DB unavailable
+            - "RDS-EVENT-0027"   # Offline patches complete ? DB available
+            - "RDS-EVENT-0266"   # Downtime started for engine upgrade
+            - "RDS-EVENT-0267"   # Engine upgrade started
+            - "RDS-EVENT-0268"   # Engine upgrade finished
+            - "RDS-EVENT-0270"   # Engine upgrade failed, rollback succeeded
+            - "RDS-EVENT-0422"   # Host replacement due to maintenance
+
+            # Other notable availability-impacting
+            - "RDS-EVENT-0396"   # Reboot scheduled for replica
+
+      Targets:
+        - Id: RdsAlertLambdaTarget
+          Arn: !GetAtt RdsAlertLambda.Arn
+      Tags:
+        - Key: App
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-rds-downtime-rule"
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdseventtrigger-v1"
+
+  # ----------------------------------------------------------
+  # Permission for EventBridge to invoke Lambda
+  # ----------------------------------------------------------
+  RdsAlertLambdaPermissionForEvents:
+    Type: AWS::Lambda::Permission
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Ref RdsAlertLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RDSDowntimeEventRule.Arn
+
+Outputs:
+  RDSDowntimeRuleArn:
+    Description: ARN of the EventBridge rule for RDS downtime events.
+    Value: !GetAtt RDSDowntimeEventRule.Arn
+
+  RdsAlertLambdaArn:
+    Description: ARN of the RDS alert Lambda.
+    Value: !GetAtt RdsAlertLambda.Arn

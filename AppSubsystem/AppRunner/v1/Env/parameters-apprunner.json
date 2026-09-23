@@ -1,0 +1,198 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "gms"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd"
+  },
+  {
+    "ParameterKey": "ServiceName",
+    "ParameterValue": "appservices"
+  },
+  {
+    "ParameterKey": "EcrImageUri",
+    "ParameterValue": "961341547198.dkr.ecr.ap-southeast-1.amazonaws.com/my-nginx-custom:1.27-bookworm"
+  },
+  {
+    "ParameterKey": "ContainerPort",
+    "ParameterValue": "80"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-02fb2e32bbb6ff24e"
+  },
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b,subnet-0e36eb3efe04524a6"
+  },
+  {
+    "ParameterKey": "AppRunnerCpu",
+    "ParameterValue": "1024"
+  },
+  {
+    "ParameterKey": "AppRunnerMemory",
+    "ParameterValue": "2048"
+  },
+  {
+    "ParameterKey": "MaxConcurrency",
+    "ParameterValue": "100"
+  },
+  {
+    "ParameterKey": "MinInstances",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "MaxInstances",
+    "ParameterValue": "2"
+  },
+  {
+    "ParameterKey": "HealthCheckPath",
+    "ParameterValue": "/health"
+  },
+  {
+    "ParameterKey": "HealthyThreshold",
+    "ParameterValue": "2"
+  },
+  {
+    "ParameterKey": "UnhealthyThreshold",
+    "ParameterValue": "2"
+  },
+  {
+    "ParameterKey": "HealthCheckInterval",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "Timeout",
+    "ParameterValue": "5"
+  },
+  {
+    "ParameterKey": "VpcCidr1",
+    "ParameterValue": "10.0.0.0/16"
+  },
+  {
+    "ParameterKey": "VpcCidr2",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VpcCidr3",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VpcCidr4",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VpcCidr5",
+    "ParameterValue": ""
+  },    
+  {
+    "ParameterKey": "S3PrefixListId",
+    "ParameterValue": "pl-6fa54006"
+  },
+  {
+    "ParameterKey": "HCCVpceCidr",
+    "ParameterValue": "10.48.42.0/24"
+  },
+  {
+    "ParameterKey": "HCCSubnetCidrBCSAZ1",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "HCCSubnetCidrBCSAZ2",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "WAFWebACLArn",
+    "ParameterValue": "arn:aws:wafv2:ap-southeast-1:961341547198:regional/webacl/gms-nprd-waf-web-acl/1c0f8b2d-3a4e-4f5b-9c6d-7e8f9a0b1c2d"
+  },
+  {
+    "ParameterKey": "AppRunnerVPCEndpoint",
+    "ParameterValue": "vpce-08f03eef9287fb0da"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrDBAZ1",
+    "ParameterValue": "10.0.151.0/24"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrDBAZ2",
+    "ParameterValue": "10.0.152.0/24"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrDBAZ3",
+    "ParameterValue": "10.0.153.0/24"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAppAZ1",
+    "ParameterValue": "10.0.101.0/24"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAppAZ2",
+    "ParameterValue": "10.0.102.0/24"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAppAZ3",
+    "ParameterValue": "10.0.103.0/24"
+  },
+  {
+    "ParameterKey": "AdditionalSecretsManagerSecretArns",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar1Name",
+    "ParameterValue": "hhm-nprd-rds-secret"
+  },
+  {
+    "ParameterKey": "EnvVar1Value",
+    "ParameterValue": "arn:aws:secretsmanager:ap-southeast-1:961341547198:secret:hhm-nprd-rds-secret-YQCW8b"
+  },
+  {
+    "ParameterKey": "EnvVar2Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar2Value",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar3Value",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar4Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar4Value",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar5Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar5Value",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar6Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar6Value",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar7Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "EnvVar7Value",
+    "ParameterValue": ""
+  }
+]

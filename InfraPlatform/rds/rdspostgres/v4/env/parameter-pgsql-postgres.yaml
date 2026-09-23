@@ -1,0 +1,220 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, db01
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                             # 📝 e.g. vpc-02fb2e32bbb6ff24e
+AvailabilityZone: "<edit_here>"                  # 📝 e.g. ap-southeast-1a (only if MultiAZ is set to false)
+VPCSubnetCidrAppAZ1: "<edit_here>"               # 📝 e.g. 10.0.102.0/24 (app subnet CIDR)
+VPCSubnetCidrAppAZ2: "<edit_here>"               # 📝 e.g. 10.0.103.0/24 (app subnet CIDR)
+DBSubnetIds: "<edit_here>"                       # 📝 e.g. subnet-xxx,subnet-yyy (min 2, different AZs, NO SPACES)
+DeploymentServer: "<edit_here>"                  # 📝 e.g. 10.0.1.9/32 (bastion/deployment server)
+VpcCidr1: "<edit_here>"                          # 📝 e.g. 10.0.0.0/16 (primary VPC CIDR)
+HCCVpceCidr: "<edit_here>"                       # 📝 e.g. 10.48.42.0/24 (HCC VPC endpoint CIDR)
+
+# FEATURE TOGGLES (DELETE the value you don't need)
+MultiAZ: "true/false"                              # 📝 Multi-AZ high availability
+EnableIAMDatabaseAuthentication: "true/false"      # 📝 IAM database authentication
+
+# INSTANCE
+PgsqlDBInstanceClass: "<edit_here>"              # 📝 e.g. db.t3.xlarge, db.m6i.large, db.r6i.xlarge
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# DATABASE ENGINE
+PgsqlDBEngine: "postgres"                       # e.g. postgres
+PgsqlDBMajorEngineVersion: "16"                 # e.g. 16
+PgsqlEngineVersion: "16.4"                      # e.g. 16.4
+PgsqlDBParameterGroupFamily: "postgres16"       # e.g. postgres16 (must match major version)
+
+# STORAGE
+PgsqlAllocatedStorage: "100"             # e.g. 100 (initial storage GB, 100-65536)
+PgsqlMaxAllocatedStorage: "1000"         # e.g. 1000 (max auto-scaling storage GB)
+PgsqlStorageType: "gp3"                  # e.g. gp3, gp2, io1, io2
+
+VPCSubnetCidrAppAZ3: ""                          # App subnet CIDR for AZ3
+VPCSubnetCidrAppAZ4: ""                          # App subnet CIDR for AZ4
+VPCSubnetCidrAppAZ5: ""                          # App subnet CIDR for AZ5
+VPCSubnetCidrAppAZ6: ""                          # App subnet CIDR for AZ6
+VpcCidr2: ""                                     # Secondary VPC CIDR
+VpcCidr3: ""                                     # Tertiary VPC CIDR
+VpcCidr4: ""                                     # Additional VPC CIDR
+S3PrefixListId: ""                               # e.g. pl-xxx (for S3 imports/exports)
+PgsqlStorageIops: ""                             # e.g. 10000 (only for io1/io2)
+KMSKeyRotationPeriod: "365"                      # e.g. 365 (default is 365 days)
+PgsqlMasterUsernameDev: "dbadmin"                # e.g. dbadmin (default is dbadmin)
+PgsqlMasterUserPasswordDev: "dbadmin123"         # e.g. changeme123 (default is dbadmin123)
+PgsqlProdDBPort: "53341"                         # e.g. 53341 (default is 53341)
+PgsqlNProdDBPort: "53331"                        # e.g. 53331 (default is 53331)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, db01)
+#   Creates instance: {AppShortName}-{EnvName}-rdspostg
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*):
+#     - DeletionPolicy: Retain
+#     - Backup retention: 35 days
+#     - DB port: 53341
+#     - Performance Insights retention: 31 days
+#   Non-Prod (nprd*):
+#     - DeletionPolicy: Delete
+#     - Backup retention: 7 days
+#     - DB port: 53331
+#     - Performance Insights retention: 7 days
+
+# --- NETWORK CONFIGURATION ---
+
+# VpcId
+#   Value: VPC ID (e.g. vpc-02fb2e32bbb6ff24e)
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+
+# AvailabilityZone
+#   Allowed Values: ap-southeast-1a, ap-southeast-1b, ap-southeast-1c
+#   Only used if MultiAZ: false
+#   Ignored if MultiAZ: true (AWS selects AZs automatically)
+
+# VPCSubnetCidrAppAZ1, VPCSubnetCidrAppAZ2 (required)
+# VPCSubnetCidrAppAZ3-6 (optional)
+#   Value: Application subnet CIDRs (e.g. 10.0.102.0/24)
+#   Purpose: Security group allows app→DB access from these subnets
+#   Finding: VPC Console → Subnets → filter by app subnets → copy CIDR
+
+# DBSubnetIds
+#   Value: Comma-separated subnet IDs (NO SPACES)
+#   Format: subnet-xxx,subnet-yyy
+#   Requirements:
+#     - Minimum 2 subnets
+#     - Must be in different AZs
+#     - Must be private subnets
+#   Finding: VPC Console → Subnets → filter by DB subnets → copy IDs
+
+# DeploymentServer
+#   Value: CIDR of deployment/bastion server (e.g. 10.0.1.9/32)
+#   Purpose: Allows DB access for migrations and admin tasks
+#   Finding: EC2 Console → find bastion → copy private IP → append /32
+
+# VpcCidr1 (required)
+# VpcCidr2-4 (optional)
+#   Value: VPC CIDR blocks for security group (e.g. 10.0.0.0/16)
+#   Finding: VPC Console → Your VPCs → select VPC → view CIDR blocks
+
+# HCCVpceCidr
+#   Value: HCC VPC endpoint CIDR (e.g. 10.48.42.0/24)
+#   Purpose: Allows DB access from HCC VPC endpoint
+#   Finding: From network team or infrastructure documentation
+
+# S3PrefixListId (optional)
+#   Value: S3 prefix list ID (e.g. pl-xxx)
+#   Purpose: Enables S3 imports/exports via PostgreSQL COPY command
+#   Finding: VPC Console → Managed Prefix Lists → com.amazonaws.region.s3
+
+# --- FEATURE TOGGLES ---
+
+# MultiAZ
+#   Values: true/false (DELETE the value you don't need)
+#   true: Synchronous standby replica in different AZ, automatic failover, 99.95% SLA
+#   false: Single AZ deployment, lower cost, suitable for dev/test
+#   Recommendation: true for production, false for dev/test
+
+# EnableIAMDatabaseAuthentication
+#   Values: true/false (DELETE the value you don't need)
+#   true: Allows IAM-based authentication (15-min tokens), no passwords needed
+#   false: Traditional username/password authentication
+#   Recommendation: true for applications with IAM roles
+
+# --- DATABASE ENGINE ---
+
+# PgsqlDBEngine
+#   Value: postgres (do not change)
+
+# PgsqlDBMajorEngineVersion
+#   Value: Major version number (e.g. 16, 15, 14, 13, 12, 11)
+#   Recommendation: Use latest stable version (16)
+
+# PgsqlEngineVersion
+#   Value: Specific version (e.g. 16.4, 15.7, 14.12)
+#   Must match major version
+#   Finding: RDS Console → Create database → view available versions
+
+# PgsqlDBParameterGroupFamily
+#   Value: Parameter group family (e.g. postgres16, postgres15, postgres14)
+#   Must match PgsqlDBMajorEngineVersion
+#   Mapping: 16→postgres16, 15→postgres15, 14→postgres14
+
+# --- INSTANCE & STORAGE ---
+
+# PgsqlDBInstanceClass
+#   Value: Instance type (e.g. db.t3.xlarge, db.m6i.large, db.r6i.xlarge)
+#   Common types:
+#     - db.t3.micro/small/medium/large/xlarge: Burstable, dev/test
+#     - db.m6i.large/xlarge/2xlarge: General purpose, balanced compute/memory
+#     - db.r6i.large/xlarge/2xlarge: Memory optimized, memory-intensive workloads
+#   Recommendation: Start with db.t3.xlarge for small apps, db.m6i.xlarge for production
+
+# PgsqlAllocatedStorage
+#   Value: Initial storage in GB (100-65536)
+#   Default: 100 (minimum)
+#   Recommendation: Set based on immediate needs, use auto-scaling for growth
+
+# PgsqlMaxAllocatedStorage
+#   Value: Maximum storage for auto-scaling in GB
+#   Must be greater than PgsqlAllocatedStorage
+#   Auto-scales when free space < 10% or < 6 GB
+#   Recommendation: Set to 6-12 months projected growth
+
+# PgsqlStorageType
+#   Allowed Values: gp3, gp2, io1, io2
+#   gp3: Latest generation, 3000 IOPS baseline, recommended for most workloads
+#   gp2: Legacy, IOPS scales with storage (3 IOPS/GB), use gp3 instead
+#   io1: Provisioned IOPS, up to 64000 IOPS, requires PgsqlStorageIops
+#   io2: Provisioned IOPS, up to 256000 IOPS, higher durability, requires PgsqlStorageIops
+#   Recommendation: Use gp3 for most cases
+
+# PgsqlStorageIops (optional)
+#   Value: Provisioned IOPS (only for io1/io2)
+#   Range: 1000-64000 (io1), 1000-256000 (io2)
+#   Leave empty ("") for gp3/gp2
+#   Recommendation: Only use io1/io2 for sustained high IOPS (>10000)
+
+# KMSKeyRotationPeriod (optional)
+#   Value: KMS key rotation period in days
+#   Range: 90-2560 days
+#   Default: 365 (1 year)
+#   Recommendation: Use 365 for annual rotation
+
+# PgsqlMasterUsernameDev, PgsqlMasterUserPasswordDev (optional)
+#   Defaults: dbadmin / dbadmin123
+#   Note: Change defaults for production!
+#   Credentials stored in application code for dev/test simplicity
+
+# PgsqlProdDBPort, PgsqlNProdDBPort (optional)
+#   Defaults: 53341 (production), 53331 (non-production)
+#   Non-standard ports for security obscurity
+#   Recommendation: Keep defaults unless specific requirements
+

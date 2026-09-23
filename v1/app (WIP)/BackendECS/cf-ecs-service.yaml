@@ -1,0 +1,466 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create or update an ECS Task Definition using Fargate with configurable OS, memory, CPU, ECR image, container name, port mappings, logging, and store output in Parameter Store.
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Env Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+
+  VpcId:
+    Description: VPC to create endpoints and workspace
+    Type: AWS::EC2::VPC::Id
+
+  ECRImage:
+    Type: String
+    Description: "The link to the ECR image (e.g., 533267434948.dkr.ecr.ap-southeast-1.amazonaws.com/hxis-fhir-ecr-repo:stable-alpine)"
+
+  ECSCpuArchitecture:
+    Type: String
+    Description: "The CPU architecture for the task (e.g., X86_64, ARM64)"
+
+  CPUUnits:
+    Description: number of cpu units used by the task
+    Type: String
+
+  Memory:
+    Description: The amount (in MiB) of memory used by the task
+    Type: String
+
+  ECSOperatingSystemFamily: 
+    Type: String
+    Description: "Operating system family to be used for the task. Allowed values are LINUX or WINDOWS versions."
+    AllowedValues: 
+      - LINUX
+    Default: "LINUX"
+
+  ECSServiceProtocol:
+    Type: String
+    AllowedValues:
+      - HTTP
+      - HTTPS
+    Description: "The protocol used for the port mapping in target group (eg, http or https)"
+
+  ServiceContainerPort:
+    Type: Number
+    Description: "The port on which the container listens (e.g., 80, 443, Custom Port)"
+
+  ContainerProtocol:
+    Type: String
+    AllowedValues:
+      - tcp
+      - udp
+    Description: "The protocol used for the port mapping (e.g., tcp, udp)"
+    Default: "tcp"
+
+  CreateNewTaskDefinition:
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: "Choose 'true' to create a new Task Definition family or 'false' to create a new revision of an existing Task Definition."
+
+  ExistingTaskFamily:
+    Type: String
+    Description: "The existing ECS task definition family name stored in Parameter Store. Leave blank if creating a new task definition."
+    Default: ""
+
+  ECSDesiredTaskCount:
+    Type: Number
+    Description: Number of desired tasks to run
+
+  VPCSubnetCidrAppAZ1:
+    Description: CIDR block for the ECS service traffic
+    Type: String
+ 
+  VPCSubnetCidrAppAZ2:
+    Description: CIDR block for the ECS service traffic
+    Type: String
+
+  VPCSubnetCidrAppAZ3:
+    Description: CIDR block for the ECS service traffic
+    Type: String
+
+  AppSubnetIds:
+    Type: CommaDelimitedList
+    Description: List of subnet IDs where the ECS tasks will be deployed
+  
+  PathPattern:
+    Description: Path-pattern for ALB listerner Rule condition check to route it to specific target group
+    Type: String
+
+  TGHealthCheckPath:
+    Description: ALB TargetGroup HealthCheck Path
+    Type: String
+
+  SystemCode:
+    Type: String
+    Description: "System code value to check in X-System-Code header (e.g., stg-r4)"
+
+  SwaggerRulePriority:
+    Type: String
+    Description: "Priority for the swagger listener rule"
+    Default: "1" 
+
+  ServiceName:
+    Type: String
+    Description: Service name (alphanumeric and hyphens only)
+
+  LogsRetentionInDays:
+    Description: ECS Service Name
+    Type: String
+    Default: "7"
+
+  RulePriority:
+    Description: ALB Listener Rules Priority
+    Type: String
+    Default: "2"
+
+  EnvVarConnectionStringSecretName:
+    Description: "Environment Variable ECS Connection String Secret Name"
+    Type: String  
+  
+  EnvVar1Name:
+    Description: "Environment Variable #1 Name"
+    Type: String
+
+  EnvVar1Value:
+    Description: "Environment Variable #1 Value"
+    Type: String
+
+  EnvVar2Name:
+    Description: "Environment Variable #2 Name"
+    Type: String
+
+  EnvVar2Value:
+    Description: "Environment Variable #2 Value"
+    Type: String
+
+  EnvVar3Name:
+    Description: "Environment Variable #3 Name"
+    Type: String
+
+  EnvVar3Value:
+    Description: "Environment Variable #3 Value"
+    Type: String
+
+  EnableAutoScaling:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: Enable or disable auto-scaling for the ECS service
+
+  MinContainers:
+    Type: Number
+    Description: Minimum number of containers to run
+
+  MaxContainers:
+    Type: Number
+    Description: Maximum number of containers to run
+
+  CPUUtilizationThreshold:
+    Type: String
+    Description: CPU utilization threshold for auto-scaling (percentage)
+
+  MemoryUtilizationThreshold:
+    Type: String
+    Description: Memory utilization threshold for auto-scaling (percentage)
+
+  EnableADOT:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: Enable or disable ADOT configuration
+
+  ADOTEndpoint:
+    Type: String
+    Description: "ADOT endpoint from parent stack"
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  HasEnvVar1Name: !Not [!Equals [!Ref EnvVar1Name, '']]
+  HasEnvVar2Name: !Not [!Equals [!Ref EnvVar2Name, '']]
+  HasEnvVar3Name: !Not [!Equals [!Ref EnvVar3Name, '']]
+  HasEnvVarConnectionStringSecretName: !Not [!Equals [!Ref EnvVarConnectionStringSecretName, '']]
+
+  CreateNewTaskDefinitionCondition:
+    Fn::Equals: [!Ref CreateNewTaskDefinition, "true"]
+
+  HasSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+  EnableAutoScalingCondition: !Equals [!Ref EnableAutoScaling, 'true']
+  EnableADOTCondition: !Equals [!Ref EnableADOT, 'true']
+
+Resources:
+  # Target Group
+  ECSALBTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]    
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-tg-ecs-${ServiceName}"
+      VpcId: !Ref VpcId
+      Protocol: !Ref ECSServiceProtocol
+      Port: !Ref ServiceContainerPort
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckProtocol: !Ref ECSServiceProtocol
+      HealthCheckPort: !Ref ServiceContainerPort
+      HealthCheckPath: !Ref TGHealthCheckPath
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5
+      HealthCheckIntervalSeconds: 15
+      HealthCheckTimeoutSeconds: 10
+      Matcher:
+        HttpCode: "200"
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+
+  ALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]    
+    Properties:
+      ListenerArn: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/alb-https-listener-arn}}"
+      Priority: !Ref RulePriority
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Ref PathPattern # Match requests to specific path
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSALBTG
+
+  SwaggerALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]    
+    Properties:
+      ListenerArn: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/alb-https-listener-arn}}"
+      Priority: !Ref SwaggerRulePriority
+      Conditions:
+        - Field: path-pattern
+          Values: 
+            - "/swagger/*"
+        - Field: http-header
+          HttpHeaderConfig:
+            HttpHeaderName: X-System-Code
+            Values:
+              - !Ref SystemCode
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSALBTG
+
+  # CloudWatch Log Group Resource
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub "/ecs/${AppShortName}/${EnvName}/${ServiceName}"
+      RetentionInDays: !Ref LogsRetentionInDays  # Adjust the retention period as needed
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Condition: HasEnvVarConnectionStringSecretName
+    Properties:
+      Family: !If
+        - CreateNewTaskDefinitionCondition
+        - !Sub "${AppShortName}-${EnvName}-${ServiceName}"  # New family
+        - !Ref ExistingTaskFamily  # Use existing family from Parameter Store if provided
+      Cpu: !Ref CPUUnits
+      Memory: !Ref Memory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/ECSTaskExecutionRoleArn}}"
+      TaskRoleArn: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/ECSTaskExecutionRoleArn}}"
+      RuntimePlatform:
+        CpuArchitecture: !Ref ECSCpuArchitecture
+        OperatingSystemFamily: !Ref ECSOperatingSystemFamily
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Image: !Ref ECRImage
+          PortMappings:
+            - ContainerPort: !Ref ServiceContainerPort
+              Protocol: !Ref ContainerProtocol
+              AppProtocol: http
+          Essential: true
+          Environment:
+            - !If
+              - HasEnvVarConnectionStringSecretName
+              - Name: "AwsSecretPrefix"
+                Value: !Ref EnvVarConnectionStringSecretName
+              - !Ref "AWS::NoValue"
+            - !If 
+              - EnableADOTCondition
+              - Name: OTEL_EXPORTER_OTLP_ENDPOINT
+                Value: !Ref ADOTEndpoint
+              - !Ref AWS::NoValue
+            - !If 
+              - EnableADOTCondition
+              - Name: OTEL_EXPORTER_OTLP_PROTOCOL
+                Value: "grpc"
+              - !Ref AWS::NoValue
+            - !If 
+              - EnableADOTCondition
+              - Name: OTEL_EXPORTER_OTLP_INSECURE
+                Value: "false"
+              - !Ref AWS::NoValue
+            - !If
+              - HasEnvVar1Name
+              - Name: !Ref EnvVar1Name
+                Value: !Ref EnvVar1Value
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasEnvVar2Name
+              - Name: !Ref EnvVar2Name
+                Value: !Ref EnvVar2Value
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasEnvVar3Name
+              - Name: !Ref EnvVar3Name
+                Value: !Ref EnvVar3Value
+              - !Ref "AWS::NoValue"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudWatchLogGroup  # Referencing the created log group
+              awslogs-region: ap-southeast-1
+              awslogs-stream-prefix: "ecs"
+          StopTimeout: 120  #Adjust this value based on your application needs, max is 120 seconds for Fargate (If not configured, default is 30s)
+
+
+## ECS Service/Container Setup
+  ECSServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${AppShortName}-${EnvName}-sg-ecs-${ServiceName}"
+      GroupDescription: Security group for ECS Service
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ServiceContainerPort
+          ToPort: !Ref ServiceContainerPort
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: App Subnet CIDR AZ1
+        - IpProtocol: tcp
+          FromPort: !Ref ServiceContainerPort
+          ToPort: !Ref ServiceContainerPort
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: App Subnet CIDR AZ2
+        - !If
+          - HasSubnetCidrAppAZ3
+          - IpProtocol: tcp
+            FromPort: !Ref ServiceContainerPort
+            ToPort: !Ref ServiceContainerPort
+            CidrIp: !Ref VPCSubnetCidrAppAZ3
+            Description: App Subnet CIDR AZ3
+          - !Ref "AWS::NoValue"
+        - IpProtocol: tcp
+          FromPort: !Ref ServiceContainerPort
+          ToPort: !Ref ServiceContainerPort
+          SourceSecurityGroupId: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/ecs-alb-security-group-id}}"
+          Description: Allow traffic from ALB Security Group
+
+  ECSService:
+    Type: AWS::ECS::Service
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Condition: HasEnvVarConnectionStringSecretName
+    DependsOn:
+      - ECSALBTG
+      - ALBListenerRule    
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/ecs-cluster-name}}"
+      TaskDefinition: !Ref ECSTaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: !Ref ECSDesiredTaskCount
+      HealthCheckGracePeriodSeconds: 60      
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ECSServiceSecurityGroup
+          Subnets: !Ref AppSubnetIds
+      LoadBalancers:
+        - TargetGroupArn: !Ref ECSALBTG
+          ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ServiceContainerPort
+
+  AutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: EnableAutoScalingCondition
+    DependsOn: ECSService
+    Properties:
+      MaxCapacity: !Ref MaxContainers
+      MinCapacity: !Ref MinContainers
+      ResourceId: !Join 
+        - '/'
+        - - service
+          - !Sub "{{resolve:ssm:/${AppShortName}/${EnvName}/ecs-cluster-name}}"
+          - !Ref ServiceName
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+
+  AutoScalingPolicyCPU:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: EnableAutoScalingCondition
+    Properties:
+      PolicyName: !Sub ${ServiceName}-cpu-autoscaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: !Ref CPUUtilizationThreshold
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300
+
+  AutoScalingPolicyMemory:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: EnableAutoScalingCondition
+    Properties:
+      PolicyName: !Sub ${ServiceName}-memory-autoscaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: !Ref MemoryUtilizationThreshold
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300

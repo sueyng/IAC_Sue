@@ -1,0 +1,47 @@
+[
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "AvailabilityZone",
+        "ParameterValue": "ap-southeast-1a"
+    },
+    {
+        "ParameterKey": "SubnetIdappAZ1",
+        "ParameterValue": "subnet-08170d48a795103d2"
+    },
+    {
+        "ParameterKey": "InstanceName",
+        "ParameterValue": "CHIS3HHASUTL01"
+    },
+    {
+        "ParameterKey": "AMIId",
+        "ParameterValue": "ami-0adcf082d85f6a445"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t3.medium"
+    },
+    {
+        "ParameterKey": "DataVolumeSize",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Function",
+        "ParameterValue": "APP"
+    },
+    {
+        "ParameterKey": "EC2InfraSecurityGroupID",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EC2AppSecurityGroupID",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EC2DeploymentSecurityGroupID",
+        "ParameterValue": ""
+    }
+
+]

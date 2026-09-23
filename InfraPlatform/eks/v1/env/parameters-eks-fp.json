@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xxxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-dev"
+    },
+    {
+        "ParameterKey": "FargateProfileName",
+        "ParameterValue": "fp_xxx"
+    },
+    {
+        "ParameterKey": "NameSpaces",
+        "ParameterValue": "namespace1"
+    }
+]

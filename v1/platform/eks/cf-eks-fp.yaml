@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS EKS Fargate Profile
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    AllowedValues:
+      - nprd
+      - prod
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-uat
+      - nprd-pt
+    Description: Environment
+  FargateProfileName:
+    Type: String
+    Description: Fargate Profile Name
+  NameSpaces:
+    Type: String
+    Description: Kubernets Name Space(Use comma if more than 1. eg- namespace1,namespace2)
+
+Conditions:
+  IsProduction: !Equals
+    - !Ref EnvName
+    - prod
+Resources:
+  EKSFargateProfile:
+    Type: 'AWS::EKS::FargateProfile'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FargateProfileName: !Sub fp_${AppShortName}-${EnvName}-${FargateProfileName}
+      ClusterName: !ImportValue EKSControlPlaneName
+      PodExecutionRoleArn: !ImportValue FargatePodExecutionRoleArn
+      Subnets:
+        - !ImportValue VPCSubnetIdappAZ1
+        - !ImportValue VPCSubnetIdappAZ2
+        - !If [IsProduction, !ImportValue VPCSubnetIdappAZ3, !Ref "AWS::NoValue"]
+      Selectors:
+        - Namespace: !Ref NameSpaces

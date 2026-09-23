@@ -1,0 +1,1891 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "API Gateway CloudWatch alarms for 2 APIs with stage-level and per-path monitoring"
+
+Parameters:
+  AppShortName:
+    Type: String
+  EnvName:
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+
+  # Optional SNS targets
+  Team1SNSTopicArn:
+    Type: String
+    Default: ""
+  Team2SNSTopicArn:
+    Type: String
+    Default: ""
+  Team3SNSTopicArn:
+    Type: String
+    Default: ""
+
+  # ---------- API 1 ----------
+  Api1Name:
+    Type: String
+    Description: ApiGateway ApiName (e.g., fusionapi)
+  Api1Stage:
+    Type: String
+    Default: dev
+  Api1ResourcePath1:
+    Type: String
+    Default: "/{proxy+}"
+  Api1ResourcePath2:
+    Type: String
+    Default: ""
+  Api1ResourcePath3:
+    Type: String
+    Default: ""
+  Api1ResourcePath4:
+    Type: String
+    Default: ""
+
+  # ---------- API 2 ----------
+  Api2Name:
+    Type: String
+    Description: ApiGateway ApiName (e.g., fhirtrg)
+  Api2Stage:
+    Type: String
+    Default: dev
+  Api2ResourcePath1:
+    Type: String
+    Default: "/{proxy+}"
+  Api2ResourcePath2:
+    Type: String
+    Default: ""
+  Api2ResourcePath3:
+    Type: String
+    Default: ""
+  Api2ResourcePath4:
+    Type: String
+    Default: ""
+
+Conditions:
+  HasTeam1Topic: !Not [!Equals [!Ref Team1SNSTopicArn, ""]]
+  HasTeam2Topic: !Not [!Equals [!Ref Team2SNSTopicArn, ""]]
+  HasTeam3Topic: !Not [!Equals [!Ref Team3SNSTopicArn, ""]]
+  
+  # API 1 Resource Path Conditions
+  HasApi1Path2: !Not [!Equals [!Ref Api1ResourcePath2, ""]]
+  HasApi1Path3: !Not [!Equals [!Ref Api1ResourcePath3, ""]]
+  HasApi1Path4: !Not [!Equals [!Ref Api1ResourcePath4, ""]]
+  
+  # API 2 Resource Path Conditions
+  HasApi2Path2: !Not [!Equals [!Ref Api2ResourcePath2, ""]]
+  HasApi2Path3: !Not [!Equals [!Ref Api2ResourcePath3, ""]]
+  HasApi2Path4: !Not [!Equals [!Ref Api2ResourcePath4, ""]]
+
+Resources:
+
+  #######################
+  # API 1 — STAGE ALARMS
+  #######################
+
+  Api1Stg5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-5XXError-High"
+      AlarmDescription: "Stage 5XX > 50/min over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      Statistic: Sum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 50
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Stg5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-5XXError-Critical"
+      AlarmDescription: "Stage 5XX > 200/min over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      Statistic: Sum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 200
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Stg4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-4XXRate-High"
+      AlarmDescription: "Stage 4XX rate > 8% over 5m"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 8
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api1Name }
+                - { Name: Stage,   Value: !Ref Api1Stage }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api1Name }
+                - { Name: Stage,   Value: !Ref Api1Stage }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "Stage4XXErrorRatePercent"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Stg4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-4XXRate-Critical"
+      AlarmDescription: "Stage 4XX rate > 20% over 3m"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 20
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api1Name }
+                - { Name: Stage,   Value: !Ref Api1Stage }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api1Name }
+                - { Name: Stage,   Value: !Ref Api1Stage }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "Stage4XXErrorRatePercent"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1StgLatencyP95High:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-LatencyP95-High"
+      AlarmDescription: "Stage Latency p95 > 1200 ms over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "Latency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      ExtendedStatistic: p95
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 1200
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1StgLatencyP95Critical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-LatencyP95-Critical"
+      AlarmDescription: "Stage Latency p95 > 2500 ms over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "Latency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      ExtendedStatistic: p95
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 2500
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1StgIntegrationLatencyHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-IntegrationLatency-High"
+      AlarmDescription: "Stage IntegrationLatency avg > 2500 ms over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "IntegrationLatency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 2500
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1StgIntegrationLatencyCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-stg-IntegrationLatency-Critical"
+      AlarmDescription: "Stage IntegrationLatency avg > 4500 ms over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "IntegrationLatency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api1Name }
+        - { Name: Stage,   Value: !Ref Api1Stage }
+      Period: 60
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 4500
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  #########################################
+  # API 1 — PER-PATH GET (4 resource paths)
+  #########################################
+
+  # ---- Path 1 ----
+  Api1Path1GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P1-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath1} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path1GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P1-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath1} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path1GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P1-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath1} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P1"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path1GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P1-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath1} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P1"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 2 ----
+  Api1Path2GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P2-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath2} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path2GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P2-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath2} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path2GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P2-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath2} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P2"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path2GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P2-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath2} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P2"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 3 ----
+  Api1Path3GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P3-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath3} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path3GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P3-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath3} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path3GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P3-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath3} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P3"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path3GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P3-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath3} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P3"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 4 ----
+  Api1Path4GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P4-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath4} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path4GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P4-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath4} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api1Name }
+        - { Name: Stage,    Value: !Ref Api1Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path4GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P4-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath4} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P4"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api1Path4GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi1Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api1Name}-${Api1Stage}-GET-P4-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api1ResourcePath4} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api1Name }
+                - { Name: Stage,    Value: !Ref Api1Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api1ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P4"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  #######################
+  # API 2 — STAGE ALARMS
+  #######################
+
+  Api2Stg5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-5XXError-High"
+      AlarmDescription: "Stage 5XX > 50/min over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      Statistic: Sum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 50
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Stg5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-5XXError-Critical"
+      AlarmDescription: "Stage 5XX > 200/min over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      Statistic: Sum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 200
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Stg4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-4XXRate-High"
+      AlarmDescription: "Stage 4XX rate > 8% over 5m"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 8
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api2Name }
+                - { Name: Stage,   Value: !Ref Api2Stage }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api2Name }
+                - { Name: Stage,   Value: !Ref Api2Stage }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "Stage4XXErrorRatePercent"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Stg4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-4XXRate-Critical"
+      AlarmDescription: "Stage 4XX rate > 20% over 3m"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 20
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api2Name }
+                - { Name: Stage,   Value: !Ref Api2Stage }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName, Value: !Ref Api2Name }
+                - { Name: Stage,   Value: !Ref Api2Stage }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "Stage4XXErrorRatePercent"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2StgLatencyP95High:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-LatencyP95-High"
+      AlarmDescription: "Stage Latency p95 > 1200 ms over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "Latency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      ExtendedStatistic: p95
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 1200
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2StgLatencyP95Critical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-LatencyP95-Critical"
+      AlarmDescription: "Stage Latency p95 > 2500 ms over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "Latency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      ExtendedStatistic: p95
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 2500
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2StgIntegrationLatencyHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-IntegrationLatency-High"
+      AlarmDescription: "Stage IntegrationLatency avg > 2500 ms over 5m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "IntegrationLatency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 2500
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2StgIntegrationLatencyCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-stg-IntegrationLatency-Critical"
+      AlarmDescription: "Stage IntegrationLatency avg > 4500 ms over 3m"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "IntegrationLatency"
+      Dimensions:
+        - { Name: ApiName, Value: !Ref Api2Name }
+        - { Name: Stage,   Value: !Ref Api2Stage }
+      Period: 60
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 4500
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  #########################################
+  # API 2 — PER-PATH GET (4 resource paths)
+  #########################################
+
+  Api2Path1GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P1-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath1} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path1GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P1-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath1} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path1GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P1-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath1} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P1"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path1GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P1-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath1} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath1 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P1"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 2 ----
+  Api2Path2GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P2-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath2} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path2GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P2-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath2} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path2GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P2-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath2} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P2"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path2GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path2
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P2-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath2} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath2 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P2"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 3 ----
+  Api2Path3GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P3-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath3} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path3GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P3-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath3} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path3GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P3-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath3} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P3"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path3GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path3
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P3-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath3} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath3 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P3"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  # ---- Path 4 ----
+  Api2Path4GET5xxHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P4-5XXError-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath4} 5XX > 5/min (5m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path4GET5xxCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P4-5XXError-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath4} 5XX > 20/min (3m)"
+      Namespace: "AWS/ApiGateway"
+      MetricName: "5XXError"
+      Dimensions:
+        - { Name: ApiName,  Value: !Ref Api2Name }
+        - { Name: Stage,    Value: !Ref Api2Stage }
+        - { Name: Method,   Value: GET }
+        - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+      Period: 60
+      Statistic: Sum
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path4GET4xxRateHigh:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P4-4XXRate-High"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath4} 4XX rate > 5% (5m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P4"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+
+  Api2Path4GET4xxRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasApi2Path4
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${Api2Name}-${Api2Stage}-GET-P4-4XXRate-Critical"
+      AlarmDescription: !Sub "GET ${Api2ResourcePath4} 4XX rate > 15% (3m)"
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 15
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "4XXError"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: "AWS/ApiGateway"
+              MetricName: "Count"
+              Dimensions:
+                - { Name: ApiName,  Value: !Ref Api2Name }
+                - { Name: Stage,    Value: !Ref Api2Stage }
+                - { Name: Method,   Value: GET }
+                - { Name: Resource, Value: !Ref Api2ResourcePath4 }
+            Period: 60
+            Stat: Sum
+        - Id: e
+          Expression: "100*m1/IF(m2,m2,1)"
+          Label: "GET4XXRate-P4"
+          ReturnData: true
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      OKActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]

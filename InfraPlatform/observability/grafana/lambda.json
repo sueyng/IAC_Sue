@@ -1,0 +1,1183 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 84,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 15,
+      "panels": [],
+      "title": "Gauges",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Invocation Errors:\n\nThe number of invocations that result in a function error. Function errors include exceptions that your code throws and exceptions that the Lambda runtime throws. The runtime returns errors for issues such as timeouts and configuration errors. To calculate the error rate, divide the value of Errors by the value of Invocations. Note that the timestamp on an error metric reflects when the function was invoked, not when the error occurred.\n\nMeaningful Statistics: Sum\n\nUnit info: Count",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Errors",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Invocation Errors (All Functions)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Duration:\n\nThe amount of time that your function code spends processing an event. The billed duration for an invocation is the value of Duration rounded up to the nearest millisecond. Duration does not include cold start time.\n\nMeaningful Statistics: Average, Maximum, Minimum, Percentiles, Trimmed Mean\n\nUnit info: Milliseconds",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 11,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Duration",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Average Duration (All Functions)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Throttles:\n\nThe number of invocation requests that are throttled. When all function instances are processing requests and no concurrency is available to scale up, Lambda rejects additional requests with a TooManyRequestsException error. Throttled requests and other invocation errors don't count as either Invocations or Errors.\n\nMeaningful Statistics: Sum\n\nUnit info: Count",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 10,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Throttles",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Throttles Total",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 8,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "DestinationDeliveryFailures",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Destination Delivery Failures",
+      "type": "gauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 17,
+      "panels": [],
+      "title": "Time Series",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Invocations:\n\nThe number of times that your function code is invoked, including successful invocations and invocations that result in a function error. Invocations aren't recorded if the invocation request is throttled or otherwise results in an invocation error. The value of Invocations equals the number of requests billed.\n\nMeaningful Statistics: Sum\n\nUnit info: Count",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "count",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "FunctionName": "$functionname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Invocations",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Invocations Total by Function",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Invocation Errors:\n\nThe number of invocations that result in a function error. Function errors include exceptions that your code throws and exceptions that the Lambda runtime throws. The runtime returns errors for issues such as timeouts and configuration errors. To calculate the error rate, divide the value of Errors by the value of Invocations. Note that the timestamp on an error metric reflects when the function was invoked, not when the error occurred.\n\nMeaningful Statistics: Sum\n\nUnit info: Count",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 15,
+            "axisSoftMin": 1,
+            "barAlignment": 1,
+            "drawStyle": "bars",
+            "fillOpacity": 49,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "count",
+            "mean",
+            "min",
+            "max",
+            "allIsZero",
+            "allIsNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "FunctionName": "$functionname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Errors",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Invocations Errors by Function",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Duration:\n\nThe amount of time that your function code spends processing an event. The billed duration for an invocation is the value of Duration rounded up to the nearest millisecond. Duration does not include cold start time.\n\nMeaningful Statistics: Average, Maximum, Minimum, Percentiles, Trimmed Mean\n\nUnit info: Milliseconds",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "FunctionName": "$functionname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Duration",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Duration by Function",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Concurrent Executions:\n\nThe number of function instances that are processing events. If this number reaches your concurrent executions quota for the Region, or the reserved concurrency limit on the function, then Lambda throttles additional invocation requests.\n\nMeaningful Statistics: Maximum, Average\n\nUnit info: Count",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "FunctionName": "$functionname"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ConcurrentExecutions",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Concurrent Executions by Function",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Maximum Duration of all Lambda functions per time period.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "dtdurationms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Duration",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Maximum Duration (All Functions)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "Maximum Concurrent Executions of all Lambda functions per time period.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "dtdurationms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ConcurrentExecutions",
+          "metricQueryType": 0,
+          "namespace": "AWS/Lambda",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Maximum Concurrent Executions(All Functions)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "revision": 1,
+  "schemaVersion": 39,
+  "tags": [
+    "cloudwatch",
+    "toolkit"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "CloudWatch",
+          "value": "b8sFz8dNk"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "cloudwatch",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ap-southeast-1",
+          "value": "ap-southeast-1"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${datasource}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Region",
+        "multi": false,
+        "name": "region",
+        "options": [],
+        "query": {
+          "queryType": "regions",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${datasource}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Function Name",
+        "multi": true,
+        "name": "functionname",
+        "options": [],
+        "query": {
+          "dimensionKey": "FunctionName",
+          "metricName": "ConcurrentExecutions",
+          "namespace": "AWS/Lambda",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "$region"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "06-TOOLKIT-Lambda",
+  "uid": "betkq8m45dekgb",
+  "version": 2,
+  "weekStart": ""
+}

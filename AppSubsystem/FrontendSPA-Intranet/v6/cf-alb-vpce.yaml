@@ -1,0 +1,460 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a ALB with target Group to Endpoint IP Addresses and optional S3 endpoint routing. v6
+
+Parameters:
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  ALBName: 
+    Description: Name for Application Load Balancer
+    Type: String
+
+  ALBScheme:
+    Description: ALB type, Internet or intranet ALB
+    Type: String
+    AllowedValues:
+      - internal
+      - internet-facing    
+  
+  VpcId:
+    Type: String
+    Description: The VPC ID where the ALB will be created.
+
+  IngressSubnetIds:
+    Type: CommaDelimitedList
+    Description: The Subnet IDs for the Ingress Subnets where the Public ALB will be deployed.
+
+  VPCEndpointIP1:
+    Description: VPC Interface Endpoint IP - AZ1
+    Type: String
+
+  VPCEndpointIP2:
+    Description: VPC Interface Endpoint IP - AZ2
+    Type: String
+
+  VPCEndpointIP3:
+    Description: VPC Interface Endpoint IP - AZ3
+    Type: String
+
+  SSLCertificateArn:
+    Description: The ARN of the SSL certificate to associate with the ALB HTTPS listener.
+    Type: String
+
+  ALBSslPolicy:
+    Type: String
+    Description: "ELB Security Policy for the HTTPS listener (TLS 1.2+ only)"
+    AllowedValues:
+      - ELBSecurityPolicy-TLS13-1-2-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Res-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Ext1-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Ext2-2021-06
+      - ELBSecurityPolicy-TLS13-1-3-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
+      - ELBSecurityPolicy-TLS13-1-2-PQ-2025-09
+      - ELBSecurityPolicy-TLS13-1-2-Ext1-PQ-2025-09
+      - ELBSecurityPolicy-TLS13-1-2-Ext2-PQ-2025-09
+      - ELBSecurityPolicy-TLS13-1-3-PQ-2025-09
+      - ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+      - ELBSecurityPolicy-TLS-1-2-2017-01
+    Default: ELBSecurityPolicy-TLS13-1-2-2021-06
+
+  AdditionalCertArn:
+    Description: Additonal SSL certificate ARN to associate with the ALB HTTPS listener (eg.IntrnetBackednAPI)
+    Type: String
+
+  PrefixListIdIntranet:
+    Type: String
+    Description: The ID of the AWS Prefix List to allow inbound traffic from intranet subnets
+
+  PrefixListIdInternet:
+    Type: String
+    Description: The ID of the AWS Prefix List to allow inbound traffic on the public ALB
+    Default: ""
+
+  EnableS3Upload:
+    Type: String
+    Description: Enable S3 upload functionality through ALB
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  S3EndpointIP1:
+    Description: S3 VPC Interface Endpoint IP - AZ1
+    Type: String
+    Default: ""
+
+  S3EndpointIP2:
+    Description: S3 VPC Interface Endpoint IP - AZ2
+    Type: String
+    Default: ""
+
+  S3EndpointIP3:
+    Description: S3 VPC Interface Endpoint IP - AZ3 (Optional)
+    Type: String
+    Default: ""
+
+  S3UploadPath:
+    Description: Path pattern for S3 upload route (e.g., /upload/*)
+    Type: String
+    Default: "/appartifacts/*"
+
+  S3DownloadPath:
+    Description: Path pattern for S3 upload route (e.g., /Download/*)
+    Type: String
+    Default: ""
+
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCEndpointIP3: !Not [!Equals [!Ref "VPCEndpointIP3", ""]]
+  IsPrivateALB: !Equals [!Ref "ALBScheme", "internal"]
+  IsPublicALB: !Equals [!Ref "ALBScheme", "internet-facing"]
+  HasPrefixListIdIntranet: !Not [!Equals [!Ref "PrefixListIdIntranet", ""]]
+  HasPrefixListIdInternet: !Not [!Equals [!Ref "PrefixListIdInternet", ""]]
+  HasAdditionalCertArn: !Not [!Equals [!Ref "AdditionalCertArn", ""]]
+  EnableS3UploadFeature: !Equals [!Ref "EnableS3Upload", "true"]
+  HasS3EndpointIP3: !And 
+    - !Not [!Equals [!Ref "S3EndpointIP3", ""]]
+    - !Condition EnableS3UploadFeature
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, '']]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, '']]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, '']]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, '']]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasS3DownloadPath: !Not [!Equals [!Ref S3DownloadPath, ""]]
+
+Resources:
+  # Security Group for ALB
+  PublicALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: IsPublicALB
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${ALBName}-sg"
+      GroupDescription: Security group for the Pulbic ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - !If
+          - HasPrefixListIdInternet
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourcePrefixListId: !Ref PrefixListIdInternet
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v6
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - !If 
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: VPC CIDR 4 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: VPC CIDR 5 IP Range
+          - !Ref "AWS::NoValue"     
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"
+
+  PrivateALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: IsPrivateALB
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${ALBName}-sg"
+      GroupDescription: Security group for the Private ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - !If
+          - HasPrefixListIdIntranet
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourcePrefixListId: !Ref PrefixListIdIntranet
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v6
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: VPC CIDR 4 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: VPC CIDR 5 IP Range
+          - !Ref "AWS::NoValue"     
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"
+
+  #Application Load Balancer
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Ref ALBName
+      Subnets: !Ref IngressSubnetIds
+      SecurityGroups:
+        - !If
+          - IsPrivateALB
+          - !Ref PrivateALBSecurityGroup  # Private ALB Security Group
+          - !Ref PublicALBSecurityGroup
+      Scheme: !Ref ALBScheme
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: "true"
+        - Key: routing.http.drop_invalid_header_fields.enabled
+          Value: "true"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v6
+
+  # Target Group
+  ALBTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${ALBName}-tg"
+      VpcId: !Ref VpcId
+      Protocol: HTTPS
+      Port: 443
+      TargetType: ip
+      Targets:
+        - Id: !Ref VPCEndpointIP1 # First IP
+        - Id: !Ref VPCEndpointIP2  # Second IP
+        - !If
+          - HasVPCEndpointIP3
+          - Id: !Ref VPCEndpointIP3  # Third IP
+          - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: "200,403"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v6
+
+  # S3 Target Group
+  S3TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: EnableS3UploadFeature
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${ALBName}-s3-tg"
+      Tags:
+        - Key: Name
+          Value: fileupload
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v6
+      VpcId: !Ref VpcId
+      Protocol: HTTPS
+      Port: 443
+      TargetType: ip
+      Targets:
+        - Id: !Ref S3EndpointIP1
+        - Id: !Ref S3EndpointIP2
+        - !If
+          - HasS3EndpointIP3
+          - Id: !Ref S3EndpointIP3
+          - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: "200,307"
+        
+  # Listener
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Protocol: HTTPS
+      SslPolicy: !Ref ALBSslPolicy
+      Port: 443
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTG
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+
+  # S3 Upload Listener Rule
+  S3UploadListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: EnableS3UploadFeature
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 10  # Priority for S3 path
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref S3TargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Ref S3UploadPath
+            - !If 
+              - HasS3DownloadPath
+              - !Ref S3DownloadPath
+              - !Ref AWS::NoValue
+
+  AdditionalCertificates:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerCertificate'
+    Condition: HasAdditionalCertArn
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref AdditionalCertArn
+#        - CertificateArn: !Ref SSLCertificateArn
+      ListenerArn: !Ref ALBListener

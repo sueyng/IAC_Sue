@@ -1,0 +1,206 @@
+# cf-infrastructure-main.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Main infrastructure stack for Security Groups, IAM Roles, API Gateway, and Lambda Authorizer
+
+Parameters:
+# Common Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+    Default: 'healthb'
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+
+# VPC Configuration
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the resources will be created
+    Default: vpc-02fb2e32bbb6ff24e
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Subnet IDs for Lambda functions
+    Default: subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b
+
+  SecurityGroupName:
+    Type: String
+    Description: "Name of the Security Group"
+    Default: 'healthbuddy-nprd-lambda-securitygroup'
+
+# API Gateway Configuration
+  ApigwVpceId:
+    Type: String
+    Description: VPC Endpoint ID for API Gateway
+    Default: 'vpce-09855052bcd07c8b0'
+
+  CustomDomainName:
+    Type: String
+    Description: Custom domain name for API Gateway
+    Default: 'healthbapi.seedideation.com'
+
+  SSLCertificateArn:
+    Type: String
+    Description: SSL certificate ARN for custom domain
+    Default: 'arn:aws:acm:ap-southeast-1:961341547198:certificate/fd6c2b82-e1ab-4ab0-a607-054fddd8a86a'
+
+  SwaggerFile:
+    Description: Swagger File location and filename, s3bucketname/filename
+    Type: String
+    Default: 'parent-child-stacks/swagger.json'
+
+# Azure AD Configuration
+  AzureAdClientId:
+    Type: String
+    Description: Azure AD Client ID
+    Default: ''
+
+  AzureAdTenantId:
+    Type: String
+    Description: Azure AD Tenant ID
+    Default: ''
+
+# Lambda Authorizer Toggle
+  EnableLambdaAuthorizer:
+    Type: String
+    Description: Enable or disable Lambda Authorizer
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+# Common Lambda Parameters
+  LogRetentionInDays:
+    Type: Number
+    Default: 14
+    Description: Number of days for Log Retention
+
+  LambdaS3bucket:
+    Type: String
+    Description: S3 bucket for Lambda function code
+    Default: 'health-nprd-cftemplates'
+
+# Authorizer Configuration
+  AuthorizerCodeZipFileName:
+    Type: String
+    Description: Zip file name for Lambda function code
+    Default: "parent-child-stacks/HealthBuddy.Authorizer-1.0.0.6.zip"
+  
+  AuthorizerLambdaRuntime:
+    Type: String
+    Description: Runtime for the Lambda function
+    Default: dotnet8
+
+  AuthorizerLambdaHandler:
+    Type: String
+    Description: Handler for the Lambda function
+    Default: "Authorizer::HealthBuddy.Authorizer.Function::FunctionHandler"
+
+# Base Lambda Role Configuration
+  LambdaExecutionRoleName:
+    Type: String
+    Description: Base name for Lambda IAM roles
+    Default: 'HealthBuddy-Lambda-Base-Role'
+
+  # BaseLambdaRoleManagedArns:
+  #   Type: CommaDelimitedList
+  #   Description: "Managed policies to attach to the base role"
+  #   Default: "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole,arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole,arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess,arn:aws:iam::aws:policy/AWSLambda_FullAccess,arn:aws:iam::aws:policy/AmazonS3FullAccess,arn:aws:iam::aws:policy/SecretsManagerReadWrite,arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"
+
+Mappings:
+ EnvironmentToStage:
+   nprd-sit1: { Stage: sit }
+   nprd-sit2: { Stage: sit }
+   nprd-sit: { Stage: sit }
+   nprd-sit-a: { Stage: sit }
+   nprd-sit-b: { Stage: sit }
+   nprd-uat: { Stage: uat }
+   nprd-uat-a: { Stage: uat }
+   nprd-uat-b: { Stage: uat }
+   nprd-pt: { Stage: pt }
+   nprd-pp: { Stage: pp }
+   prod: { Stage: prod }
+   prod-a: { Stage: prod }
+   prod-b: { Stage: prod }
+
+Conditions:
+  # Condition to check if Lambda Authorizer is enabled
+  IsLambdaAuthorizerEnabled: !Equals [!Ref EnableLambdaAuthorizer, 'true']
+
+Resources:
+  # Combined Infrastructure Stack (Security Group + IAM Role)
+  LambdaRoleSecuritGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-network-iamrole.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        SecurityGroupName: !Ref SecurityGroupName
+        VpcId: !Ref VpcId
+        LambdaRoleName: !Ref LambdaExecutionRoleName
+        # ManagedPolicyArns: !Join [",", !Ref BaseLambdaRoleManagedArns]
+
+  # Lambda Authorizer Stack - Only created if enabled
+  LambdaAuthorizerStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsLambdaAuthorizerEnabled
+    DependsOn: LambdaRoleSecuritGroupStack
+    Properties:
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-api-authorizer.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        LambdaS3bucket: !Ref LambdaS3bucket
+        CodeZipFileName: !Ref AuthorizerCodeZipFileName
+        LambdaRuntime: !Ref AuthorizerLambdaRuntime
+        LambdaHandler: !Ref AuthorizerLambdaHandler
+        AzureAdClientId: !Ref AzureAdClientId
+        AzureAdTenantId: !Ref AzureAdTenantId
+        SecurityGroupId: !GetAtt LambdaRoleSecuritGroupStack.Outputs.SecurityGroupId
+        LogRetentionInDays: !Ref LogRetentionInDays
+        SubnetIds: !Join [',', !Ref SubnetIds]
+
+  # API Gateway Stack
+  ApiGatewayStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - LambdaRoleSecuritGroupStack
+    Properties:
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-api-gateway.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        SwaggerFile: !Sub "s3://${LambdaS3bucket}/${SwaggerFile}"
+        ApigwVpceId: !Ref ApigwVpceId
+        APIName: !Sub ${AppShortName}-${EnvName}-api
+        StageName: !FindInMap [EnvironmentToStage, !Ref EnvName, Stage]
+        CustomDomainName: !Ref CustomDomainName
+        SSLCertificateArn: !Ref SSLCertificateArn
+        LambdaAuthorizerFunctionArn: !If [IsLambdaAuthorizerEnabled, !GetAtt LambdaAuthorizerStack.Outputs.LambdaAuthorizerArn, '']

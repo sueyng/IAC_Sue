@@ -1,0 +1,1850 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 80,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "b8sFz8dNk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "b8sFz8dNk"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "CPU Utilization - Maximum",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "b8sFz8dNk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "fieldMinMax": true,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "b8sFz8dNk"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "FreeableMemory",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Freeable Memory - Maximum",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "b8sFz8dNk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 26,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "b8sFz8dNk"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "LoginFailures",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Minimum"
+        }
+      ],
+      "title": "Login Failure Count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "DatabaseConnections",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Database connections [count sum]",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "b8sFz8dNk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "b8sFz8dNk"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Deadlocks",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Minimum"
+        }
+      ],
+      "title": "Dead Lock Count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 100000000000
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "FreeStorageSpace",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Available storage space [bytes]",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "b8sFz8dNk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "b8sFz8dNk"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "DiskQueueDepth",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Queue Depth",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "CPU utilization per instance [%]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "FreeableMemory",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Available RAM [bytes]",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "uid": "$datasource"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 2,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Instance metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ReadThroughput",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Read throughput [bytes/sec]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "WriteThroughput",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Write throughput [bytes/sec]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ReadLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Read latency [sec]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "WriteLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Write latency [sec]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ReadIOPS",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Read operations [IOPS]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 56
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "$datasource"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "WriteIOPS",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Write operations [IOPS]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^pophealthdb.*"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [
+            "max",
+            "min",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "ReadIOPS",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "$region",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        },
+        {
+          "alias": "",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource}"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "WriteIOPS",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Total IOPS",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Total IOPS - pophealthdb-prod",
+            "binary": {
+              "left": "pophealthdb-prod ReadIOPS",
+              "operator": "+",
+              "reducer": "sum",
+              "right": "pophealthdb-prod WriteIOPS"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Total IOPS - pophealthdb-prod-readreplica",
+            "binary": {
+              "left": "pophealthdb-prod-readreplica ReadIOPS",
+              "operator": "+",
+              "reducer": "sum",
+              "right": "pophealthdb-prod-readreplica WriteIOPS"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "collapsed": true,
+      "datasource": {
+        "uid": "$datasource"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "id": 22,
+      "panels": [
+        {
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 2,
+            "w": 24,
+            "x": 0,
+            "y": 50
+          },
+          "id": 20,
+          "options": {
+            "code": {
+              "language": "plaintext",
+              "showLineNumbers": false,
+              "showMiniMap": false
+            },
+            "content": "For more information about the available Amazon RDS metrics, please visit the [Amazon RDS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MonitoringOverview.html#rds-metrics).",
+            "mode": "markdown"
+          },
+          "pluginVersion": "10.4.1",
+          "targets": [
+            {
+              "alias": "",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "dimensions": {},
+              "expression": "",
+              "id": "",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "",
+              "metricQueryType": 0,
+              "namespace": "",
+              "refId": "A",
+              "region": "default",
+              "statistic": "Average"
+            }
+          ],
+          "title": "Documentation",
+          "type": "text"
+        }
+      ],
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Information",
+      "type": "row"
+    }
+  ],
+  "refresh": "",
+  "revision": 1,
+  "schemaVersion": 39,
+  "tags": [
+    "cloudwatch",
+    "toolkit"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "CloudWatch",
+          "value": "b8sFz8dNk"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "cloudwatch",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ap-southeast-1",
+          "value": "ap-southeast-1"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${datasource}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Region",
+        "multi": false,
+        "name": "region",
+        "options": [],
+        "query": {
+          "queryType": "regions",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "60",
+          "value": "60"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Period [sec]",
+        "multi": false,
+        "name": "period",
+        "options": [
+          {
+            "selected": true,
+            "text": "60",
+            "value": "60"
+          },
+          {
+            "selected": false,
+            "text": "180",
+            "value": "180"
+          },
+          {
+            "selected": false,
+            "text": "300",
+            "value": "300"
+          }
+        ],
+        "query": "60,180,300",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "02-TOOLKIT - RDS",
+  "uid": "detcjt3yz4rnke",
+  "version": 5,
+  "weekStart": ""
+}

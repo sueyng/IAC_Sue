@@ -1,0 +1,344 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS S3 Buckets Template v9 - Batch job buckets with optional irreversible Object Lock COMPLIANCE retention'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterLabels:
+      EnableObjectLock:
+        default: "Enable Object Lock for both batch job buckets - IRREVERSIBLE"
+      ObjectLockRetentionYears:
+        default: "COMPLIANCE retention period in years (minimum 1)"
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  EnableS3Versioning:
+    Type: String
+    Description: Enable S3 bucket versioning for all batch job buckets
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  EnableObjectLock:
+    Type: String
+    Description: "ONE-WAY CHANGE: Enable S3 Object Lock with COMPLIANCE retention for both batch job buckets. After Object Lock is enabled, it cannot be disabled and bucket versioning cannot be suspended."
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  ObjectLockRetentionYears:
+    Type: Number
+    Description: Default COMPLIANCE retention period applied to each new object version in both batch job buckets when Object Lock is enabled
+    Default: 1
+    MinValue: 1
+    MaxValue: 100
+
+  EnableLifecycle:
+    Type: String
+    Description: Enable lifecycle configuration for both batch job buckets. Must be false when Object Lock is enabled.
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  S3CurrentVersionExpirationDays:
+    Type: Number
+    Description: Days before current (live) objects are deleted (0 to disable lifecycle rule). Default 365 preserves previous hardcoded behavior.
+    Default: 365
+    MinValue: 0
+    MaxValue: 3650
+
+  S3NoncurrentVersionExpirationDays:
+    Type: Number
+    Description: Days to retain noncurrent object versions before deletion (0 to disable)
+    Default: 14
+    MinValue: 0
+    MaxValue: 365
+
+Rules:
+  ObjectLockLifecycleCompatibility:
+    RuleCondition: !Equals [!Ref "EnableObjectLock", "true"]
+    Assertions:
+      - Assert: !Equals [!Ref "EnableLifecycle", "false"]
+        AssertDescription: "EnableLifecycle must be false when Object Lock is enabled. Review and test post-retention lifecycle cleanup separately."
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  EnableVersioning: !Equals [!Ref EnableS3Versioning, "true"]
+  IsObjectLockEnabled: !Equals [!Ref EnableObjectLock, "true"]
+  IsLifecycleEnabled: !Equals [!Ref EnableLifecycle, "true"]
+  IsEffectiveVersioningEnabled: !Or
+    - !Condition EnableVersioning
+    - !Condition IsObjectLockEnabled
+  ShouldRetainBucket: !Or
+    - !Condition IsProduction
+    - !Condition IsObjectLockEnabled
+  HasCurrentExpiration: !And
+    - !Condition IsLifecycleEnabled
+    - !Not [!Equals [!Ref S3CurrentVersionExpirationDays, 0]]
+  HasNoncurrentExpiration: !And
+    - !Condition IsLifecycleEnabled
+    - !Condition IsEffectiveVersioningEnabled
+    - !Not [!Equals [!Ref S3NoncurrentVersionExpirationDays, 0]]
+  HasAnyLifecycleRule: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
+
+Resources:
+  DataloadS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [ShouldRetainBucket, Retain, Delete]
+    UpdateReplacePolicy: !If [ShouldRetainBucket, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-dataload
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: !If
+        - IsEffectiveVersioningEnabled
+        - Status: Enabled
+        - !Ref "AWS::NoValue"
+      ObjectLockEnabled: !If
+        - IsObjectLockEnabled
+        - true
+        - !Ref "AWS::NoValue"
+      ObjectLockConfiguration: !If
+        - IsObjectLockEnabled
+        - ObjectLockEnabled: Enabled
+          Rule:
+            DefaultRetention:
+              Mode: COMPLIANCE
+              Years: !Ref ObjectLockRetentionYears
+        - !Ref "AWS::NoValue"
+      LifecycleConfiguration: !If
+        - HasAnyLifecycleRule
+        - Rules:
+            - !If
+              - HasCurrentExpiration
+              - Id: CurrentVersionExpiration
+                Status: Enabled
+                ExpirationInDays: !Ref S3CurrentVersionExpirationDays
+                Prefix: ""
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasNoncurrentExpiration
+              - Id: NoncurrentVersionCleanup
+                Status: Enabled
+                NoncurrentVersionExpiration:
+                  NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+              - !Ref "AWS::NoValue"
+        - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-s3-v9
+        - Key: VersioningEnabled
+          Value: !If [IsEffectiveVersioningEnabled, "true", "false"]
+        - Key: ObjectLockEnabled
+          Value: !Ref EnableObjectLock
+
+  DataloadS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [ShouldRetainBucket, Retain, Delete]
+    UpdateReplacePolicy: !If [ShouldRetainBucket, Retain, Delete]
+    Properties:
+      Bucket: !Ref DataloadS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt DataloadS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataloadS3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource:
+              - !GetAtt DataloadS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataloadS3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  DataExtractionS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [ShouldRetainBucket, Retain, Delete]
+    UpdateReplacePolicy: !If [ShouldRetainBucket, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-data-extraction
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: !If
+        - IsEffectiveVersioningEnabled
+        - Status: Enabled
+        - !Ref "AWS::NoValue"
+      ObjectLockEnabled: !If
+        - IsObjectLockEnabled
+        - true
+        - !Ref "AWS::NoValue"
+      ObjectLockConfiguration: !If
+        - IsObjectLockEnabled
+        - ObjectLockEnabled: Enabled
+          Rule:
+            DefaultRetention:
+              Mode: COMPLIANCE
+              Years: !Ref ObjectLockRetentionYears
+        - !Ref "AWS::NoValue"
+      LifecycleConfiguration: !If
+        - HasAnyLifecycleRule
+        - Rules:
+            - !If
+              - HasCurrentExpiration
+              - Id: CurrentVersionExpiration
+                Status: Enabled
+                ExpirationInDays: !Ref S3CurrentVersionExpirationDays
+                Prefix: ""
+              - !Ref "AWS::NoValue"
+            - !If
+              - HasNoncurrentExpiration
+              - Id: NoncurrentVersionCleanup
+                Status: Enabled
+                NoncurrentVersionExpiration:
+                  NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+              - !Ref "AWS::NoValue"
+        - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-s3-v9
+        - Key: VersioningEnabled
+          Value: !If [IsEffectiveVersioningEnabled, "true", "false"]
+        - Key: ObjectLockEnabled
+          Value: !Ref EnableObjectLock
+
+  DataExtractionS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [ShouldRetainBucket, Retain, Delete]
+    UpdateReplacePolicy: !If [ShouldRetainBucket, Retain, Delete]
+    Properties:
+      Bucket: !Ref DataExtractionS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt DataExtractionS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataExtractionS3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource:
+              - !GetAtt DataExtractionS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt DataExtractionS3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+Outputs:
+  DataloadS3BucketName:
+    Description: Name of the dataload S3 bucket
+    Value: !Ref DataloadS3Bucket
+
+  DataloadS3BucketArn:
+    Description: ARN of the dataload S3 bucket
+    Value: !GetAtt DataloadS3Bucket.Arn
+
+  DataExtractionS3BucketName:
+    Description: Name of the data-extraction S3 bucket
+    Value: !Ref DataExtractionS3Bucket
+
+  DataExtractionS3BucketArn:
+    Description: ARN of the data-extraction S3 bucket
+    Value: !GetAtt DataExtractionS3Bucket.Arn
+
+  VersioningStatus:
+    Description: Versioning status shared by both batch job buckets
+    Value: !If [IsEffectiveVersioningEnabled, "Enabled", "Disabled"]
+
+  ObjectLockStatus:
+    Description: S3 Object Lock status shared by both batch job buckets
+    Value: !If [IsObjectLockEnabled, "Enabled", "Disabled"]
+
+  ObjectLockMode:
+    Description: Default S3 Object Lock retention mode shared by both batch job buckets
+    Value: !If [IsObjectLockEnabled, "COMPLIANCE", "NotConfigured"]
+
+  ObjectLockRetentionYears:
+    Description: Default Object Lock retention period in years shared by both batch job buckets
+    Value: !If [IsObjectLockEnabled, !Ref ObjectLockRetentionYears, "NotConfigured"]

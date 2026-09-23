@@ -1,0 +1,728 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Amazon VPC Endpoints stack
+
+Parameters:
+  AWSRegion:
+    Description: Region for AWS Services
+    Type: String
+    AllowedValues:
+      - ap-southeast-1  
+  VpcId:
+    Description: VPC to create endpoints and workspace
+    Type: AWS::EC2::VPC::Id
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  AppSubnetIds:
+    Description: Subnets to create endpoints and workspace
+    Type: List<AWS::EC2::Subnet::Id>
+  AppShortName:
+    Description: Application name
+    Type: String
+  EnvName:
+    Description: Env Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+
+  CreateGrafanaEndpoint:
+    Description: Create VPC Endpoint for Grafana?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateEKSEndpoint:
+    Description: Create VPC Endpoint for EKS?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateXRayEndpoint:
+    Description: Create VPC Endpoint for X-Ray?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateAMPEndpoint:
+    Description: Create VPC Endpoint for AMP (Prometheus)?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateECREndpoints:
+    Description: Create VPC Endpoints for ECR (API and Docker)?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateELBEndpoint:
+    Description: Create VPC Endpoint for Elastic Load Balancing?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateSecretsEndpoint:
+    Description: Create VPC Endpoint for Secrets Manager?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateElasticacheEndpoint:
+    Description: Create VPC Endpoint for Elasticache?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateSESEndpoint:
+    Description: Create VPC Endpoint for SES?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateAPIGatewayEndpoint:
+    Description: Create VPC Endpoint for API Gateway?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateSQSEndpoint:
+    Description: Create VPC Endpoint for SQS?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateRDSEndpoint:
+    Description: Create VPC Endpoint for RDS?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateLambdaEndpoint:
+    Description: Create VPC Endpoint for Lambda?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateS3Endpoint:
+    Description: Create VPC Endpoint for S3?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateECSEndpoint:
+    Description: Create VPC Endpoint for ECS?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateCloudFormationEndpoint:
+    Description: Create VPC Endpoint for CloudFormation?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateGlueEndpoint:
+    Description: Create VPC Endpoint for AWS Glue?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateDataSyncEndpoint:
+    Description: Create VPC Endpoint for AWS DataSync?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateSNSEndpoint:
+    Description: Create VPC Endpoint for Amazon SNS?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateBatchEndpoint:
+    Description: Create VPC Endpoint for AWS Batch?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  CreateAthenaEndpoint:
+    Description: Create VPC Endpoint for Amazon Athena?
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, '']]
+  
+  # Service-specific conditions
+  CreateGrafana: !Equals [!Ref CreateGrafanaEndpoint, "true"]
+  CreateEKS: !Equals [!Ref CreateEKSEndpoint, "true"]
+  CreateXRay: !Equals [!Ref CreateXRayEndpoint, "true"]
+  CreateAMP: !Equals [!Ref CreateAMPEndpoint, "true"]
+  CreateECR: !Equals [!Ref CreateECREndpoints, "true"]
+  CreateELB: !Equals [!Ref CreateELBEndpoint, "true"]
+  CreateSecrets: !Equals [!Ref CreateSecretsEndpoint, "true"]
+  CreateElasticache: !Equals [!Ref CreateElasticacheEndpoint, "true"]
+  CreateSES: !Equals [!Ref CreateSESEndpoint, "true"]
+  CreateAPIGateway: !Equals [!Ref CreateAPIGatewayEndpoint, "true"]
+  CreateSQS: !Equals [!Ref CreateSQSEndpoint, "true"]
+  CreateRDS: !Equals [!Ref CreateRDSEndpoint, "true"]
+  CreateLambda: !Equals [!Ref CreateLambdaEndpoint, "true"]
+  CreateS3: !Equals [!Ref CreateS3Endpoint, "true"]
+  CreateECS: !Equals [!Ref CreateECSEndpoint, "true"]
+  CreateCloudFormation: !Equals [!Ref CreateCloudFormationEndpoint, "true"]
+  CreateGlue: !Equals [!Ref CreateGlueEndpoint, "true"]
+  CreateDataSync: !Equals [!Ref CreateDataSyncEndpoint, "true"]
+  CreateSNS: !Equals [!Ref CreateSNSEndpoint, "true"]
+  CreateBatch: !Equals [!Ref CreateBatchEndpoint, "true"]
+  CreateAthena: !Equals [!Ref CreateAthenaEndpoint, "true"]
+  
+  # Condition to create main security group if any non-SES endpoint is enabled
+  CreateMainSecurityGroup: !Or 
+    - !Condition CreateGrafana
+    - !Condition CreateEKS  
+    - !Or
+      - !Condition CreateXRay
+      - !Condition CreateAMP
+      - !Condition CreateECR
+      - !Condition CreateELB
+      - !Condition CreateSecrets
+      - !Condition CreateElasticache
+      - !Condition CreateAPIGateway
+      - !Condition CreateSQS
+      - !Condition CreateS3
+      - !Condition CreateECS
+    - !Or
+      - !Condition CreateCloudFormation
+      - !Condition CreateLambda
+      - !Condition CreateGlue
+      - !Condition CreateDataSync
+      - !Condition CreateSNS
+      - !Condition CreateBatch
+      - !Condition CreateAthena
+      
+Resources:
+  # Security Groups
+  VPCESecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Condition: CreateMainSecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security Group for VPC Endpoints
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-vpce
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${EnvName}-sg-vpce
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+
+  VPCESESSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Condition: CreateSES
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security Group for SES VPC Endpoint
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-vpce-ses
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${EnvName}-sg-vpce-ses
+      SecurityGroupIngress:
+        # SMTP Port 25
+        - IpProtocol: tcp
+          FromPort: 25
+          ToPort: 25
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 25
+          ToPort: 25
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 25
+            ToPort: 25
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        
+        # SMTP Port 587
+        - IpProtocol: tcp
+          FromPort: 587
+          ToPort: 587
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 587
+          ToPort: 587
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        
+        # SMTP Port 2587
+        - IpProtocol: tcp
+          FromPort: 2587
+          ToPort: 2587
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 2587
+          ToPort: 2587
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 2587
+            ToPort: 2587
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        
+        # SMTPS Port 465
+        - IpProtocol: tcp
+          FromPort: 465
+          ToPort: 465
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 465
+          ToPort: 465
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 465
+            ToPort: 465
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        
+        # SMTPS Port 2465
+        - IpProtocol: tcp
+          FromPort: 2465
+          ToPort: 2465
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: 2465
+          ToPort: 2465
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 2465
+            ToPort: 2465
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+
+  VPCERDSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Condition: CreateRDS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security Group for RDS VPC Endpoint
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-vpce-rds
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${EnvName}-sg-vpce-rds
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, 53341, 53331]
+          ToPort: !If [IsProduction, 53341, 53331]
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, 53341, 53331]
+          ToPort: !If [IsProduction, 53341, 53331]
+          CidrIp: !Ref VpcCidr2
+          Description: VPC CIDR 2 IP Range
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, 53341, 53331]
+            ToPort: !If [IsProduction, 53341, 53331]
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+
+  # VPC Endpoints
+  VPCInterfaceEndpointGrafanaWorkspace:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateGrafana
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]    
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.grafana-workspace'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds    
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointGrafana:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateGrafana
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.grafana'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds   
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointEKS:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateEKS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.eks'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointXRay:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateXRay
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.xray'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointAMP:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateAMP
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.aps-workspaces'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointECRDkr:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateECR
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.ecr.dkr'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds    
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointECRAPI:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateECR
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.ecr.api'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds 
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointELB:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateELB
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.elasticloadbalancing'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds   
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointSecrets:
+      Type: 'AWS::EC2::VPCEndpoint'
+      Condition: CreateSecrets
+      DeletionPolicy: !If [IsProduction, Retain, Delete]
+      UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+      Properties:
+        ServiceName: !Sub 'com.amazonaws.${AWSRegion}.secretsmanager'
+        VpcId: !Ref VpcId
+        SubnetIds: !Ref AppSubnetIds  
+        SecurityGroupIds:
+          - !GetAtt VPCESecurityGroup.GroupId
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointElasticache:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateElasticache
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.elasticache'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds       
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointSES:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateSES
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.email-smtp'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds     
+      SecurityGroupIds:
+        - !GetAtt VPCESESSecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointAPIGateway:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateAPIGateway
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.execute-api'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds  
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointSQS:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateSQS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.sqs'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointRDS:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateRDS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.rds'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCERDSSecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointS3:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateS3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.s3'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointLambda:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateLambda
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.lambda'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointECS:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateECS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.ecs'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointCloudFormation:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateCloudFormation
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.cloudformation'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointGlue:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateGlue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.glue'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointDataSync:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateDataSync
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.datasync'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointSNS:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateSNS
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.sns'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointBatch:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateBatch
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.batch'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+
+  VPCInterfaceEndpointAthena:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateAthena
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWSRegion}.athena'
+      VpcId: !Ref VpcId
+      SubnetIds: !Ref AppSubnetIds
+      SecurityGroupIds:
+        - !GetAtt VPCESecurityGroup.GroupId
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true

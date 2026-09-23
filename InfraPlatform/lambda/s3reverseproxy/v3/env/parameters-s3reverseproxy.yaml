@@ -1,0 +1,227 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Pre-deployment requirements:
+# - VPC must have CloudWatch Logs + X-Ray Interface VPC Endpoints reachable from SubnetIds
+# - S3 Gateway Endpoint with prefix list ID (provide via S3PrefixListId)
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                     # 📝 e.g. myapp, api, docs
+EnvName: "<edit_here>"                          # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA CODE CONFIGURATION
+LambdaS3bucket: "<edit_here>"                   # 📝 e.g. myapp-nprd-cftemplates (bucket name, not ARN)
+CodeZipFileName: "<edit_here>"                  # 📝 e.g. s3reverseproxy.zip, lambda/s3proxy-v1.0.0.zip
+LambdaRuntime: "nodejs20.x"                     # default nodejs20.x; also accepts python3.x, nodejs18.x
+LambdaHandler: "index.handler"                  # default index.handler
+
+# S3 BACKEND — fill EITHER one (mode is inferred); leave the other ""
+FrontendSPABucketName: "<edit_here>"            # 📝 single bucket — e.g. myapp-nprd-dev-frontend-spa
+APIGatewayToS3BucketMapping: ""                 #    OR multi bucket — e.g. "abc123:bucket1,def456:bucket2"
+
+# LAMBDA BEHAVIOR
+LogRetentionInDays: "14"                        # e.g. 14, 30, 90 (days)
+
+# VPC CONFIGURATION (mandatory in v3 — TISO compliance)
+VpcId: "<edit_here>"                            # 📝 e.g. vpc-02fb2e32bbb6ff24e (must contain SubnetIds)
+SubnetIds: "<edit_here>"                        # 📝 e.g. subnet-xxx,subnet-yyy (min 2 private subnets, NO SPACES)
+VpcCidr1: "<edit_here>"                         # 📝 Primary VPC CIDR. e.g. 10.193.0.0/16
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# Additional VPC CIDRs — leave empty if not needed
+VpcCidr2: ""                                    # Optional secondary VPC CIDR (e.g. multi-CIDR/peered VPC)
+VpcCidr3: ""                                    # Optional tertiary VPC CIDR
+VpcCidr4: ""                                    # Optional quaternary VPC CIDR
+VpcCidr5: ""                                    # Optional quinary VPC CIDR
+
+# S3 egress path — strongly recommended (free, private)
+S3PrefixListId: ""                              # Optional S3 Gateway Endpoint Prefix List (e.g. pl-xxxxxxxx) — strongly recommended for FrontendSPABucket egress
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, docs)
+#   Creates function: {AppShortName}-{EnvName}-s3ReverseProxy
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-dev1, nprd-dev2, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*): DeletionPolicy Retain on stateful resources
+#   Non-Prod (nprd*): DeletionPolicy Delete
+
+# --- BUCKET ROUTING (mode inferred from which param you fill) ---
+#
+# Fill EITHER FrontendSPABucketName OR APIGatewayToS3BucketMapping; leave the other "".
+#
+#   FrontendSPABucketName non-empty (single-bucket usage):
+#     - One Lambda → one S3 bucket
+#     - Lambda env var: S3_BUCKET_NAME = ${FrontendSPABucketName}
+#     - IAM: narrow — s3:GetObject on ${FrontendSPABucketName}/* + ${LambdaS3bucket}/*
+#     - Template attaches managed S3 bucket policy on ${FrontendSPABucketName} (TLS 1.2 enforce, deny non-SSL)
+#
+#   APIGatewayToS3BucketMapping non-empty (multi-bucket usage):
+#     - One Lambda → many S3 buckets, picked by API Gateway ID
+#     - Lambda env var: API_TO_S3_BUCKET_MAP = ${APIGatewayToS3BucketMapping}
+#     - IAM: wildcard — s3:GetObject on ${AppShortName}-*/* + ${LambdaS3bucket}/*
+#       (scoped by AppShortName only — supports buckets like myapp-bucket1, myapp-bucket2;
+#        safe because project accounts are isolated per environment)
+#     - NO managed bucket policy — project team owns each routed bucket's policy
+#
+# If both are empty, the Lambda deploys with NO Environment variables block at all — it will fail at runtime when invoked.
+#
+#   Note: Lambda code zip must match the chosen mode (different env var, different routing logic).
+
+# --- LAMBDA CODE CONFIGURATION ---
+
+# LambdaS3bucket
+#   Value: S3 bucket name with Lambda code (NOT ARN)
+#   Example: myapp-nprd-cftemplates
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# CodeZipFileName
+#   Value: S3 key path to Lambda zip file
+#   Example: s3reverseproxy.zip, lambda/s3proxy-v1.0.0.zip
+#   Finding: S3 Console → bucket → browse to file → copy key
+
+# LambdaRuntime
+#   Allowed Values:
+#     Node.js: nodejs18.x, nodejs20.x
+#     Python: python3.9, python3.10, python3.11, python3.12
+#   Default: nodejs20.x
+#   Recommendation: nodejs20.x (good for I/O-heavy S3 operations)
+
+# LambdaHandler
+#   Format by runtime:
+#     Node.js: file.export → e.g. index.handler
+#     Python: file.function → e.g. lambda_function.lambda_handler
+#   Default: index.handler
+#   Finding: Check Lambda code for main entry point
+
+# --- S3 BACKEND ---
+
+# FrontendSPABucketName
+#   Value: S3 bucket name that the Lambda will reverse-proxy to (NOT ARN)
+#   Example: myapp-nprd-dev-frontend-spa
+#   Purpose: Lambda receives API Gateway request, calls S3 GetObject on this bucket, returns object as HTTP response
+#   Requirements:
+#     - Bucket must exist before deployment
+#     - Template adds bucket policy: Allow LambdaExecutionRole s3:GetObject + s3:PutObject; Deny non-TLS-1.2 + non-SSL requests
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# --- LAMBDA BEHAVIOR ---
+
+# LogRetentionInDays
+#   Allowed Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653
+#   Common values:
+#     - Development: 7-14 days
+#     - Staging: 30 days
+#     - Production: 90-365 days
+#   Default: 14
+#   Recommendation: 90 days for production
+
+# --- VPC CONFIGURATION (TISO compliance) ---
+#
+# v3 attaches the Lambda to a VPC for egress control + VPC Flow Log visibility (TISO).
+# A dedicated, per-Lambda security group is created in this template with least-privilege
+# inline egress (HTTPS 443 to Interface VPC Endpoints + optional S3 Gateway endpoint).
+#
+# Pre-deployment requirements:
+#   1. VPC has the following Interface Endpoints reachable from SubnetIds:
+#        - com.amazonaws.{region}.logs (Lambda log writes)
+#        - com.amazonaws.{region}.xray (X-Ray traces)
+#   2. Subnets must be PRIVATE and provide egress to the FrontendSPABucket via one of:
+#        - S3 Gateway endpoint (recommended — set S3PrefixListId)
+#        - S3 Interface endpoint reachable from VpcCidr1-5
+
+# VpcId
+#   Value: VPC ID (e.g. vpc-02fb2e32bbb6ff24e)
+#   Purpose: VPC where the Lambda SG will be created; must contain SubnetIds
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+
+# SubnetIds
+#   Value: Comma-separated PRIVATE subnet IDs (NO SPACES)
+#   Format: subnet-xxx,subnet-yyy
+#   Requirements: minimum 2 subnets in different AZs; private subnets with route to
+#                 Logs/X-Ray Interface Endpoints + S3 egress path
+#   Finding: VPC Console → Subnets → filter by VPC → copy private subnet IDs
+
+# VpcCidr1
+#   Value: Primary VPC CIDR (e.g. 10.193.0.0/16)
+#   Purpose: SG egress to CloudWatch Logs / X-Ray Interface VPC Endpoints
+#   Required: Must match an actual CIDR in the VPC
+
+# VpcCidr2..VpcCidr5
+#   Value: Additional VPC CIDRs (optional — leave empty if not needed)
+#   Use cases: Multi-CIDR VPC, shared-services VPC, peered VPC
+
+# S3PrefixListId
+#   Value: S3 Gateway Endpoint Prefix List ID (e.g. pl-xxxxxxxx)
+#   Strongly recommended: enables egress to S3 via Gateway endpoint (free, private)
+#   Leave empty if S3 traffic egresses via Interface Endpoint reachable from VpcCidr1-5
+#   Finding: VPC Console → Endpoints → S3 Gateway Endpoint → Prefix List ID
+
+# --- RESOURCES CREATED ---
+
+# Lambda Function
+#   Name: {AppShortName}-{EnvName}-s3ReverseProxy
+#   Runtime: {LambdaRuntime}
+#   Handler: {LambdaHandler}
+#   VPC: VpcConfig with subnets {SubnetIds} and SG {LambdaSecurityGroup.GroupId}
+#   Environment variable: S3_BUCKET_NAME={FrontendSPABucketName}
+#   X-Ray tracing: Active
+
+# Lambda Security Group
+#   Name: {AppShortName}-{EnvName}-s3ReverseProxy-sg (auto-generated by template)
+#   Egress (least-privilege):
+#     - 443/tcp → VpcCidr1 (mandatory)
+#     - 443/tcp → VpcCidr2..5 (conditional)
+#     - 443/tcp → S3PrefixListId (conditional)
+
+# IAM Execution Role
+#   Name: {AppShortName}-{EnvName}-lambda-execution-s3ReverseProxy-role
+#   Permissions:
+#     - CloudWatch Logs write
+#     - S3 GetObject (FrontendSPABucket + LambdaS3bucket)
+#     - VPC ENI management
+#     - X-Ray write (PutTraceSegments, PutTelemetryRecords)
+#   Managed policies: AWSLambdaBasicExecutionRole
+
+# CloudWatch Log Group
+#   Name: /aws/lambda/{AppShortName}-{EnvName}-s3ReverseProxy
+#   Retention: {LogRetentionInDays} days
+
+# Lambda Permission
+#   Principal: apigateway.amazonaws.com
+#   Action: lambda:InvokeFunction
+#   Allows any API Gateway to invoke Lambda
+
+# SSM Parameter
+#   Name: /{AppShortName}/{EnvName}/Lambda-s3ReverseProxy-Arn
+#   Value: Lambda function ARN (for cross-stack reference)
+
+# S3 Bucket Policy
+#   Bucket: {FrontendSPABucketName}
+#   Statements:
+#     - Allow LambdaExecutionRole: s3:GetObject + s3:PutObject
+#     - Deny non-TLS-1.2 requests
+#     - Deny non-SSL requests

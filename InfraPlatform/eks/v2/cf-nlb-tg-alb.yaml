@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Provision NLB with ALB Target Group
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+  Function:
+    Type: String
+    Description: Server Function (eg, APP, UTL, DB)
+    AllowedValues:
+      - APP
+      - WEB
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: VPC Subnet ids for App
+  IngressALBArn:
+    Type: String
+    Description: Ingress ALB Arn
+  VpcId:
+    Type: String
+    Description: VPC ID
+  HealthCheckPath:
+    Type: String
+    Description: Health Check Path
+    Default: "/swagger/index.html"
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  HasIngressALBArn: !Not [!Equals [!Ref IngressALBArn, '']]
+Resources:
+  IngressNLB:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      IpAddressType: "ipv4"
+      Subnets: !Ref AppSubnetIds  
+      Type: "network"
+      Scheme: "internal"
+      Name: !Sub ${AppShortName}-${EnvName}-${Function}-ingress-NLB
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EKS-v2      
+
+  IngressNLBTG:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete] 
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      IpAddressType: "ipv4"
+      HealthCheckIntervalSeconds: 30
+      Matcher:
+        HttpCode: "200-399"
+      HealthCheckPath: !Ref HealthCheckPath
+      Port: 443
+      Targets:
+      - !If
+        - HasIngressALBArn
+        - Port: 443
+          Id: !Ref IngressALBArn
+        - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      UnhealthyThresholdCount: 3
+      HealthCheckTimeoutSeconds: 10
+      Name: !Sub ${AppShortName}-${EnvName}-${Function}-ingress-NLB-TG
+      VpcId: !Ref VpcId
+      HealthyThresholdCount: 3
+      HealthCheckProtocol: "HTTPS"
+      TargetType: "alb"
+      HealthCheckPort: "traffic-port"
+      Protocol: "TCP"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EKS-v2      
+
+  IngressNLBListener:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref IngressNLB
+      Protocol: "TCP"
+      DefaultActions:
+      - Type: "forward"
+        ForwardConfig:
+          TargetGroups:
+          - TargetGroupArn: !Ref IngressNLBTG
+      Port: 443    

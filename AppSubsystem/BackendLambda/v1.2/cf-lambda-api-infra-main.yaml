@@ -1,0 +1,395 @@
+# cf-infrastructure-main.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Main infrastructure stack for Security Groups, IAM Roles, API Gateway, and Lambda Authorizer
+
+Parameters:
+# Common Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+    Default: 'healthb'
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+
+# VPC Configuration
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the resources will be created
+    Default: vpc-02fb2e32bbb6ff24e
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Subnet IDs for Lambda functions
+    Default: subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b
+
+  SecurityGroupName:
+    Type: String
+    Description: "Name of the Security Group"
+    Default: 'healthbuddy-nprd-lambda-securitygroup'
+
+# Network Configuration - VPC CIDRs
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+
+# Network Configuration - Database Subnets
+  VPCSubnetCidrDBAZ1:
+    Type: String
+    Description: AZ1 Database Subnet CIDR
+    Default: ""
+  VPCSubnetCidrDBAZ2:
+    Type: String
+    Description: AZ2 Database Subnet CIDR
+    Default: ""
+  VPCSubnetCidrDBAZ3:
+    Type: String
+    Description: AZ3 Database Subnet CIDR
+    Default: ""
+  ProdDBPort:
+    Type: String
+    Default: 53341
+    NoEcho: true
+  NProdDBPort:
+    Type: String
+    Default: 53331
+    NoEcho: true
+
+# Network Configuration - S3 & HCC VPC Endpoints
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+# HCC Forward Proxy Parameters
+  EnableBCSProxy:
+    Description: "Set to true to enable egress rules for HCC Forward Proxy"
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  HCCProxyPort:
+    Description: "HCC Forward Proxy port for external communication"
+    Type: Number
+    Default: 4000
+
+  ProdHCCProxyCidr1:
+    Description: "Production HCC Forward Proxy Subnet CIDR 1"
+    Type: String
+    Default: ""
+
+  ProdHCCProxyCidr2:
+    Description: "Production HCC Forward Proxy Subnet CIDR 2"
+    Type: String
+    Default: ""
+
+  NprdHCCProxyCidr1:
+    Description: "Non-Production HCC Forward Proxy Subnet CIDR 1"
+    Type: String
+    Default: ""
+
+  NprdHCCProxyCidr2:
+    Description: "Non-Production HCC Forward Proxy Subnet CIDR 2"
+    Type: String
+    Default: ""
+
+# ElastiCache Redis Parameters
+  ElastiCacheSubnetAZ1:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ1"
+    Type: String
+    Default: ""
+
+  ElastiCacheSubnetAZ2:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ2"
+    Type: String
+    Default: ""
+
+  ElastiCacheSubnetAZ3:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ3"
+    Type: String
+    Default: ""
+
+# API Gateway Configuration
+  ApigwVpceId:
+    Type: String
+    Description: VPC Endpoint ID for API Gateway
+    Default: 'vpce-09855052bcd07c8b0'
+
+  CustomDomainName:
+    Type: String
+    Description: Custom domain name for API Gateway
+    Default: 'healthbapi.seedideation.com'
+
+  SSLCertificateArn:
+    Type: String
+    Description: SSL certificate ARN for custom domain
+    Default: 'arn:aws:acm:ap-southeast-1:961341547198:certificate/fd6c2b82-e1ab-4ab0-a607-054fddd8a86a'
+
+  SwaggerFile:
+    Description: Swagger File location and filename, s3bucketname/filename
+    Type: String
+    Default: 'parent-child-stacks/swagger.json'
+
+  ApiGwAccessLogFormat:
+    Type: String
+    Description: Format string for API Gateway access logs (leave empty to disable access logging)
+    Default: ""
+
+  ApiGwLogRetentionInDays:
+    Type: Number
+    Description: Number of days to retain API Gateway access logs
+    Default: 30
+
+  ApiGwEnableCompression:
+    Type: String
+    Description: Enable API Gateway gzip response compression (yes/no). When yes, ApiGwMinimumCompressionSize is applied. Default 'no' — project teams should audit client gzip handling before enabling.
+    AllowedValues: ['yes', 'no']
+    Default: 'no'
+
+  ApiGwMinimumCompressionSize:
+    Type: Number
+    Description: Minimum response payload size in bytes to trigger gzip compression (only used when ApiGwEnableCompression=yes). Valid range 0 to 10485760.
+    Default: 10240
+    MinValue: 0
+    MaxValue: 10485760
+
+# Stack Notification Configuration (Optional - Recommended for new stack creation)
+  EnableStackNotifications:
+    Type: String
+    Description: Enable CloudFormation stack event notifications to SNS topic. Recommended 'yes' for NEW stack creation only - see README for limitations on existing stacks.
+    AllowedValues: ['yes', 'no']
+    Default: 'no'
+  StackNotificationSNSTopicArn:
+    Type: String
+    Description: ARN of an existing SNS topic for CloudFormation stack event notifications (required when EnableStackNotifications=yes; project team must provision the topic separately)
+    Default: ''
+
+# Azure AD Configuration
+  AzureAdClientId:
+    Type: String
+    Description: Azure AD Client ID
+    Default: ''
+
+  AzureAdTenantId:
+    Type: String
+    Description: Azure AD Tenant ID
+    Default: ''
+
+# Lambda Authorizer Toggle
+  EnableLambdaAuthorizer:
+    Type: String
+    Description: Enable or disable Lambda Authorizer
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+# Common Lambda Parameters
+  LogRetentionInDays:
+    Type: Number
+    Default: 14
+    Description: Number of days for Log Retention
+
+  LambdaS3bucket:
+    Type: String
+    Description: S3 bucket for Lambda function code
+    Default: 'health-nprd-cftemplates'
+
+# Authorizer Configuration
+  AuthorizerCodeZipFileName:
+    Type: String
+    Description: Zip file name for Lambda function code
+    Default: "parent-child-stacks/HealthBuddy.Authorizer-1.0.0.6.zip"
+
+  AuthorizerLambdaRuntime:
+    Type: String
+    Description: Runtime for the Lambda function
+    Default: dotnet8
+
+  AuthorizerLambdaHandler:
+    Type: String
+    Description: Handler for the Lambda function
+    Default: "Authorizer::HealthBuddy.Authorizer.Function::FunctionHandler"
+
+  AuthorizerLambdaTimeout:
+    Type: Number
+    Description: Timeout for the Lambda authorizer function in seconds
+    Default: 90
+    MinValue: 1
+    MaxValue: 900
+
+# Base Lambda Role Configuration
+  LambdaExecutionRoleName:
+    Type: String
+    Description: Base name for Lambda IAM roles
+    Default: 'HealthBuddy-Lambda-Base-Role'
+
+  # BaseLambdaRoleManagedArns:
+  #   Type: CommaDelimitedList
+  #   Description: "Managed policies to attach to the base role"
+  #   Default: "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole,arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole,arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess,arn:aws:iam::aws:policy/AWSLambda_FullAccess,arn:aws:iam::aws:policy/AmazonS3FullAccess,arn:aws:iam::aws:policy/SecretsManagerReadWrite,arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"
+
+Mappings:
+ EnvironmentToStage:
+   nprd-sit1: { Stage: sit }
+   nprd-sit2: { Stage: sit }
+   nprd-sit: { Stage: sit }
+   nprd-sit-a: { Stage: sit }
+   nprd-sit-b: { Stage: sit }
+   nprd-uat: { Stage: uat }
+   nprd-uat-a: { Stage: uat }
+   nprd-uat-b: { Stage: uat }
+   nprd-pt: { Stage: pt }
+   nprd-pp: { Stage: pp }
+   prod: { Stage: prod }
+   prod-a: { Stage: prod }
+   prod-b: { Stage: prod }
+
+Conditions:
+  # Condition to check if Lambda Authorizer is enabled
+  IsLambdaAuthorizerEnabled: !Equals [!Ref EnableLambdaAuthorizer, 'true']
+  HasStackNotifications: !And
+    - !Equals [!Ref EnableStackNotifications, 'yes']
+    - !Not [!Equals [!Ref StackNotificationSNSTopicArn, '']]
+
+Resources:
+  # Combined Infrastructure Stack (Security Group + IAM Role)
+  LambdaRoleSecuritGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      NotificationARNs: !If
+        - HasStackNotifications
+        - - !Ref StackNotificationSNSTopicArn
+        - !Ref 'AWS::NoValue'
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-network-iamrole.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        SecurityGroupName: !Ref SecurityGroupName
+        VpcId: !Ref VpcId
+        LambdaRoleName: !Ref LambdaExecutionRoleName
+        # Network parameters passed to nested stack
+        VpcCidr1: !Ref VpcCidr1
+        VpcCidr2: !Ref VpcCidr2
+        VpcCidr3: !Ref VpcCidr3
+        VpcCidr4: !Ref VpcCidr4
+        VpcCidr5: !Ref VpcCidr5
+        VPCSubnetCidrDBAZ1: !Ref VPCSubnetCidrDBAZ1
+        VPCSubnetCidrDBAZ2: !Ref VPCSubnetCidrDBAZ2
+        VPCSubnetCidrDBAZ3: !Ref VPCSubnetCidrDBAZ3
+        ProdDBPort: !Ref ProdDBPort
+        NProdDBPort: !Ref NProdDBPort
+        S3PrefixListId: !Ref S3PrefixListId
+        HCCVpceCidr: !Ref HCCVpceCidr
+        EnableBCSProxy: !Ref EnableBCSProxy
+        HCCProxyPort: !Ref HCCProxyPort
+        ProdHCCProxyCidr1: !Ref ProdHCCProxyCidr1
+        ProdHCCProxyCidr2: !Ref ProdHCCProxyCidr2
+        NprdHCCProxyCidr1: !Ref NprdHCCProxyCidr1
+        NprdHCCProxyCidr2: !Ref NprdHCCProxyCidr2
+        ElastiCacheSubnetAZ1: !Ref ElastiCacheSubnetAZ1
+        ElastiCacheSubnetAZ2: !Ref ElastiCacheSubnetAZ2
+        ElastiCacheSubnetAZ3: !Ref ElastiCacheSubnetAZ3
+        # ManagedPolicyArns: !Join [",", !Ref BaseLambdaRoleManagedArns]
+
+  # Lambda Authorizer Stack - Only created if enabled
+  LambdaAuthorizerStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsLambdaAuthorizerEnabled
+    DependsOn: LambdaRoleSecuritGroupStack
+    Properties:
+      NotificationARNs: !If
+        - HasStackNotifications
+        - - !Ref StackNotificationSNSTopicArn
+        - !Ref 'AWS::NoValue'
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-api-authorizer.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        LambdaS3bucket: !Ref LambdaS3bucket
+        CodeZipFileName: !Ref AuthorizerCodeZipFileName
+        LambdaRuntime: !Ref AuthorizerLambdaRuntime
+        LambdaHandler: !Ref AuthorizerLambdaHandler
+        LambdaTimeout: !Ref AuthorizerLambdaTimeout
+        AzureAdClientId: !Ref AzureAdClientId
+        AzureAdTenantId: !Ref AzureAdTenantId
+        SecurityGroupId: !GetAtt LambdaRoleSecuritGroupStack.Outputs.SecurityGroupId
+        LogRetentionInDays: !Ref LogRetentionInDays
+        SubnetIds: !Join [',', !Ref SubnetIds]
+
+  # API Gateway Stack
+  ApiGatewayStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - LambdaRoleSecuritGroupStack
+    Properties:
+      NotificationARNs: !If
+        - HasStackNotifications
+        - - !Ref StackNotificationSNSTopicArn
+        - !Ref 'AWS::NoValue'
+      TemplateURL: !Sub https://${AppShortName}-${EnvName}-cftemplates.s3.ap-southeast-1.amazonaws.com/cf-lambda-api-gateway.yaml
+      Parameters:
+        AppShortName: !Ref AppShortName
+        EnvName: !Ref EnvName
+        SwaggerFile: !Sub "s3://${LambdaS3bucket}/${SwaggerFile}"
+        ApigwVpceId: !Ref ApigwVpceId
+        APIName: !Sub ${AppShortName}-${EnvName}-api
+        StageName: !FindInMap [EnvironmentToStage, !Ref EnvName, Stage]
+        CustomDomainName: !Ref CustomDomainName
+        SSLCertificateArn: !Ref SSLCertificateArn
+        LambdaAuthorizerFunctionArn: !If [IsLambdaAuthorizerEnabled, !GetAtt LambdaAuthorizerStack.Outputs.LambdaAuthorizerArn, '']
+        AccessLogFormat: !Ref ApiGwAccessLogFormat
+        LogRetentionInDays: !Ref ApiGwLogRetentionInDays
+        EnableCompression: !Ref ApiGwEnableCompression
+        MinimumCompressionSize: !Ref ApiGwMinimumCompressionSize

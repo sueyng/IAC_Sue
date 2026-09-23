@@ -1,0 +1,50 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "healthb"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "LambdaS3bucket",
+        "ParameterValue": "health-nprd-cftemplates"
+    },
+    {
+        "ParameterKey": "CodeZipFileName",
+        "ParameterValue": "HealthBuddy.Authorizer-1.0.0.6.zip"
+    },
+    {
+        "ParameterKey": "LambdaRuntime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "LambdaHandler",
+        "ParameterValue": "Authorizer::HealthBuddy.Authorizer.Function::FunctionHandler"
+    },
+    {
+        "ParameterKey": "AzureAdClientId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AzureAdTenantId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "ForwardProxyAddress",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "SecurityGroupId",
+        "ParameterValue": "sg-048257d88871b1a16"
+    },
+    {
+        "ParameterKey": "LogRetentionInDays",
+        "ParameterValue": "14"
+    },
+    {
+        "ParameterKey": "SubnetIds",
+        "ParameterValue": "subnet-0123456789abcdef0,subnet-0fedcba9876543210"
+    }
+]

@@ -1,0 +1,50 @@
+# ========================================================================
+# QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with <edit_here>.
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END.
+# ========================================================================
+
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # e.g. nprd-dev, nprd-sit, prod
+
+# VPC LINK V2 CONFIGURATION
+VpcId: "<edit_here>"                    # e.g. vpc-0123456789abcdef0
+VpcLinkSubnetIds: "<edit_here>"         # e.g. subnet-aaa,subnet-bbb
+VpcLinkSubnetCidr1: "<edit_here>"       # e.g. 10.10.1.0/24
+VpcLinkSubnetCidr2: ""                  # e.g. 10.10.2.0/24
+VpcLinkSubnetCidr3: ""                  # optional
+
+# <<< PARAMETERS_END >>>
+
+# ========================================================================
+# PARAMETER REFERENCE - DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- VpcId ---
+# VPC where the API Gateway VPC Link V2 ENIs and managed security group are created.
+
+# --- VpcLinkSubnetIds ---
+# Subnets where API Gateway creates VPC Link V2 ENIs.
+# Use private/app-tier subnets that can route to the backend private ALB or NLB.
+# Provide comma-separated subnet IDs with no spaces.
+
+# --- VpcLinkSubnetCidr1/2/3 ---
+# Backend target subnet CIDRs allowed by the VPC Link V2 security group egress.
+# VpcLinkSubnetCidr1 is required.
+# VpcLinkSubnetCidr2 and VpcLinkSubnetCidr3 are optional.
+
+# --- Backend security group expectation ---
+# This template does not modify backend target security groups.
+# The backend ALB/NLB security group must allow inbound TCP 443 from the VPC Link
+# V2 ENI/security group path. If the backend already allows app subnet CIDRs,
+# choose VPC Link V2 subnets that align with the allowed CIDR ranges.
+
+# --- API Gateway integration expectation ---
+# Provisioning this VPC Link V2 alone does not change API Gateway traffic.
+# The API Gateway OpenAPI/Swagger private integration must be updated to use the
+# VPC Link V2 ID, then the API Gateway stage must be redeployed.

@@ -1,0 +1,130 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, processor
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+SQSQueueName: "<edit_here>"                      # 📝 e.g. myapp-prod-processing-queue
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+Team1SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:ops-team
+Team2SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:dev-team
+Team3SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:infra-team
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates alarm names: {AppShortName}-{EnvName}-sqs-*
+# - Used for alarm organization and filtering
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, processor
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a,
+#   nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#   nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (alarms preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (alarms deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- SQS QUEUE NAME ---
+# SQSQueueName: Name of the SQS queue to monitor
+#
+# Purpose:
+# - Specifies which SQS queue to monitor with CloudWatch alarms
+# - Used as CloudWatch metric dimension
+#
+# Format: Queue name (not ARN)
+# Example: myapp-prod-processing-queue, api-nprd-notifications
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SQS Console → Queues
+# 2. Find your queue
+# 3. Copy the queue name (not the URL or ARN)
+
+# --- TEAM 1 SNS TOPIC ARN (OPTIONAL) ---
+# Team1SNSTopicArn: SNS Topic ARN for Team 1 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 1 (typically L2 Operations)
+# - All alarms will send notifications to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:ops-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 1 / L2 Operations
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 1 notifications
+
+# --- TEAM 2 SNS TOPIC ARN (OPTIONAL) ---
+# Team2SNSTopicArn: SNS Topic ARN for Team 2 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 2 (typically L3 Support/Development)
+# - All alarms will send notifications to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:dev-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 2 / L3 Support
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 2 notifications
+
+# --- TEAM 3 SNS TOPIC ARN (OPTIONAL) ---
+# Team3SNSTopicArn: SNS Topic ARN for Team 3 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 3 (typically Infrastructure/Platform)
+# - All alarms will send notifications to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:infra-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 3 / Infrastructure
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 3 notifications

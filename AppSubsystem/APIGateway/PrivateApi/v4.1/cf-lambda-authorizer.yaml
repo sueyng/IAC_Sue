@@ -1,0 +1,239 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision and deploy a private API with swagger json file
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  LambdaS3bucket:
+    Type: String
+    Description: The s3 bucket where Lambda code is stored
+
+  CodeZipFileName:
+    Type: String
+    Description: Zip file name for lambda function code
+
+  LambdaRuntime:
+    Type: String
+    Description: Zip file name for lambda function code
+
+  LambdaHandler:
+    Type: String
+    Description: Zip file name for lambda function code
+
+  AzureAdClientId:
+    Type: String
+    Description: Azure AD Client ID
+  
+  AzureAdTenantId:
+    Type: String
+    Description: Azure AD Tenant ID
+
+  ForwardProxyAddress:
+    Type: String
+    Description: Forward Proxy Address
+
+  # VPC Configuration (Mandatory in v4 - TISO compliance)
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the Lambda security group will be created (must match the VPC of LambdaSubnetIds)
+
+  LambdaSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs where Lambda ENIs will be provisioned (mandatory, min 2 for HA)
+
+  VpcCidr1:
+    Type: String
+    Description: Primary VPC CIDR range (mandatory) - used for Lambda SG egress to CloudWatch Logs/X-Ray Interface Endpoint ENIs
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+    ConstraintDescription: Must be a valid CIDR range in the format x.x.x.x/x (e.g., 10.193.0.0/16)
+
+  VpcCidr2:
+    Type: String
+    Description: Secondary VPC CIDR range (optional) - for shared-services VPC or additional VPC CIDR peering
+    Default: ""
+
+  VpcCidr3:
+    Type: String
+    Description: Tertiary VPC CIDR range (optional)
+    Default: ""
+
+  VpcCidr4:
+    Type: String
+    Description: Quaternary VPC CIDR range (optional)
+    Default: ""
+
+  VpcCidr5:
+    Type: String
+    Description: Quinary VPC CIDR range (optional)
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, ""]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, ""]]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, ""]]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, ""]]
+
+Resources:
+  # Security Group for Lambda Authorizer ENIs (least-privilege egress)
+  LambdaAuthorizerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub ${AppShortName}-${EnvName}-lambda-authorizer-sg
+      GroupDescription: !Sub Security group for ${AppShortName}-${EnvName} Lambda authorizer
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: HTTPS to Interface VPC Endpoints (CloudWatch Logs, X-Ray) in primary VPC CIDR
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: HTTPS to Interface VPC Endpoints / centralised egress in VpcCidr2
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: HTTPS to Interface VPC Endpoints / centralised egress in VpcCidr3
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: HTTPS to Interface VPC Endpoints / centralised egress in VpcCidr4
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: HTTPS to Interface VPC Endpoints / centralised egress in VpcCidr5
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${EnvName}-lambda-authorizer-sg
+        - Key: IaCVersion
+          Value: AppSubsystem-PrivateApi-v4
+
+  # Lambda Authorizer function
+  LambdaAuthorizerFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: !Sub '${AppShortName}-${EnvName}-LambdaAuthorizer'
+      Handler: !Ref LambdaHandler # Adjust according to your Lambda code
+      Role: !GetAtt LambdaAuthorizerRole.Arn  # Replace with your Lambda execution role ARN
+      Runtime: !Ref LambdaRuntime # Adjust runtime as per your Lambda code
+      Code:
+        S3Bucket: !Ref LambdaS3bucket  # Replace with your S3 bucket where Lambda code is stored
+        S3Key: !Ref CodeZipFileName # Replace with the key to your zipped Lambda function code
+      Environment:
+        Variables:
+          AZURE_AD_TENANT_ID: !Ref AzureAdTenantId
+          AZURE_AD_CLIENT_ID: !Ref AzureAdClientId
+          FORWARD_PROXY_ADDRESS: !Ref ForwardProxyAddress
+      TracingConfig:
+        Mode: Active
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !GetAtt LambdaAuthorizerSecurityGroup.GroupId
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-PrivateApi-v4
+
+  LambdaAuthorizerRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RoleName: !Sub ${AppShortName}-${EnvName}-lambda-authorizer-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-LambdaAuthorizerExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppShortName}-${EnvName}-lambda-authorizer:*"
+        - PolicyName: LambdaAuthorizerVPCAccessExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                Resource: "*"
+        - PolicyName: LambdaAuthorizerXRayWriteAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-PrivateApi-v4
+
+#Outputs:
+#  ApiGatewayUrl:
+#    Description: 'URL of the API Gateway'
+#    Value: !Sub 'https://${PrivateApi}.execute-api.${AWS::Region}.amazonaws.com/prod/'

@@ -1,0 +1,59 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"                      # 📝 e.g. xyz, myapp, demo
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, prod
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+#
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates IAM role name: {AppShortName}-{EnvName}-apigw-cloudwatch-role
+# - Enables multi-application deployments in same account
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: xyz, myapp, demo
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd
+#
+# Allowed Values (Production):
+# - prod
+#
+# Environment-Specific Behavior:
+# Production environments (prod):
+# - DeletionPolicy: Retain (IAM role preserved on stack deletion)
+#
+# Non-Production environments (nprd):
+# - DeletionPolicy: Delete (IAM role deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+

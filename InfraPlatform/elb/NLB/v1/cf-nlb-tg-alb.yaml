@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template to provision Network Load Balancer (NLB) with target group
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Short name of the application (e.g., myapp, api-service)
+
+  EnvName:
+    Type: String
+    Description: Target environment for deployment. Controls environment-specific behaviors and naming
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of VPC Subnet IDs where the NLB will be deployed. Must be in different Availability Zones for high availability
+
+  IngressALBArn:
+    Type: String
+    Description: ARN of the Application Load Balancer that will be the target for this NLB. Leave empty if no ALB target is needed
+
+  VpcId:
+    Type: String
+    Description: ID of the VPC where the NLB and target group will be created
+
+  HealthCheckPath:
+    Type: String
+    Description: HTTP path for health check requests. Should return 200-399 status code when healthy
+    Default: "/swagger/index.html"
+
+  IngressNLBName:
+    Type: String
+    Description: Name of the Network Load Balancer to be created. Will be used in AWS console and tags
+    MaxLength: 32
+    MinLength: 1
+    AllowedPattern: "^[a-zA-Z0-9-]*$"
+    ConstraintDescription: "NLB name can only contain alphanumeric characters and hyphens, and must be less than 32 characters"
+
+  IngressNLBTargetGroupName:
+    Type: String
+    Description: Name of the Target Group to be created for the NLB. Will be used in AWS console and tags
+    MaxLength: 32
+    MinLength: 1
+    AllowedPattern: "^[a-zA-Z0-9-]*$"
+    ConstraintDescription: "Target Group name can only contain alphanumeric characters and hyphens, and must be less than 32 characters"
+
+Conditions:
+  IsProduction: !Or 
+    - !Equals [!Ref "EnvName", "prod"]
+    - !Equals [!Ref "EnvName", "prod-a"]
+    - !Equals [!Ref "EnvName", "prod-b"]
+    - !Equals [!Ref "EnvName", "prod-c"]
+  HasIngressALBArn: !Not [!Equals [!Ref IngressALBArn, '']]
+
+Resources:
+  IngressNLB:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      IpAddressType: "ipv4"
+      Subnets: !Ref AppSubnetIds  
+      Type: "network"
+      Scheme: "internal"
+      Name: !Ref IngressNLBName
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: "true"
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-nlb-v1"
+
+  IngressNLBTG:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete] 
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      IpAddressType: "ipv4"
+      HealthCheckIntervalSeconds: 30
+      Matcher:
+        HttpCode: "200-399"
+      HealthCheckPath: !Ref HealthCheckPath
+      Port: 443
+      Targets: !If 
+        - HasIngressALBArn
+        - - Id: !Ref IngressALBArn
+            Port: 443
+        - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      UnhealthyThresholdCount: 3
+      HealthCheckTimeoutSeconds: 10
+      Name: !Ref IngressNLBTargetGroupName
+      VpcId: !Ref VpcId
+      HealthyThresholdCount: 3
+      HealthCheckProtocol: "HTTPS"
+      TargetType: "alb"
+      HealthCheckPort: "traffic-port"
+      Protocol: "TCP"
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-nlb-v1"
+
+  IngressNLBListener:
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref IngressNLB
+      Protocol: "TCP"
+      DefaultActions:
+        - Type: "forward"
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref IngressNLBTG
+      Port: 443
+
+  ParameterNLBArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-parameter-NLBArn"
+      Description: !Sub "Network Load Balancer ARN for ${AppShortName} in ${EnvName} environment"
+      Value: !Ref IngressNLB
+      Type: String
+      Tier: Standard
+      Tags:
+        IaCVersion: "InfraPlatform-nlb-v1"

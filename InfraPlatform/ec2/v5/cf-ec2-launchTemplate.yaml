@@ -1,0 +1,275 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Launch Template
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+  EC2IAMRoleName:
+    Type: String
+    Description: Name for the EC2 IAM Role
+  EC2InstanceProfileName:
+    Type: String
+    Description: Name for the EC2 Instance Profile
+  EC2KeyPairName:
+    Type: String
+    Description: Name for the EC2 Key Pair
+  EC2LaunchTemplateName:
+    Type: String
+    Description: Name for the EC2 Launch Template
+  EC2InfraSecurityGroupName:
+    Type: String
+    Description: Name for the EC2 Infra Security Group
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, ""]]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, ""]]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+
+Resources:
+  EC2IAMRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      RoleName: !Ref EC2IAMRoleName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v5
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      InstanceProfileName: !Ref EC2InstanceProfileName
+      Roles: 
+        - !Ref EC2IAMRole
+
+  EC2KeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      KeyName: !Ref EC2KeyPairName
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v5
+
+  EC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DependsOn: 
+      - EC2IAMRole
+    Properties: 
+      LaunchTemplateName: !Ref EC2LaunchTemplateName
+      LaunchTemplateData:
+        KeyName: !Ref EC2KeyPair
+        MetadataOptions:
+          HttpTokens: required
+        TagSpecifications:
+          - ResourceType: instance
+            Tags: 
+              - Key: FUNCTION
+                Value: TBC
+              - Key: EBS-SNAPSHOT
+                Value: 'YES'
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-EC2
+              - Key: BACKUP-DAILY
+                Value: 'YES'
+              - Key: BACKUP-WEEKLY
+                Value: 'YES'
+              - Key: BACKUP-MONTHLY
+                Value: 'YES'
+              - Key: BACKUP-YEARLY
+                Value: 'YES'
+              - Key: CW-CONFIG
+                Value: 'BASELINE'
+              - Key: CREATE-AUTO-ALARMS
+                Value: ''
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v5
+          - ResourceType: volume
+            Tags: 
+              - Key: FUNCTION
+                Value: TBC
+              - Key: EBS-SNAPSHOT
+                Value: 'YES'
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-EBS
+              - Key: BACKUP-DAILY
+                Value: 'YES'
+              - Key: BACKUP-WEEKLY
+                Value: 'YES'
+              - Key: BACKUP-MONTHLY
+                Value: 'YES'
+              - Key: BACKUP-YEARLY
+                Value: 'YES'
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v5
+          - ResourceType: network-interface
+            Tags: 
+              - Key: FUNCTION
+                Value: TBC
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-vNIC
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v5
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: IaCVersion
+              Value: InfraPlatform-EC2-v5
+
+  EC2InfraSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      GroupDescription: Common Infra Security Group for EC2
+      GroupName: !Ref EC2InfraSecurityGroupName
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - !If 
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"     
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v5
+
+# Parameters will be referenced by EC2 template 
+  ParameterEC2LTID: #Parameter for EC2 Launch Template ID
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AppShortName}-${EnvName}-parameter-EC2LaunchTemplateID
+      Description: !Sub ${AppShortName}-${EnvName}-parameter-EC2LaunchTemplateID
+      Value: !Ref EC2LaunchTemplate
+      Type: String
+      Tier: Standard
+      Tags:
+        IaCVersion: InfraPlatform-EC2-v5
+
+  ParameterEC2LTLatestVNum: #Parameter for EC2 Launch Template Latest Version Number
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AppShortName}-${EnvName}-parameter-EC2LaunchTemplateLatestVersionNumber
+      Description: !Sub ${AppShortName}-${EnvName}-parameter-EC2LaunchTemplateLatestVersionNumber
+      Value: !GetAtt EC2LaunchTemplate.LatestVersionNumber
+      Type: String
+      Tier: Standard
+      Tags:
+        IaCVersion: InfraPlatform-EC2-v5
+
+  ParameterEC2InstanceProfileName: #Parameter for EC2 Instance Profile Name
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AppShortName}-${EnvName}-parameter-EC2InstanceProfileName
+      Description: !Sub ${AppShortName}-${EnvName}-parameter-EC2InstanceProfileName
+      Value: !Ref EC2InstanceProfile
+      Type: String
+      Tier: Standard
+      Tags:
+        IaCVersion: InfraPlatform-EC2-v5

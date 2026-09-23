@@ -1,0 +1,474 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. hxis, myapp, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-09528f37a12368b13
+AppSubnetIds: "<edit_here>"             # 📝 e.g. subnet-abc123,subnet-def456 (private subnets, comma-separated, no spaces)
+
+VPCSubnetCidrAZ1: "<edit_here>"         # 📝 e.g. 10.53.144.128/26 (private subnet CIDR for AZ1)
+VPCSubnetCidrAZ2: "<edit_here>"         # 📝 e.g. 10.53.144.192/26 (private subnet CIDR for AZ2)
+
+# APPLICATION LOAD BALANCER CONFIGURATION
+ALBName: "<edit_here>"                  # 📝 e.g. hxis-nprd-dev-alb-ecs
+DefaultCertificateArn: "<edit_here>"    # 📝 Primary SSL certificate ARN from ACM
+# Format: arn:aws:acm:region:account:certificate/cert-id
+
+# ECS CLUSTER CONFIGURATION
+ECSClusterName: "<edit_here>"           # 📝 e.g. hxis-nprd-dev-ecs
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+AdditionalCertificateArn: ""            # Additional SSL certificate ARN (optional, for multi-domain support)
+NLBSecurityGroupId: ""                  # NLB security group ID (optional, if using NLB → ALB pattern)
+
+# NETWORK CONFIGURATION
+VPCSubnetCidrAZ3: ""                    # e.g. 10.53.145.0/26 (private subnet CIDR for AZ3, optional)
+VPCSubnetCidrInternetIngressAlbAZ1: ""  # e.g. 10.53.144.0/26 (public subnet CIDR for AZ1, for ALB security group rules)
+VPCSubnetCidrInternetIngressAlbAZ2: ""  # e.g. 10.53.144.64/26 (public subnet CIDR for AZ2, for ALB security group rules)
+VPCSubnetCidrInternetIngressAlbAZ3: ""  # e.g. 10.53.145.128/26 (public subnet CIDR for AZ3, for ALB security group rules, optional)
+
+# ADOT COLLECTOR CONFIGURATION (OpenTelemetry)
+EnableADOT: "false"                      # Enable/Disable AWS Distro for OpenTelemetry collector
+ADOTContainerImage: ""                   # ADOT collector ECR image URI (required if EnableADOT=true)
+# Example: 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/utility-images/aws-observability/aws-otel-collector:latest
+
+ADOTTaskCpu: "512"                      # CPU units for ADOT collector (256, 512, 1024, 2048, 4096)
+ADOTTaskMemory: "1024"                  # Memory in MiB for ADOT collector (512, 1024, 2048, etc.)
+PrivateHostedZoneId: ""                 # Route53 private hosted zone ID for ADOT endpoint (optional)
+ADOTCustomDomainName: ""                # Custom domain for ADOT endpoint (e.g. adot.healthx.sg, optional)
+ADOTInternalCertificateArn: ""          # SSL certificate ARN for ADOT ALB (optional)
+
+# VPC CIDR RANGES (for security group rules)
+VpcCidr1: ""                            # e.g. 10.193.0.0/16 (primary VPC CIDR block)
+VpcCidr2: ""                            # Secondary VPC CIDR (optional)
+VpcCidr3: ""                            # Tertiary VPC CIDR (optional)
+VpcCidr4: ""                            # Quaternary VPC CIDR (optional)
+VpcCidr5: ""                            # Quinary VPC CIDR (optional)
+S3PrefixListId: ""                      # S3 prefix list ID for VPC endpoint access (optional)
+HCCVpceCidr: ""                         # e.g. 10.48.42.0/24 (HCC VPC endpoint CIDR, optional)
+PrefixListId: ""                        # Prefix list ID for additional ingress rules (optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- DEPLOYMENT SEQUENCE ---
+# Correct deployment order for ECS backend infrastructure:
+#
+# 1. Deploy this main stack first (cf-backend-ecs-main.yaml):
+#    Creates foundational infrastructure:
+#    ✅ Application Load Balancer with HTTPS listener
+#    ✅ ALB security groups
+#    ✅ ECS Cluster with CloudWatch Container Insights
+#    ✅ ADOT Collector service (if EnableADOT=true)
+#    ✅ IAM roles (Task Execution Role with managed policies)
+#    ✅ SSM parameters for cross-stack references
+#
+# 2. After main stack is complete, deploy ECS services:
+#    Use parameters-ecs-service.yaml for each service
+#    - Services reference the ALB listener created here
+#    - Services read cluster name from SSM parameters
+#    - Services create their own target groups and routing rules
+#    - Multiple services can share the same ALB and cluster
+#
+# 3. Two-phase service deployment:
+#    PHASE 1: Deploy service with empty secrets → Creates infrastructure
+#    PHASE 2: Populate secrets in Secrets Manager → Redeploy service
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates resource names: {AppShortName}-{EnvName}-alb-ecs, {AppShortName}-{EnvName}-ecs
+# - Used for IAM roles: {AppShortName}-{EnvName}-role-TaskExecution
+# - SSM parameter prefix: /{AppShortName}-{EnvName}-*
+#
+# Format: Lowercase alphanumeric
+# Example: hxis, myapp, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+# - Affects log retention (7 days for nprd, 30 days for prod)
+#
+# Production environments (prod, prod-a, prod-b, prod-c):
+# - DeletionPolicy: Retain (resources preserved on stack deletion)
+# - Log retention: 30 days
+# - Enhanced security settings
+#
+# Non-Production environments (nprd, nprd-dev, nprd-stg, nprd-sit, nprd-uat):
+# - DeletionPolicy: Delete (resources deleted on stack deletion)
+# - Log retention: 7 days
+# - Standard security settings
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b, prod-c: Multi-region production
+
+# --- VPC ID ---
+# VpcId: VPC identifier where resources will be deployed
+#
+# Purpose: Specifies which VPC to deploy ALB, ECS cluster, and tasks
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-09528f37a12368b13
+#
+# Finding VPC ID:
+# AWS Console → VPC → Your VPCs
+# - Locate the VPC for your environment
+# - Copy VPC ID from the list
+#
+# Requirements:
+# - VPC must have private subnets for ECS tasks
+# - VPC must have VPC endpoints for ECR, S3, CloudWatch, Secrets Manager, SSM
+# - VPC must have internet connectivity (NAT Gateway or VPC endpoints)
+
+# --- APP SUBNET IDS ---
+# AppSubnetIds: Private subnet IDs for ECS tasks and ALB
+#
+# Purpose: Specifies which subnets to deploy ECS tasks and ALB
+#
+# Format: subnet-abc123,subnet-def456,subnet-ghi789 (comma-separated, no spaces)
+# Example: subnet-0e3f828d570c58f11,subnet-0d1706693a418f5a3
+#
+# Requirements:
+# - Must be private subnets (recommended)
+# - Must be in different Availability Zones (for high availability)
+# - Minimum 2 subnets required, 3 recommended
+# - Subnets must have internet access via NAT Gateway or VPC endpoints
+# - Subnets must be in the same VPC as VpcId
+#
+# Finding Subnet IDs:
+# AWS Console → VPC → Subnets
+# - Filter by VPC ID
+# - Look for "Private" subnets in different AZs
+# - Copy subnet IDs
+
+# --- VPC SUBNET CIDR (AZ1, AZ2, AZ3) ---
+# VPCSubnetCidrAZ1/AZ2/AZ3: CIDR ranges for private subnets
+#
+# Purpose: Used in security group rules to allow traffic from subnets
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.53.144.128/26, 10.53.144.192/26
+#
+# Requirements:
+# - Must match the CIDR ranges of the subnets in AppSubnetIds
+# - Used for ALB security group ingress rules
+# - VPCSubnetCidrAZ3 is optional (only if using 3 AZs)
+#
+# Finding Subnet CIDR:
+# AWS Console → VPC → Subnets
+# - Select each subnet from AppSubnetIds
+# - Copy the "IPv4 CIDR" value
+
+# --- VPC SUBNET CIDR INTERNET INGRESS ALB ---
+# VPCSubnetCidrInternetIngressAlbAZ1/AZ2/AZ3: Internet-facing ingress subnet CIDRs
+#
+# Purpose: 
+# - Defines CIDR ranges for public subnets that contain the Internet Gateway
+# - Used in ALB security group rules to allow inbound traffic from internet-facing layer
+# - Traffic flow: Internet → Internet Gateway → Ingress Subnets → ALB → ECS Tasks
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.53.144.0/26, 10.53.144.64/26
+#
+# Requirements:
+# - These subnets should have routes to an Internet Gateway
+# - Used when ALB needs to accept traffic from internet-facing components
+# - Optional: Leave empty ("") if not using internet ingress pattern
+#
+# Finding Ingress Subnet CIDR:
+# AWS Console → VPC → Subnets
+# - Look for public/ingress subnets with Internet Gateway route
+# - Copy the "IPv4 CIDR" value for each AZ
+#
+# --- ALB NAME ---
+# ALBName: Application Load Balancer name
+#
+# Purpose: Name of the ALB for ECS services
+#
+# Format: {AppShortName}-{EnvName}-alb-ecs
+# Example: hxis-nprd-dev-alb-ecs
+#
+# Requirements:
+# - Must be unique within your AWS account and region
+# - Used to create ALB resource
+# - Used in SSM parameter names for cross-stack references
+#
+# SSM Parameters Created:
+# - /{ALBName}-ALBSecurityGroupId: Security group ID for ALB
+# - /{ALBName}-HTTPSListenerArn: HTTPS listener ARN for routing rules
+
+# --- DEFAULT CERTIFICATE ARN ---
+# DefaultCertificateArn: Primary SSL/TLS certificate for ALB HTTPS listener
+#
+# Purpose: Enables HTTPS traffic to ALB
+#
+# Format: arn:aws:acm:region:account:certificate/cert-id
+# Example: arn:aws:acm:ap-southeast-1:533267434948:certificate/8293c654-7ec9-4e43-9484-90cf6679da38
+#
+# Requirements:
+# - Certificate must be in AWS Certificate Manager (ACM)
+# - Must be in the same region as the ALB (e.g., ap-southeast-1)
+# - Certificate must be validated and in "Issued" status
+# - Wildcard certificates recommended for multiple subdomains (e.g., *.example.com)
+#
+# Creating ACM Certificate:
+# AWS Console → Certificate Manager
+# 1. Click "Request certificate"
+# 2. Choose "Request a public certificate"
+# 3. Enter domain names (e.g., *.healthx.sg, healthx.sg)
+# 4. Choose DNS validation (recommended) or email validation
+# 5. Complete validation process
+# 6. Copy certificate ARN
+
+# --- ADDITIONAL CERTIFICATE ARN ---
+# AdditionalCertificateArn: Additional SSL certificate for multi-domain support
+#
+# Purpose: Allows ALB to serve multiple domains with different certificates
+#
+# Format: arn:aws:acm:region:account:certificate/cert-id
+# Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/abcd1234-5678-90ab-cdef-1234567890ab
+#
+# Use Cases:
+# - Serving multiple domains from same ALB (e.g., api.example.com and app.example.com)
+# - Different SSL certificates for different services
+# - Leave empty ("") if not needed
+#
+# Requirements:
+# - Must be in same region as ALB
+# - Certificate must be validated in ACM
+
+# --- NLB SECURITY GROUP ID ---
+# NLBSecurityGroupId: Security group ID of Network Load Balancer
+#
+# Purpose: Allow traffic from NLB to ALB (two-tier load balancer architecture)
+#
+# Format: sg-xxxxxxxxxxxxxxxxx
+# Example: sg-0a1b2c3d4e5f6g7h8
+#
+# Use Cases:
+# - NLB → ALB → ECS Services architecture
+# - API Gateway VPC Link → NLB → ALB → ECS
+# - Leave empty ("") if not using NLB
+#
+# Finding NLB Security Group:
+# AWS Console → EC2 → Load Balancers
+# - Select NLB
+# - Security tab → Copy security group ID
+
+# --- ECS CLUSTER NAME ---
+# ECSClusterName: Name of the ECS Fargate cluster
+#
+# Purpose: Name of the ECS cluster for running containers
+#
+# Format: {AppShortName}-{EnvName}-ecs
+# Example: hxis-nprd-dev-ecs
+#
+# Features:
+# - Container Insights enabled for metrics
+# - Execute Command enabled for debugging
+# - Fargate capacity provider (serverless)
+#
+# SSM Parameters Created:
+# - /{ECSClusterName}-ECSClusterName: Cluster name for services
+# - /{ECSClusterName}-TaskExecutionRoleArn: IAM role ARN for tasks
+
+# --- ENABLE ADOT ---
+# EnableADOT: Enable AWS Distro for OpenTelemetry collector
+#
+# Purpose: Provides OpenTelemetry endpoint for application traces and metrics
+#
+# Values:
+# - true: Deploy ADOT collector service
+# - false: Skip ADOT deployment
+#
+# When Enabled:
+# - Creates ECS service running ADOT collector
+# - Provides gRPC endpoint (port 4317) and HTTP endpoint (port 4318)
+# - Exports traces to AWS X-Ray
+# - Exports metrics to CloudWatch
+# - Accessible via custom domain (if configured)
+#
+# Application Configuration (when ADOT enabled):
+# Environment variables to set in your application:
+# - OTEL_EXPORTER_OTLP_ENDPOINT: "https://adot.healthx.sg"
+# - OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+#
+# Requirements:
+# - ADOTContainerImage must be specified if EnableADOT=true
+# - Optional: PrivateHostedZoneId, ADOTCustomDomainName, ADOTInternalCertificateArn for custom domain
+
+# --- ADOT CONTAINER IMAGE ---
+# ADOTContainerImage: ECR image URI for ADOT collector
+#
+# Purpose: Specifies the container image for OpenTelemetry collector
+#
+# Format: account.dkr.ecr.region.amazonaws.com/repository:tag
+# Example: 533267434948.dkr.ecr.ap-southeast-1.amazonaws.com/utility-images/aws-observability/aws-otel-collector:latest
+#
+# Official AWS Image:
+# - Repository: public.ecr.aws/aws-observability/aws-otel-collector
+# - Latest version: public.ecr.aws/aws-observability/aws-otel-collector:latest
+#
+# Requirements:
+# - Image must be in ECR (copy from public ECR if needed)
+# - Must be in same region as ECS cluster
+# - Required if EnableADOT=true
+
+# --- ADOT TASK CPU & MEMORY ---
+# ADOTTaskCpu: CPU units for ADOT collector task
+# ADOTTaskMemory: Memory in MiB for ADOT collector task
+#
+# Purpose: Defines compute resources for ADOT collector
+#
+# Valid CPU/Memory Combinations:
+# - CPU: 256  → Memory: 512, 1024, 2048
+# - CPU: 512  → Memory: 1024, 2048, 3072, 4096
+# - CPU: 1024 → Memory: 2048, 3072, 4096, 5120, 6144, 7168, 8192
+# - CPU: 2048 → Memory: 4096 to 16384 (1 GB increments)
+#
+# Recommendations:
+# - Small workloads (< 10 apps): CPU=256, Memory=512
+# - Medium workloads (10-50 apps): CPU=512, Memory=1024
+# - Large workloads (> 50 apps): CPU=1024, Memory=2048
+
+# --- PRIVATE HOSTED ZONE ID ---
+# PrivateHostedZoneId: Route53 private hosted zone ID for ADOT custom domain
+#
+# Purpose: Creates DNS record for ADOT endpoint (e.g., adot.healthx.sg)
+#
+# Format: Zxxxxxxxxxxxxxxxxx
+# Example: Z095034935AWUIQP1FGLO
+#
+# Requirements:
+# - Private hosted zone must be associated with the VPC
+# - Zone must be created before deployment
+# - Leave empty ("") if not using custom domain
+#
+# Finding Hosted Zone ID:
+# AWS Console → Route 53 → Hosted zones
+# - Select your private hosted zone
+# - Copy "Hosted zone ID"
+
+# --- ADOT CUSTOM DOMAIN NAME ---
+# ADOTCustomDomainName: Custom domain for ADOT endpoint
+#
+# Purpose: Friendly DNS name for OpenTelemetry endpoint
+#
+# Format: subdomain.domain.tld
+# Example: adot.healthx.sg, otel.myapp.internal
+#
+# Requirements:
+# - Domain must be managed in PrivateHostedZoneId
+# - Must be a subdomain (not root domain)
+# - Leave empty ("") if not using custom domain
+#
+# Usage in Applications:
+# OTEL_EXPORTER_OTLP_ENDPOINT: "https://adot.healthx.sg"
+
+# --- ADOT INTERNAL CERTIFICATE ARN ---
+# ADOTInternalCertificateArn: SSL certificate for ADOT ALB
+#
+# Purpose: Enables HTTPS for ADOT endpoint
+#
+# Format: arn:aws:acm:region:account:certificate/cert-id
+# Example: arn:aws:acm:ap-southeast-1:533267434948:certificate/8293c654-7ec9-4e43-9484-90cf6679da38
+#
+# Requirements:
+# - Certificate must cover ADOTCustomDomainName
+# - Must be in ACM in same region as ALB
+# - Leave empty ("") if not using custom domain or HTTPS
+
+# --- VPC CIDR RANGES ---
+# VpcCidr1/VpcCidr2/VpcCidr3/VpcCidr4/VpcCidr5: VPC CIDR blocks for security group rules
+#
+# Purpose: Allow traffic from VPC CIDR ranges to ECS tasks
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.193.0.0/16, 10.194.0.0/16
+#
+# Use Cases:
+# - VpcCidr1: Primary VPC CIDR (required)
+# - VpcCidr2: Secondary VPC CIDR (optional)
+# - VpcCidr3: Tertiary VPC CIDR (optional)
+# - VpcCidr4: Quaternary VPC CIDR (optional)
+# - VpcCidr5: Quinary VPC CIDR (optional)
+#
+# Finding VPC CIDR:
+# AWS Console → VPC → Your VPCs
+# - Select VPC
+# - IPv4 CIDR shows primary CIDR
+# - CIDRs tab shows additional CIDRs
+
+# --- S3 PREFIX LIST ID ---
+# S3PrefixListId: Prefix list ID for S3 service
+#
+# Purpose: Allow ECS tasks to access S3 via VPC endpoint
+#
+# Format: pl-xxxxxxxx
+# Example: pl-6ca54005 (S3 prefix list for ap-southeast-1)
+#
+# Finding Prefix List ID:
+# AWS Console → VPC → Managed Prefix Lists
+# - Look for "com.amazonaws.ap-southeast-1.s3"
+# - Copy prefix list ID
+#
+# Or use AWS CLI:
+# aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.*.s3 --region ap-southeast-1
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: HCC VPC endpoint CIDR for external connectivity
+#
+# Purpose: Allow traffic from HCC VPC endpoint to ECS services
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.48.42.0/24
+#
+
+# --- PREFIX LIST ID ---
+# PrefixListId: Managed prefix list ID for additional ingress rules
+#
+# Purpose: Allow traffic from managed prefix list to ALB/ECS
+#
+# Format: pl-xxxxxxxx
+# Example: pl-12345678
+#
+# Use Cases:
+# - Corporate network IP ranges
+# - Partner network access
+# - Centrally managed IP allow lists
+# - Leave empty ("") if not needed
+#
+# Finding Prefix List:
+# AWS Console → VPC → Managed Prefix Lists
+# - Locate your custom prefix list
+# - Copy prefix list ID

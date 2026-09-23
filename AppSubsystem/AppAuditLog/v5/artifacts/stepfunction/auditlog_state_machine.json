@@ -1,0 +1,146 @@
+{
+    "Comment": "Datalake AuditLog Transformation Layer",
+    "StartAt": "startCrawler",
+    "States": {
+      "startCrawler": {
+        "Type": "Task",
+        "Next": "GetCrawler",
+        "Parameters": {
+          "Name": "${AuditLogCrawler}"
+        },
+        "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "ResultPath": "$.errorResult",
+            "Next": "SNSFail"
+          }
+        ],
+        "ResultPath": "$.crawlinterim"
+      },
+      "GetCrawler": {
+        "Type": "Task",
+        "Next": "CrawlerChoice",
+        "Parameters": {
+          "Name": "${AuditLogCrawler}"
+        },
+        "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Next": "SNSFail",
+            "ResultPath": "$.errorResult"
+          }
+        ],
+        "ResultPath": "$.getcrawler"
+      },
+      "CrawlerChoice": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Or": [
+              {
+                "Variable": "$.getcrawler.Crawler.State",
+                "StringEquals": "RUNNING"
+              },
+              {
+                "Variable": "$.getcrawler.Crawler.State",
+                "StringEquals": "STOPPING"
+              }
+            ],
+            "Next": "Wait"
+          }
+        ],
+        "Default": "Choice"
+      },
+      "Wait": {
+        "Type": "Wait",
+        "Seconds": 30,
+        "Next": "GetCrawler"
+      },
+      "Choice": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.getcrawler.Crawler.LastCrawl.Status",
+            "StringEquals": "SUCCEEDED",
+            "Next": "IsManualInput"
+          }
+        ],
+        "Default": "SNSFail"
+      },
+      "IsManualInput": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.CDC_END",
+            "IsPresent": false,
+            "Next": "GenerateParameters"
+          }
+        ],
+        "Default": "ExecuteGlueJob"
+      },
+      "GenerateParameters": {
+        "Type": "Pass",
+        "Parameters": {
+          "CDC_START": "null",
+          "CDC_END": "null"
+        },
+        "Next": "ExecuteGlueJob"
+      },
+      "ExecuteGlueJob": {
+        "Type": "Task",
+        "Next": "SNSOK",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
+        "Parameters": {
+          "Arguments": {
+            "--CDC_START.$": "$.CDC_START",
+            "--CDC_END.$": "$.CDC_END",
+            "--EXECUTION_ID.$": "$$.Execution.Id"
+          },
+          "JobName": "${JobName}"
+        },
+        "ResultPath": "$.GlueResult",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Next": "SNSFail",
+            "ResultPath": "$.errorMessage"
+          }
+        ]
+      },
+      "SNSOK": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::sns:publish",
+        "Parameters": {
+          "TopicArn": "${SNSTopicArn}",
+          "Message": "AuditLog data lake transformation succeeded"
+        },
+        "Next": "Succeed",
+        "ResultPath": "$.SNSResult"
+      },
+      "SNSFail": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::sns:publish",
+        "Parameters": {
+          "TopicArn": "${SNSTopicArn}",
+          "Message.$": "States.Format('Error! AuditLog data lake transformation failed : {}', $.errorResult.Cause)"
+        },
+        "Next": "Fail",
+        "ResultPath": "$.SNSResult"
+      },
+      "Succeed": {
+        "Type": "Succeed"
+      },
+      "Fail": {
+        "Type": "Fail"
+      }
+    }
+  }
+  

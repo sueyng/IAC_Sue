@@ -1,0 +1,426 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+#NAMING
+AppShortName: "<edit_here>"             # 📝 e.g. gms, myapp, frontend (max 10 characters)
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-02fb2e32bbb6ff24e
+AppSubnetIds: "<edit_here>"             # 📝 e.g. subnet-xxx,subnet-yyy,subnet-zzz (comma-separated, 2-3 subnets)
+
+# APPLICATION SUBNET CIDRs
+VPCSubnetCidrAppAZ1: "<edit_here>"      # 📝 e.g. 10.0.101.0/24 (App subnet CIDR in AZ1)
+VPCSubnetCidrAppAZ2: "<edit_here>"      # 📝 e.g. 10.0.102.0/24 (App subnet CIDR in AZ2)
+VPCSubnetCidrAppAZ3: "<edit_here>"      # 📝 e.g. 10.0.103.0/24 (App subnet CIDR in AZ3)
+
+# INGRESS CONTROLLER PORTS
+AppIngressNodePort: "<edit_here>"       # 📝 e.g. 8443, 30443 (NodePort for app ingress controller)
+InternalIngressNodePort: "<edit_here>"  # 📝 e.g. 8443, 30443 (NodePort for internal ingress controller)
+
+# DEPLOYMENT SERVERS
+HIPDeploymentServer01: "<edit_here>"    # 📝 e.g. 10.50.196.37/32 (HIP deployment server 1)
+HIPDeploymentServer02: "<edit_here>"    # 📝 e.g. 10.50.196.36/32 (HIP deployment server 2)
+HIPDeploymentServer03: "<edit_here>"    # 📝 e.g. 10.50.196.35/32 (HIP deployment server 3)
+DeploymentServerUTL01: "<edit_here>"    # 📝 e.g. 10.53.26.197/32 (UTL deployment server)
+
+# VPC & ENDPOINT CONFIGURATION
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.0.0.0/16 (Primary VPC CIDR)
+S3PrefixListId: "<edit_here>"           # 📝 e.g. pl-6fa54006 (S3 prefix list ID for VPC endpoint)
+HCCVpceCidr: "<edit_here>"              # 📝 e.g. 10.48.42.0/24 (HCC VPC endpoint CIDR)
+
+# DATABASE SUBNET CIDRs
+DBSubnetCidrAZ1: "<edit_here>"          # 📝 e.g. 10.0.151.0/24 (DB subnet CIDR in AZ1)
+DBSubnetCidrAZ2: "<edit_here>"          # 📝 e.g. 10.0.152.0/24 (DB subnet CIDR in AZ2)
+DBSubnetCidrAZ3: "<edit_here>"          # 📝 e.g. 10.0.153.0/24 (DB subnet CIDR in AZ3)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+# REGION
+AWSRegion: "ap-southeast-1"             # e.g. ap-southeast-1
+
+# NLB INGRESS
+NLBIngressSecurityGroupId: ""           # NLB security group ID (e.g. sg-xxx, for ingress traffic)
+
+# HSGW SUBNETS
+HSGWSubnet01: ""                        # HSGW subnet 1 (e.g. 10.50.196.38/32, optional)
+HSGWSubnet02: ""                        # HSGW subnet 2 (e.g. 10.50.196.39/32, optional)
+HSGWSubnet03: ""                        # HSGW subnet 3 (e.g. 10.50.196.40/32, optional)
+
+# CUSTOM PORT RANGE
+HasCustomPorts: "false"                 # Enable custom port range (true or false)
+CustomPortStart: "7000"                 # Custom port range start (e.g. 7000)
+CustomPortEnd: "15000"                  # Custom port range end (e.g. 15000)
+
+# ADDITIONAL VPC CIDRs
+VpcCidr2: ""                            # Secondary VPC CIDR (e.g. 10.1.0.0/16, optional)
+VpcCidr3: ""                            # Tertiary VPC CIDR (e.g. 10.2.0.0/16, optional)
+
+# PREFIX LIST
+PrefixListNLBIngress: ""                # Prefix list ID for NLB ingress (e.g. pl-xxx, optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- AWS REGION ---
+# AWSRegion: AWS region where EKS cluster is deployed
+#
+# Format: AWS region code
+# Example: ap-southeast-1, us-east-1, eu-west-1
+#
+# Purpose:
+# - Used by CloudFormation for resource deployment
+# - Must match EKS cluster region
+# - Affects VPC endpoint and service availability
+#
+# Common Regions:
+# - ap-southeast-1: Singapore
+# - us-east-1: N. Virginia
+# - us-west-2: Oregon
+# - eu-west-1: Ireland
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates security group names: {AppShortName}-{EnvName}-sg-eks-*
+# - Enables multi-application EKS deployments
+# - Facilitates cost allocation and resource organization
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: gms, myapp, frontend
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Allowed Values:
+# Non-Production:
+# - nprd, nprd-dev, nprd-stg
+# - nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit, nprd-sit-a, nprd-sit-b, nprd-sit-c
+# - nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c
+# - nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Production:
+# - prod, prod-a, prod-b, prod-c
+
+# --- VPC ID ---
+# VpcId: Virtual Private Cloud identifier for EKS cluster
+#
+# Format: vpc-{16-char-hex}
+# Example: vpc-02fb2e32bbb6ff24e
+#
+# Requirements:
+# - VPC must have DNS resolution enabled
+# - VPC must have DNS hostnames enabled
+# - Must contain subnets specified in AppSubnetIds
+# - Recommended: Private subnets with NAT Gateway for EKS nodes
+#
+# Finding VPC ID:
+# AWS Console → VPC → Your VPCs
+# - Select the VPC for EKS deployment
+# - Copy VPC ID
+
+# --- APP SUBNET IDS ---
+# AppSubnetIds: Subnets where EKS nodes will be deployed
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones (for HA)
+# - Recommended 3 subnets for high availability
+# - Must be private subnets with NAT Gateway or VPC endpoints
+# - Comma-separated list (no spaces)
+#
+# Format: subnet-{17-char-hex},subnet-{17-char-hex},subnet-{17-char-hex}
+# Example: subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b,subnet-0e36eb3efe04524a6
+#
+# EKS Subnet Requirements:
+# - Sufficient IP addresses for nodes and pods
+# - Tagged with kubernetes.io/cluster/{cluster-name}=shared
+# - Private subnets: Tag kubernetes.io/role/internal-elb=1
+# - Public subnets (if any): Tag kubernetes.io/role/elb=1
+#
+# Finding Subnet IDs:
+# AWS Console → VPC → Subnets
+# - Filter by VPC ID
+# - Filter by Availability Zone
+# - Select private subnets
+# - Copy subnet IDs, join with commas
+
+# --- VPC SUBNET CIDR APP AZ1/2/3 ---
+# VPCSubnetCidrAppAZ1/2/3: Application subnet CIDRs for security group rules
+#
+# Purpose:
+# - Creates security group rules for pod-to-pod communication
+# - Allows ingress traffic from application subnets
+# - Enables node-to-node communication
+# - Required for EKS cluster networking
+#
+# Format: CIDR notation
+# Example: 10.0.101.0/24, 10.0.102.0/24, 10.0.103.0/24
+#
+# Finding Subnet CIDRs:
+# AWS Console → VPC → Subnets
+# - Select subnet (from AppSubnetIds)
+# - Copy IPv4 CIDR value
+# - Repeat for all 3 AZs
+
+# --- INGRESS CONTROLLER PORTS ---
+# AppIngressNodePort: NodePort for application ingress controller
+# InternalIngressNodePort: NodePort for internal ingress controller
+#
+# Purpose:
+# - Allows NLB to route traffic to ingress controller pods
+# - Creates security group rules for NodePort access
+# - Enables external/internal traffic routing to cluster
+#
+# Format: Port number (1-65535)
+# Example: 8443, 30443, 31000
+#
+# Common Values:
+# - 8443: HTTPS ingress (custom port)
+# - 30000-32767: Default Kubernetes NodePort range
+# - 80/443: Standard HTTP/HTTPS (requires privileged containers)
+#
+# Security Group Rules Created:
+# - Allow AppIngressNodePort from NLB security group (if NLBIngressSecurityGroupId provided)
+# - Allow InternalIngressNodePort from app subnets
+#
+# Ingress Controller Types:
+# - NGINX Ingress: Typically uses NodePort in range 30000-32767
+# - AWS ALB Ingress Controller: Uses target type IP (no NodePort needed)
+# - Istio Ingress Gateway: Custom NodePort configuration
+# - Traefik: Configurable NodePort
+
+# --- HIP DEPLOYMENT SERVERS ---
+# HIPDeploymentServer01/02/03: HIP platform deployment server IPs
+# DeploymentServerUTL01: Utility deployment server IP
+#
+# Purpose:
+# - Grants kubectl access to EKS cluster API
+# - Allows SSH access to EKS nodes for troubleshooting
+# - Enables CI/CD pipeline connectivity
+# - Facilitates deployment automation
+#
+# Format: IP address with /32 CIDR
+# Example: 10.50.196.37/32, 10.53.26.197/32
+#
+# Security Group Rules Created:
+# - Allow 443 (HTTPS) for EKS API access from deployment servers
+# - Allow 22 (SSH) to EKS nodes from deployment servers
+# - Allow kubectl commands and cluster management
+#
+# Usage:
+# After deployment, configure kubectl on deployment server:
+# 1. Install kubectl and aws-iam-authenticator
+# 2. Configure AWS credentials
+# 3. Run: aws eks update-kubeconfig --region {AWSRegion} --name {cluster-name}
+# 4. Verify: kubectl get nodes
+
+# --- VPC CIDR 1 (REQUIRED) ---
+# VpcCidr1: Primary VPC CIDR block for egress rules
+#
+# Purpose:
+# - Creates security group egress rules to VPC resources
+# - Allows EKS nodes to communicate with VPC endpoints
+# - Enables access to internal services
+#
+# Format: CIDR notation
+# Example: 10.0.0.0/16
+#
+# Security Group Egress Rules:
+# - HTTPS (443) to VpcCidr1 (for VPC endpoints: ECR, S3, etc.)
+# - All traffic within VPC for internal communication
+#
+# Finding VPC CIDR:
+# AWS Console → VPC → Your VPCs → Select VPC → Details → IPv4 CIDR
+
+# --- VPC CIDR 2/3 (OPTIONAL) ---
+# VpcCidr2, VpcCidr3: Additional VPC CIDR blocks for egress rules
+#
+# Purpose:
+# - Allows egress to secondary/tertiary VPC CIDR blocks
+# - Use when VPC has multiple CIDR blocks associated
+# - Leave empty ("") if VPC has only one CIDR block
+#
+# Format: CIDR notation or empty string ""
+# Example: 10.1.0.0/16 or ""
+#
+# When to Use:
+# - VPC has multiple CIDR blocks associated
+# - Need to access services in secondary CIDR blocks
+#
+# When to Leave Empty:
+# - VPC has only one CIDR block
+# - Not accessing services in additional CIDR blocks
+
+# --- S3 PREFIX LIST ID ---
+# S3PrefixListId: AWS-managed prefix list for S3 VPC endpoint
+#
+# Purpose:
+# - Allows EKS nodes to access S3 via VPC endpoint
+# - Required for pulling container images from Amazon ECR
+# - Enables S3 access without internet gateway
+# - Reduces NAT Gateway costs
+#
+# Format: pl-{8-char-hex}
+# Example: pl-6fa54006
+#
+# Finding S3 Prefix List ID:
+# AWS Console → VPC → Managed Prefix Lists
+# - Filter by name: com.amazonaws.{region}.s3
+# - Copy Prefix List ID
+#
+# Security Group Egress Rules Created:
+# - HTTPS (443) to S3 prefix list
+# - Enables ECR image pulls
+# - Enables S3 bucket access for applications
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: Hybrid Cloud Connectivity VPC Endpoint subnet CIDR
+#
+# Purpose:
+# - Allows access from HCC VPC endpoint subnet
+# - Enables hybrid cloud connectivity scenarios
+# - Supports on-premises to EKS access via Direct Connect/VPN
+# - Facilitates enterprise integration
+#
+# Format: CIDR notation
+# Example: 10.48.42.0/24
+#
+# Use Cases:
+# - On-premises systems accessing EKS workloads
+# - Hybrid deployment architectures
+# - Enterprise network integration
+
+# --- DATABASE SUBNET CIDRS ---
+# DBSubnetCidrAZ1/2/3: Database subnet CIDRs per Availability Zone
+#
+# Purpose:
+# - Creates security group egress rules for RDS/Aurora access
+# - Allows EKS pods to connect to databases
+# - Supports multiple database engines
+#
+# Format: CIDR notation
+# Example: 10.0.151.0/24, 10.0.152.0/24, 10.0.153.0/24
+#
+# Security Group Egress Rules Created:
+# - TCP 3306 (MySQL/MariaDB) to DB subnets
+# - TCP 5432 (PostgreSQL) to DB subnets
+# - TCP 1433 (SQL Server) to DB subnets
+# - TCP 1521 (Oracle) to DB subnets
+# - TCP 27017 (MongoDB) to DB subnets
+#
+# Finding Database Subnet CIDRs:
+# AWS Console → VPC → Subnets
+# - Filter by tag Name containing "database" or "db"
+# - Identify subnets by Availability Zone
+# - Copy IPv4 CIDR for each AZ
+
+# --- NLB INGRESS SECURITY GROUP ID (OPTIONAL) ---
+# NLBIngressSecurityGroupId: Security group ID of Network Load Balancer
+#
+# Purpose:
+# - Allows NLB to route traffic to EKS nodes via NodePort
+# - Creates ingress rule for AppIngressNodePort from NLB
+# - Required when using NLB for ingress traffic
+#
+# Format: sg-{17-char-hex} or empty string ""
+# Example: sg-0a1b2c3d4e5f6g7h8 or ""
+#
+# When to Provide:
+# - Using NLB with NodePort target type
+# - NLB forwards traffic to ingress controller on EKS nodes
+#
+# When to Leave Empty (""):
+# - Not using NLB for ingress
+# - Using ALB with target type IP instead
+# - Using Istio/service mesh without NLB
+#
+# Finding NLB Security Group ID:
+# AWS Console → EC2 → Load Balancers
+# - Select your NLB
+# - Security tab → Security groups
+# - Copy security group ID
+
+# --- HSGW SUBNETS (OPTIONAL) ---
+# HSGWSubnet01/02/03: Hybrid Secure Gateway subnet CIDRs
+#
+# Purpose:
+# - Additional network access for hybrid connectivity
+# - Optional supplementary security group rules
+# - Enterprise gateway integration
+#
+# Format: IP address with /32 CIDR or empty string ""
+# Example: 10.50.196.38/32 or ""
+#
+# When to Provide:
+# - Using Hybrid Secure Gateway for enterprise connectivity
+# - Additional gateway IPs need access to EKS
+#
+# When to Leave Empty:
+# - Not using HSGW
+# - Covered by HCC VPC endpoint
+
+# --- CUSTOM PORT RANGE (OPTIONAL) ---
+# HasCustomPorts: Enable custom port range for NodePort services
+# CustomPortStart: Starting port of custom range
+# CustomPortEnd: Ending port of custom range
+#
+# Purpose:
+# - Allows NodePort services outside default Kubernetes range (30000-32767)
+# - Supports legacy applications with specific port requirements
+# - Enables custom service port configurations
+#
+# Values:
+# - HasCustomPorts: "true" or "false"
+# - CustomPortStart/End: Port numbers (1-65535)
+#
+# Example Configuration:
+# - HasCustomPorts: "true"
+# - CustomPortStart: "7000"
+# - CustomPortEnd: "15000"
+#
+# Security Group Rule (if HasCustomPorts="true"):
+# - Allow CustomPortStart-CustomPortEnd (TCP) from app subnets
+# - Only created when HasCustomPorts is "true"
+#
+# When to Use:
+# - Legacy applications require specific ports
+# - Custom NodePort range configuration in EKS
+# - Special service port requirements
+#
+# When to Leave as "false":
+# - Using default Kubernetes NodePort range
+# - No special port requirements
+
+# --- PREFIX LIST NLB INGRESS (OPTIONAL) ---
+# PrefixListNLBIngress: AWS managed prefix list for NLB ingress
+#
+# Purpose:
+# - Alternative to NLBIngressSecurityGroupId
+# - Uses AWS-managed prefix lists for NLB access
+# - Simplifies security group management
+#
+# Format: pl-{8-char-hex} or empty string ""
+# Example: pl-1a2b3c4d or ""
+#
+# When to Provide:
+# - Using AWS-managed prefix lists for NLB
+# - Prefer prefix list over security group reference
+#
+# When to Leave Empty (""):
+# - Using NLBIngressSecurityGroupId instead
+# - Not using managed prefix lists
+# - Not using NLB
+

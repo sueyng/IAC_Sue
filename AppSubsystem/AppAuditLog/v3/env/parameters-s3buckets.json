@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "mimo"
+  },
+  {
+    "ParameterKey": "AWSEnvName",
+    "ParameterValue": "nprd"
+  }
+]

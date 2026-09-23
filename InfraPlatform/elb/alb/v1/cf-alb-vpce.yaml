@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a ALB with target Group to Endpoint IP Addresses. v1
+
+Parameters:
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  ALBName: 
+    Description: Name for Application Load Balancer
+    Type: String
+
+  ALBScheme:
+    Description: ALB type, Internet or intranet ALB
+    Type: String
+    AllowedValues:
+      - internal
+      - internet-facing    
+  
+  VpcId:
+    Type: String
+    Description: The VPC ID where the ALB will be created.
+
+  IngressSubnetIds:
+    Type: CommaDelimitedList
+    Description: The Subnet IDs for the Ingress Subnets where the Public ALB will be deployed.
+
+  VPCEndpointIP1:
+    Description: VPC Interface Endpoint IP - AZ1
+    Type: String
+
+  VPCEndpointIP2:
+    Description: VPC Interface Endpoint IP - AZ2
+    Type: String
+
+  VPCEndpointIP3:
+    Description: VPC Interface Endpoint IP - AZ3
+    Type: String
+
+  SSLCertificateArn:
+    Description: The ARN of the SSL certificate to associate with the ALB HTTPS listener.
+    Type: String
+
+  PrefixListIdIntranet:
+    Type: String
+    Description: The ID of the AWS Prefix List to allow inbound traffic from intranet subnets
+
+  ListenerSslPolicy:
+    Type: String
+    Description: ALB Latest TLS Settings
+    Default: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCEndpointIP3: !Not [!Equals [!Ref "VPCEndpointIP3", ""]]
+  IsPrivateALB: !Equals [!Ref "ALBScheme", "internal"]
+  IsPublicALB: !Equals [!Ref "ALBScheme", "internet-facing"]
+  HasPrefixListIdIntranet: !Not [!Equals [!Ref "PrefixListIdIntranet", ""]]
+
+Resources:
+
+  # Security Group for ALB
+  PublicALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: IsPublicALB
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${ALBName}-sg"
+      GroupDescription: Security group for the Pulbic ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-alb-v1
+
+  PrivateALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: IsPrivateALB
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${ALBName}-sg"
+      GroupDescription: Security group for the Private ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - !If
+          - HasPrefixListIdIntranet
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourcePrefixListId: !Ref PrefixListIdIntranet
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-alb-v1
+
+  #Application Load Balancer
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Ref ALBName
+      Subnets: !Ref IngressSubnetIds
+      SecurityGroups:
+        - !If
+          - IsPrivateALB
+          - !Ref PrivateALBSecurityGroup  # Private ALB Security Group
+          - !Ref PublicALBSecurityGroup
+      Scheme: !Ref ALBScheme
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-alb-v1
+
+  # Target Group
+  ALBTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${ALBName}-tg"
+      VpcId: !Ref VpcId
+      Protocol: HTTPS
+      Port: 443
+      TargetType: ip
+      Targets:
+        - Id: !Ref VPCEndpointIP1 # First IP
+        - Id: !Ref VPCEndpointIP2  # Second IP
+        - !If
+          - HasVPCEndpointIP3
+          - Id: !Ref VPCEndpointIP3  # Third IP
+          - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: "200,403"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-alb-v1
+
+  # Listener
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Protocol: HTTPS
+      Port: 443
+      SslPolicy: !Ref ListenerSslPolicy
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTG

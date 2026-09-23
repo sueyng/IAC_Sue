@@ -1,0 +1,203 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapi, api, gateway
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+ApiGateway1Name: "<edit_here>"                   # 📝 e.g. myapi-prod-gateway
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+ApiGateway1Stage: ""                             # e.g. prod (default is prod)
+ApiGateway2Name: ""                              # e.g. myapi-prod-gateway-v2
+ApiGateway2Stage: ""                             # e.g. prod (default is prod)
+ResourcePath1: ""                                # e.g. /api/v1/users
+ResourcePath2: ""                                # e.g. /api/v1/orders
+ResourcePath3: ""                                # e.g. /api/v1/products
+Team1SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:ops-team
+Team2SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:dev-team
+Team3SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:infra-team
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates alarm names: {AppShortName}-{EnvName}-{GatewayName}-*
+# - Used for alarm organization and filtering
+#
+# Format: Lowercase alphanumeric
+# Example: myapi, api, gateway
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit-a,
+#   nprd-sit-b, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-pt,
+#   nprd-pp, nprd-pp-a, nprd-pp-b
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (alarms preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (alarms deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- API GATEWAY 1 NAME ---
+# ApiGateway1Name: API Gateway 1 name for monitoring
+#
+# Purpose:
+# - Specifies primary API Gateway for CloudWatch alarms
+# - Creates alarms for 5XX/4XX errors, latency, integration latency, request count
+#
+# Format: API Gateway name
+# Example: myapi-prod-gateway, api-dev
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to API Gateway Console → APIs
+# 2. Find your API Gateway
+# 3. Copy the API name
+
+# --- API GATEWAY 1 STAGE (OPTIONAL) ---
+# ApiGateway1Stage: API Gateway 1 deployment stage
+#
+# Purpose:
+# - Specifies which stage to monitor (e.g., dev, test, prod)
+# - Used as CloudWatch metric dimension
+#
+# Format: Stage name or empty string
+# Default: prod
+# Example: prod, dev, test, v1, or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to API Gateway Console → APIs → Your API → Stages
+# 2. Find your deployment stage
+# 3. Copy the stage name
+# 4. Leave empty ("") to use default (prod)
+
+# --- API GATEWAY 2 NAME (OPTIONAL) ---
+# ApiGateway2Name: API Gateway 2 name for monitoring
+#
+# Purpose:
+# - Optional second API Gateway for CloudWatch alarms
+# - Creates same set of alarms as API Gateway 1
+#
+# Format: API Gateway name or empty string
+# Example: myapi-prod-gateway-v2 or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to API Gateway Console → APIs
+# 2. Find your API Gateway
+# 3. Copy the API name
+# 4. Leave empty ("") if not monitoring a second API Gateway
+
+# --- API GATEWAY 2 STAGE (OPTIONAL) ---
+# ApiGateway2Stage: API Gateway 2 deployment stage
+#
+# Purpose:
+# - Specifies which stage to monitor for API Gateway 2
+# - Only used if ApiGateway2Name is specified
+#
+# Format: Stage name or empty string
+# Default: prod
+# Example: prod, dev, test, v1, or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to API Gateway Console → APIs → Your API → Stages
+# 2. Find your deployment stage
+# 3. Copy the stage name
+# 4. Leave empty ("") to use default (prod)
+
+# --- RESOURCE PATH 1/2/3 (OPTIONAL) ---
+# ResourcePath1, ResourcePath2, ResourcePath3: API Gateway resource paths
+#
+# Purpose:
+# - Monitor specific API resource paths
+# - Currently documented but not actively used in alarm creation
+# - Reserved for future resource-level monitoring
+#
+# Format: API resource path or empty string
+# Example: /api/v1/users, /api/v1/orders, /api/v1/products, or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to API Gateway Console → APIs → Your API → Resources
+# 2. Find your resource path
+# 3. Copy the resource path
+# 4. Leave empty ("") if not specifying resource paths
+
+# --- TEAM 1 SNS TOPIC ARN (OPTIONAL) ---
+# Team1SNSTopicArn: SNS Topic ARN for Team 1 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 1 (typically L2 Operations)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:ops-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 1 / L2 Operations
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 1 notifications
+
+# --- TEAM 2 SNS TOPIC ARN (OPTIONAL) ---
+# Team2SNSTopicArn: SNS Topic ARN for Team 2 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 2 (typically L3 Support/Development)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:dev-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 2 / L3 Support
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 2 notifications
+
+# --- TEAM 3 SNS TOPIC ARN (OPTIONAL) ---
+# Team3SNSTopicArn: SNS Topic ARN for Team 3 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 3 (typically Infrastructure/Platform)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:infra-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 3 / Infrastructure
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 3 notifications

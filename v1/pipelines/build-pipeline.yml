@@ -1,0 +1,36 @@
+trigger: none
+
+variables:
+  - name: PROJECT_NAME
+    value: GRP-00
+  - name: RESOURCE_NAME
+    value: eks
+
+parameters:
+  - name: 'Environments'
+    type: object
+    default:
+      - EnvName: 'DEV'
+        StackName: '$(PROJECT_NAME)-NPRD-DEV-$(RESOURCE_NAME)-STACK'
+        
+resources:
+  repositories:
+  - repository: HIP_Pipeline_Templates
+    type: git
+    name: HIP/HIP_Pipeline_Templates
+    ref: refs/heads/master
+  - repository: IaC-Templates
+    type: git
+    name: TechRadar/IaC-Templates
+    ref: refs/heads/master
+
+stages:
+  - template: v2/Overall/IaC/IaC-CF-master-template-with-parameters-template.yml@HIP_Pipeline_Templates
+    parameters:
+      Environments: '${{ parameters.Environments }}'
+      CFTemplateVersion: 'v1'
+      CFTemplateFilename: 'cf-$(RESOURCE_NAME).yaml'
+      ResourceType: 'platform'
+      ProjectName: '$(PROJECT_NAME)'
+      ResourceName: '$(RESOURCE_NAME)'
+      ProjectComponentName: '$(RESOURCE_NAME)'

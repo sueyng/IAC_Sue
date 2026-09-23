@@ -1,0 +1,70 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Api1Name",
+    "ParameterValue": "fusionapi"
+  },
+  {
+    "ParameterKey": "Api1Stage",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "Api1ResourcePath1",
+    "ParameterValue": "/{proxy+}"
+  },
+  {
+    "ParameterKey": "Api1ResourcePath2",
+    "ParameterValue": "/"
+  },
+  {
+    "ParameterKey": "Api1ResourcePath3",
+    "ParameterValue": "/health"
+  },
+  {
+    "ParameterKey": "Api1ResourcePath4",
+    "ParameterValue": "/status"
+  },
+  {
+    "ParameterKey": "Api2Name",
+    "ParameterValue": "fhirtrg"
+  },
+  {
+    "ParameterKey": "Api2Stage",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "Api2ResourcePath1",
+    "ParameterValue": "/{proxy+}"
+  },
+  {
+    "ParameterKey": "Api2ResourcePath2",
+    "ParameterValue": "/"
+  },
+  {
+    "ParameterKey": "Api2ResourcePath3",
+    "ParameterValue": "/health"
+  },
+  {
+    "ParameterKey": "Api2ResourcePath4",
+    "ParameterValue": "/status"
+  }
+]

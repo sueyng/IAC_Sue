@@ -1,0 +1,142 @@
+[
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    }, 
+    {
+        "ParameterKey": "ALBName",
+        "ParameterValue": "apt-nprd-public-alb-portal"
+    }, 
+    {
+        "ParameterKey": "ALBScheme",
+        "ParameterValue": "internet-facing"
+    },    
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    },
+    {
+        "ParameterKey": "IngressSubnetIds",
+        "ParameterValue": "subnet-0dea7db2634fdcb74,subnet-0c0884fe76edfe546"
+    },
+    {
+        "ParameterKey": "VPCEndpointIP1",
+        "ParameterValue": "10.1.154.147"
+    },
+    {
+        "ParameterKey": "VPCEndpointIP2",
+        "ParameterValue": "10.1.138.43"
+    },
+    {
+        "ParameterKey": "VPCEndpointIP3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "SSLCertificateArn",
+        "ParameterValue": "arn:aws:acm:ap-southeast-1:781576980265:certificate/5e10a9f8-f3b4-4e6b-8dd7-cfc26a0eaf08"
+    },
+    {
+        "ParameterKey": "PrefixListIdIntranet",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "ListenerSslPolicy",
+        "ParameterValue": "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn1",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn2",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn4",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn5",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn6",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn7",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn8",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn9",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn10",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn11",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn12",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn13",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn14",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn15",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn16",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn17",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn18",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn19",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn20",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn21",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn22",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn23",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AdditionalCertificateArn24",
+        "ParameterValue": ""
+    }
+]

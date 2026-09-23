@@ -1,0 +1,21 @@
+Example cli commands:
+Create Stack:
+aws cloudformation create-stack --stack-name my-vpc --template-body file://cf-vpc-3AZ.yaml --parameters file://prod-parameters.json
+aws cloudformation create-stack --stack-name my-vpc --template-body file://cf-vpc-3AZ.yaml --parameters file://non-prod-parameters.json
+
+aws cloudformation create-stack --stack-name my-vpce --template-body file://cf-vpce.yaml --parameters file://prod-parameters.json
+aws cloudformation create-stack --stack-name my-nonprod-vpce --template-body file://cf-vpce.yaml --parameters file://non-prod-parameters.json
+
+aws cloudformation create-stack --stack-name my-eks --template-body file://cf-eks.yaml --parameters file://prod-parameters.json --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name my-nonprod-eks --template-body file://cf-eks.yaml --parameters file://non-prod-parameters.json --capabilities CAPABILITY_NAMED_IAM
+
+aws cloudformation create-stack --stack-name my-elasticache --template-body file://cf-elasticache.yaml --parameters file://prod-parameters.json
+aws cloudformation create-stack --stack-name my-nonprod-elasticache --template-body file://cf-elasticache.yaml --parameters file://non-prod-parameters.json
+
+
+Update Stack:
+Step1: Create Change Set 
+aws cloudformation create-change-set --stack-name my-vpce --template-body file://cf-vpce.yaml --parameters file://prod-parameters.json
+aws cloudformation create-change-set --stack-name my-eks --template-body file://cf-vpce.yaml --parameters file://prod-parameters.json --capabilities CAPABILITY_NAMED_IAM
+
+Step2: Execute Change Set

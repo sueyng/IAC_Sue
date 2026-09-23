@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "prod"
+    }
+]

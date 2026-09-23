@@ -1,0 +1,86 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "webapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "Alb1Name",
+    "ParameterValue": "webapp-prod-alb-public"
+  },
+  {
+    "ParameterKey": "Alb1TargetGroup1Name",
+    "ParameterValue": "webapp-prod-tg-frontend"
+  },
+  {
+    "ParameterKey": "Alb1TargetGroup2Name",
+    "ParameterValue": "webapp-prod-tg-api"
+  },
+  {
+    "ParameterKey": "Alb1TargetGroup3Name",
+    "ParameterValue": "webapp-prod-tg-admin"
+  },
+  {
+    "ParameterKey": "Alb2Name",
+    "ParameterValue": "webapp-prod-alb-internal"
+  },
+  {
+    "ParameterKey": "Alb2TargetGroup1Name",
+    "ParameterValue": "webapp-prod-tg-backend"
+  },
+  {
+    "ParameterKey": "Alb2TargetGroup2Name",
+    "ParameterValue": "webapp-prod-tg-worker"
+  },
+  {
+    "ParameterKey": "Alb2TargetGroup3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Alb3Name",
+    "ParameterValue": "webapp-prod-alb-microservices"
+  },
+  {
+    "ParameterKey": "Alb3TargetGroup1Name",
+    "ParameterValue": "webapp-prod-tg-service1"
+  },
+  {
+    "ParameterKey": "Alb3TargetGroup2Name",
+    "ParameterValue": "webapp-prod-tg-service2"
+  },
+  {
+    "ParameterKey": "Alb3TargetGroup3Name",
+    "ParameterValue": "webapp-prod-tg-service3"
+  },
+  {
+    "ParameterKey": "Alb4Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Alb4TargetGroup1Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Alb4TargetGroup2Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Alb4TargetGroup3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

@@ -1,0 +1,542 @@
+# cf-lambda-vpc-infrastructure.yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template for Lambda VPC Infrastructure (Security Group and IAM Role)"
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    Default: 'healthb'
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+
+  LambdaRoleName:
+    Type: String
+    Description: "Name of the IAM Role for the Lambda function"
+
+  SecurityGroupName:
+    Type: String
+    Description: "Name of the Security Group"
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC ID where the Security Group will be created"
+
+  # -----------------------------------------------------------
+  # Network Configuration - VPC CIDRs
+  # -----------------------------------------------------------
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+
+  # -----------------------------------------------------------
+  # Network Configuration - Database Subnets
+  # -----------------------------------------------------------
+  VPCSubnetCidrDBAZ1:
+    Type: String
+    Description: AZ1 Database Subnet CIDR
+    Default: ""
+  VPCSubnetCidrDBAZ2:
+    Type: String
+    Description: AZ2 Database Subnet CIDR
+    Default: ""
+  VPCSubnetCidrDBAZ3:
+    Type: String
+    Description: AZ3 Database Subnet CIDR
+    Default: ""
+  ProdDBPort:
+    Type: String
+    Default: 53341
+    NoEcho: true
+  NProdDBPort:
+    Type: String
+    Default: 53331
+    NoEcho: true
+
+  # -----------------------------------------------------------
+  # Network Configuration - S3 & HCC VPC Endpoints
+  # -----------------------------------------------------------
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+  # -----------------------------------------------------------
+  # HCC Forward Proxy Parameters
+  # -----------------------------------------------------------
+  EnableBCSProxy:
+    Description: "Set to true to enable egress rules for HCC Forward Proxy"
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  HCCProxyPort:
+    Description: "HCC Forward Proxy port for external communication"
+    Type: Number
+    Default: 4000
+
+  ProdHCCProxyCidr1:
+    Description: "Production HCC Forward Proxy Subnet CIDR 1"
+    Type: String
+    Default: ""
+
+  ProdHCCProxyCidr2:
+    Description: "Production HCC Forward Proxy Subnet CIDR 2"
+    Type: String
+    Default: ""
+
+  NprdHCCProxyCidr1:
+    Description: "Non-Production HCC Forward Proxy Subnet CIDR 1"
+    Type: String
+    Default: ""
+
+  NprdHCCProxyCidr2:
+    Description: "Non-Production HCC Forward Proxy Subnet CIDR 2"
+    Type: String
+    Default: ""
+
+  # -----------------------------------------------------------
+  # ElastiCache Redis Parameters
+  # -----------------------------------------------------------
+  ElastiCacheSubnetAZ1:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ1 (if ElastiCache sits in different subnets from VPC CIDRs)"
+    Type: String
+    Default: ""
+
+  ElastiCacheSubnetAZ2:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ2 (if ElastiCache sits in different subnets from VPC CIDRs)"
+    Type: String
+    Default: ""
+
+  ElastiCacheSubnetAZ3:
+    Description: "Optional dedicated ElastiCache subnet CIDR AZ3 (if ElastiCache sits in different subnets from VPC CIDRs)"
+    Type: String
+    Default: ""
+
+Conditions:
+  IsProduction: !Or
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+  # VPC CIDR conditions
+  HasVpcCidr1: !Not [!Equals [!Ref VpcCidr1, ""]]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, ""]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, ""]]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, ""]]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, ""]]
+  # Database subnet conditions
+  HasVPCSubnetCidrDBAZ1: !Not [!Equals [!Ref VPCSubnetCidrDBAZ1, ""]]
+  HasVPCSubnetCidrDBAZ2: !Not [!Equals [!Ref VPCSubnetCidrDBAZ2, ""]]
+  HasVPCSubnetCidrDBAZ3: !Not [!Equals [!Ref VPCSubnetCidrDBAZ3, ""]]
+  # S3 & HCC VPC endpoint conditions
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  # HCC Forward Proxy conditions
+  EnableBCSProxy: !Equals [!Ref EnableBCSProxy, 'true']
+  HasProdHCCProxyCidr1: !Not [!Equals [!Ref ProdHCCProxyCidr1, ""]]
+  HasProdHCCProxyCidr2: !Not [!Equals [!Ref ProdHCCProxyCidr2, ""]]
+  HasNprdHCCProxyCidr1: !Not [!Equals [!Ref NprdHCCProxyCidr1, ""]]
+  HasNprdHCCProxyCidr2: !Not [!Equals [!Ref NprdHCCProxyCidr2, ""]]
+  HasHCCProxyCidr1: !And
+    - !Condition EnableBCSProxy
+    - !Or
+      - !And [!Condition IsProduction, !Condition HasProdHCCProxyCidr1]
+      - !And [!Not [!Condition IsProduction], !Condition HasNprdHCCProxyCidr1]
+  HasHCCProxyCidr2: !And
+    - !Condition EnableBCSProxy
+    - !Or
+      - !And [!Condition IsProduction, !Condition HasProdHCCProxyCidr2]
+      - !And [!Not [!Condition IsProduction], !Condition HasNprdHCCProxyCidr2]
+  # ElastiCache Redis conditions
+  HasElastiCacheSubnetAZ1: !Not [!Equals [!Ref ElastiCacheSubnetAZ1, ""]]
+  HasElastiCacheSubnetAZ2: !Not [!Equals [!Ref ElastiCacheSubnetAZ2, ""]]
+  HasElastiCacheSubnetAZ3: !Not [!Equals [!Ref ElastiCacheSubnetAZ3, ""]]
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref LambdaRoleName
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.1
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+      # ManagedPolicyArns: !Ref ManagedPolicyArns
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+
+  BaseExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${LambdaRoleName}-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:*"
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - "ec2:CreateNetworkInterface"
+              - "ec2:DescribeNetworkInterfaces"
+              - "ec2:DeleteNetworkInterface"
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - "xray:*"
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - "cloudwatch:PutMetricData"
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - "secretsmanager:*"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaExecutionRole
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref SecurityGroupName
+      GroupDescription: "Lambda Security Group"
+      SecurityGroupEgress:
+        # -------------------------------------------------------
+        # HTTPS (port 443) - VPC CIDRs
+        # -------------------------------------------------------
+        - !If
+          - HasVpcCidr1
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr1
+            Description: "HTTPS to VPC CIDR 1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: "HTTPS to VPC CIDR 2"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: "HTTPS to VPC CIDR 3"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: "HTTPS to VPC CIDR 4"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: "HTTPS to VPC CIDR 5"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # Database Port - DB Subnets
+        # -------------------------------------------------------
+        - !If
+          - HasVPCSubnetCidrDBAZ1
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrDBAZ1
+            Description: "Database access to AZ1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVPCSubnetCidrDBAZ2
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrDBAZ2
+            Description: "Database access to AZ2"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVPCSubnetCidrDBAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrDBAZ3
+            Description: "Database access to AZ3"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # S3 VPC Endpoint (Prefix List)
+        # -------------------------------------------------------
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: "HTTPS to S3 VPC Endpoint"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # HCC VPC Endpoint
+        # -------------------------------------------------------
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: "HTTPS to HCC VPC Endpoint"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # HCC Forward Proxy (auto prod/nprd selection)
+        # -------------------------------------------------------
+        - !If
+          - HasHCCProxyCidr1
+          - IpProtocol: tcp
+            FromPort: !Ref HCCProxyPort
+            ToPort: !Ref HCCProxyPort
+            CidrIp: !If [IsProduction, !Ref ProdHCCProxyCidr1, !Ref NprdHCCProxyCidr1]
+            Description: "HCC Forward Proxy Subnet 1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasHCCProxyCidr2
+          - IpProtocol: tcp
+            FromPort: !Ref HCCProxyPort
+            ToPort: !Ref HCCProxyPort
+            CidrIp: !If [IsProduction, !Ref ProdHCCProxyCidr2, !Ref NprdHCCProxyCidr2]
+            Description: "HCC Forward Proxy Subnet 2"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # SES SMTP (port 587) - VPC CIDRs
+        # -------------------------------------------------------
+        - !If
+          - HasVpcCidr1
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr1
+            Description: "SES SMTP to VPC CIDR 1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr2
+            Description: "SES SMTP to VPC CIDR 2"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr3
+            Description: "SES SMTP to VPC CIDR 3"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr4
+            Description: "SES SMTP to VPC CIDR 4"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 587
+            ToPort: 587
+            CidrIp: !Ref VpcCidr5
+            Description: "SES SMTP to VPC CIDR 5"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # ElastiCache Redis (ports 6379-6380) - VPC CIDRs
+        # -------------------------------------------------------
+        - !If
+          - HasVpcCidr1
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref VpcCidr1
+            Description: "ElastiCache Redis to VPC CIDR 1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref VpcCidr2
+            Description: "ElastiCache Redis to VPC CIDR 2"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref VpcCidr3
+            Description: "ElastiCache Redis to VPC CIDR 3"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref VpcCidr4
+            Description: "ElastiCache Redis to VPC CIDR 4"
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref VpcCidr5
+            Description: "ElastiCache Redis to VPC CIDR 5"
+          - !Ref AWS::NoValue
+
+        # -------------------------------------------------------
+        # ElastiCache Redis (ports 6379-6380) - Dedicated Subnets
+        # -------------------------------------------------------
+        - !If
+          - HasElastiCacheSubnetAZ1
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref ElastiCacheSubnetAZ1
+            Description: "ElastiCache Redis to dedicated subnet AZ1"
+          - !Ref AWS::NoValue
+        - !If
+          - HasElastiCacheSubnetAZ2
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref ElastiCacheSubnetAZ2
+            Description: "ElastiCache Redis to dedicated subnet AZ2"
+          - !Ref AWS::NoValue
+        - !If
+          - HasElastiCacheSubnetAZ3
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6380
+            CidrIp: !Ref ElastiCacheSubnetAZ3
+            Description: "ElastiCache Redis to dedicated subnet AZ3"
+          - !Ref AWS::NoValue
+
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.1
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+
+  # SSM Parameters
+  LambdaRoleArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/lambda/${AppShortName}/${EnvName}/execution-role-arn"
+      Type: String
+      Value: !GetAtt LambdaExecutionRole.Arn
+      Description: "Lambda base execution role ARN"
+
+  SecurityGroupIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/lambda/${AppShortName}/${EnvName}/security-group-id"
+      Type: String
+      Value: !Ref LambdaSecurityGroup
+      Description: "Lambda security group ID"
+
+Outputs:
+  RoleArn:
+    Description: ARN of the created IAM Role
+    Value: !GetAtt LambdaExecutionRole.Arn
+  RoleName:
+    Description: Name of the created IAM Role
+    Value: !Ref LambdaExecutionRole
+  SecurityGroupId:
+    Description: ID of the created Security Group
+    Value: !Ref LambdaSecurityGroup
+  SSMRoleArnPath:
+    Description: SSM Parameter path for Lambda Role ARN
+    Value: !Sub "/lambda/${EnvName}/base-role-arn"
+  SSMSecurityGroupPath:
+    Description: SSM Parameter path for Security Group ID
+    Value: !Sub "/lambda/${EnvName}/security-group-id"

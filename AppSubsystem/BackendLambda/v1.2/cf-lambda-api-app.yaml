@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision a Lambda function with a common role and Security Group.
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+    Default: 'healthb'
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  LambdaS3bucket:
+    Type: String
+    Description: The S3 bucket where Lambda code is stored
+    Default: 'health-nprd-cftemplates'
+
+  CodeZipFileName:
+    Type: String
+    Description: Zip file name for Lambda function code
+    Default: ''
+
+  LambdaFunctionName:
+    Type: String
+    Description: Name of the Lambda function
+    Default: ''
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Subnet IDs for the Lambda function
+
+  LogRetentionInDays:
+    Type: Number
+    Default: 14
+    Description: Number of days for Log Retention
+
+  LambdaRuntime:
+    Type: String
+    Default: 'dotnet8'
+    Description: Runtime for the Lambda function
+
+  LambdaHandler:
+    Type: String
+    Default: 'HealthBuddy.Admission.SubmitPayment::HealthBuddy.Admission.SubmitPayment.Function::FunctionHandler'
+    Description: Lambda function handler
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 1024
+    Description: Memory size for the Lambda function in MB
+    MinValue: 128
+    MaxValue: 10240
+    ConstraintDescription: Value must be between 128 MB and 10240 MB
+
+  LambdaTimeout:
+    Type: Number
+    Default: 25
+    Description: Timeout for the Lambda function in seconds
+    MinValue: 1
+    MaxValue: 900
+    ConstraintDescription: Value must be between 1 and 900 seconds
+
+  ApiResourcePath:
+    Type: String
+    Description: API Gateway resource path (e.g., admissions/submit-payment)
+    Default: 'admissions/submit-payment'
+
+  ApiHttpMethod:
+    Type: String
+    Description: HTTP method for the API endpoint
+    AllowedValues: 
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+      - OPTIONS
+    Default: 'POST'
+    
+  TimeZone:
+    Type: String
+    Description: Timezone for the Lambda function (TZ environment variable)
+    Default: 'Asia/Singapore'
+
+Conditions:
+  IsProduction: !Or 
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+Resources:
+  # Log Group
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaFunctionName}"
+      RetentionInDays: !Ref LogRetentionInDays
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.2
+
+  # Lambda Function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref LambdaFunctionName
+      Code:
+        S3Bucket: !Ref LambdaS3bucket
+        S3Key: !Ref CodeZipFileName
+      Handler: !Ref LambdaHandler
+      Role: !Sub "{{resolve:ssm:/lambda/${AppShortName}/${EnvName}/execution-role-arn}}"
+      Runtime: !Ref LambdaRuntime
+      Environment:
+        Variables:
+          Environment: !Ref EnvName
+          TZ: !Ref TimeZone
+      VpcConfig:
+        SecurityGroupIds:
+          - !Sub "{{resolve:ssm:/lambda/${AppShortName}/${EnvName}/security-group-id}}"
+        SubnetIds: !Ref SubnetIds
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+
+  # API Gateway Permission to Invoke Lambda
+  APIGatewayInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:{{resolve:ssm:/lambda/${AppShortName}/${EnvName}/apigw_id}}/*/${ApiHttpMethod}/${ApiResourcePath}"
+
+
+Outputs:
+  LambdaFunctionArn:
+    Description: The ARN of the Lambda function
+    Value: !GetAtt LambdaFunction.Arn

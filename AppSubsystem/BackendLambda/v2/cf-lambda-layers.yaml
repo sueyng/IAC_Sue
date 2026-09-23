@@ -1,0 +1,319 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation template for Lambda Layers'
+
+Parameters:
+  # Core Application Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Lambda Layer Configuration
+  LayerDeploymentBucketName:
+    Type: String
+    Description: S3 bucket name where Lambda layer packages are stored
+
+  # Layer 1 Configuration
+  Layer1Name:
+    Type: String
+    Description: Name of the first Lambda layer (e.g., formsg, pymysql, requests)
+    Default: ''
+
+  Layer1Description:
+    Type: String
+    Description: Description of the first Lambda layer
+    Default: ''
+
+  Layer1S3Key:
+    Type: String
+    Description: S3 key path to the first layer package (.zip file)
+    Default: ''
+
+  Layer1CompatibleRuntimes:
+    Type: CommaDelimitedList
+    Description: Compatible runtimes for the first layer
+    Default: 'python3.12'
+
+  Layer1CompatibleArchitectures:
+    Type: CommaDelimitedList
+    Description: Compatible architectures for the first layer
+    Default: 'x86_64'
+
+  # Layer 2 Configuration
+  Layer2Name:
+    Type: String
+    Description: Name of the second Lambda layer
+    Default: ''
+
+  Layer2Description:
+    Type: String
+    Description: Description of the second Lambda layer
+    Default: ''
+
+  Layer2S3Key:
+    Type: String
+    Description: S3 key path to the second layer package (.zip file)
+    Default: ''
+
+  Layer2CompatibleRuntimes:
+    Type: CommaDelimitedList
+    Description: Compatible runtimes for the second layer
+    Default: 'python3.12'
+
+  Layer2CompatibleArchitectures:
+    Type: CommaDelimitedList
+    Description: Compatible architectures for the second layer
+    Default: 'x86_64'
+
+  # Layer 3 Configuration
+  Layer3Name:
+    Type: String
+    Description: Name of the third Lambda layer
+    Default: ''
+
+  Layer3Description:
+    Type: String
+    Description: Description of the third Lambda layer
+    Default: ''
+
+  Layer3S3Key:
+    Type: String
+    Description: S3 key path to the third layer package (.zip file)
+    Default: ''
+
+  Layer3CompatibleRuntimes:
+    Type: CommaDelimitedList
+    Description: Compatible runtimes for the third layer
+    Default: 'python3.12'
+
+  Layer3CompatibleArchitectures:
+    Type: CommaDelimitedList
+    Description: Compatible architectures for the third layer
+    Default: 'x86_64'
+
+  # Layer 4 Configuration
+  Layer4Name:
+    Type: String
+    Description: Name of the fourth Lambda layer
+    Default: ''
+
+  Layer4Description:
+    Type: String
+    Description: Description of the fourth Lambda layer
+    Default: ''
+
+  Layer4S3Key:
+    Type: String
+    Description: S3 key path to the fourth layer package (.zip file)
+    Default: ''
+
+  Layer4CompatibleRuntimes:
+    Type: CommaDelimitedList
+    Description: Compatible runtimes for the fourth layer
+    Default: 'python3.12'
+
+  Layer4CompatibleArchitectures:
+    Type: CommaDelimitedList
+    Description: Compatible architectures for the fourth layer
+    Default: 'x86_64'
+
+  # Layer 5 Configuration
+  Layer5Name:
+    Type: String
+    Description: Name of the fifth Lambda layer
+    Default: ''
+
+  Layer5Description:
+    Type: String
+    Description: Description of the fifth Lambda layer
+    Default: ''
+
+  Layer5S3Key:
+    Type: String
+    Description: S3 key path to the fifth layer package (.zip file)
+    Default: ''
+
+  Layer5CompatibleRuntimes:
+    Type: CommaDelimitedList
+    Description: Compatible runtimes for the fifth layer
+    Default: 'python3.12'
+
+  Layer5CompatibleArchitectures:
+    Type: CommaDelimitedList
+    Description: Compatible architectures for the fifth layer
+    Default: 'x86_64'
+
+Conditions:
+  # Environment conditions
+  IsProduction: !Or 
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+  # Layer existence conditions
+  HasLayer1: !Not [!Equals [!Ref Layer1Name, '']]
+  HasLayer2: !Not [!Equals [!Ref Layer2Name, '']]
+  HasLayer3: !Not [!Equals [!Ref Layer3Name, '']]
+  HasLayer4: !Not [!Equals [!Ref Layer4Name, '']]
+  HasLayer5: !Not [!Equals [!Ref Layer5Name, '']]
+
+Resources:
+  # Lambda Layer 1
+  LambdaLayer1:
+    Type: AWS::Lambda::LayerVersion
+    Condition: HasLayer1
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LayerName: !Sub "${AppShortName}-${EnvName}-layer-${Layer1Name}"
+      Description: !Ref Layer1Description
+      CompatibleArchitectures: !Ref Layer1CompatibleArchitectures
+      CompatibleRuntimes: !Ref Layer1CompatibleRuntimes
+      Content:
+        S3Bucket: !Ref LayerDeploymentBucketName
+        S3Key: !Ref Layer1S3Key
+
+  # Lambda Layer 2
+  LambdaLayer2:
+    Type: AWS::Lambda::LayerVersion
+    Condition: HasLayer2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LayerName: !Sub "${AppShortName}-${EnvName}-layer-${Layer2Name}"
+      Description: !Ref Layer2Description
+      CompatibleArchitectures: !Ref Layer2CompatibleArchitectures
+      CompatibleRuntimes: !Ref Layer2CompatibleRuntimes
+      Content:
+        S3Bucket: !Ref LayerDeploymentBucketName
+        S3Key: !Ref Layer2S3Key
+
+  # Lambda Layer 3
+  LambdaLayer3:
+    Type: AWS::Lambda::LayerVersion
+    Condition: HasLayer3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LayerName: !Sub "${AppShortName}-${EnvName}-layer-${Layer3Name}"
+      Description: !Ref Layer3Description
+      CompatibleArchitectures: !Ref Layer3CompatibleArchitectures
+      CompatibleRuntimes: !Ref Layer3CompatibleRuntimes
+      Content:
+        S3Bucket: !Ref LayerDeploymentBucketName
+        S3Key: !Ref Layer3S3Key
+
+  # Lambda Layer 4
+  LambdaLayer4:
+    Type: AWS::Lambda::LayerVersion
+    Condition: HasLayer4
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LayerName: !Sub "${AppShortName}-${EnvName}-layer-${Layer4Name}"
+      Description: !Ref Layer4Description
+      CompatibleArchitectures: !Ref Layer4CompatibleArchitectures
+      CompatibleRuntimes: !Ref Layer4CompatibleRuntimes
+      Content:
+        S3Bucket: !Ref LayerDeploymentBucketName
+        S3Key: !Ref Layer4S3Key
+
+  # Lambda Layer 5
+  LambdaLayer5:
+    Type: AWS::Lambda::LayerVersion
+    Condition: HasLayer5
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LayerName: !Sub "${AppShortName}-${EnvName}-layer-${Layer5Name}"
+      Description: !Ref Layer5Description
+      CompatibleArchitectures: !Ref Layer5CompatibleArchitectures
+      CompatibleRuntimes: !Ref Layer5CompatibleRuntimes
+      Content:
+        S3Bucket: !Ref LayerDeploymentBucketName
+        S3Key: !Ref Layer5S3Key
+
+Outputs:
+  # Layer 1 Outputs
+  Layer1Arn:
+    Condition: HasLayer1
+    Description: "ARN of the first Lambda layer"
+    Value: !Ref LambdaLayer1
+
+  Layer1Name:
+    Condition: HasLayer1
+    Description: "Name of the first Lambda layer"
+    Value: !Sub "${AppShortName}-${EnvName}-layer-${Layer1Name}"
+
+  # Layer 2 Outputs
+  Layer2Arn:
+    Condition: HasLayer2
+    Description: "ARN of the second Lambda layer"
+    Value: !Ref LambdaLayer2
+
+  Layer2Name:
+    Condition: HasLayer2
+    Description: "Name of the second Lambda layer"
+    Value: !Sub "${AppShortName}-${EnvName}-layer-${Layer2Name}"
+
+  # Layer 3 Outputs
+  Layer3Arn:
+    Condition: HasLayer3
+    Description: "ARN of the third Lambda layer"
+    Value: !Ref LambdaLayer3
+
+  Layer3Name:
+    Condition: HasLayer3
+    Description: "Name of the third Lambda layer"
+    Value: !Sub "${AppShortName}-${EnvName}-layer-${Layer3Name}"
+
+  # Layer 4 Outputs
+  Layer4Arn:
+    Condition: HasLayer4
+    Description: "ARN of the fourth Lambda layer"
+    Value: !Ref LambdaLayer4
+
+  Layer4Name:
+    Condition: HasLayer4
+    Description: "Name of the fourth Lambda layer"
+    Value: !Sub "${AppShortName}-${EnvName}-layer-${Layer4Name}"
+
+  # Layer 5 Outputs
+  Layer5Arn:
+    Condition: HasLayer5
+    Description: "ARN of the fifth Lambda layer"
+    Value: !Ref LambdaLayer5
+
+  Layer5Name:
+    Condition: HasLayer5
+    Description: "Name of the fifth Lambda layer"
+    Value: !Sub "${AppShortName}-${EnvName}-layer-${Layer5Name}"

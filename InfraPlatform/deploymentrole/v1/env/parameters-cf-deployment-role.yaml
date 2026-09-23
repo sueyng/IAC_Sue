@@ -1,0 +1,63 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment -
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Deployment -
+# - SINGLE template deployment (all resources in one stack)
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# General Parameters
+AppShortName: "<edit_here>"                      # 📝 e.g. app, myapp
+EnvName: "<edit_here>"                           # 📝 nprd | prod
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName - Application identifier for resource naming
+#
+# Purpose -
+# - Creates role name: {AppShortName}-{EnvName}-depl-role
+# - Creates policy name: {AppShortName}-{EnvName}-depl-policy
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: app, myapp, demo
+#
+# Finding Your Value -
+# - Use your organization's application naming convention
+
+# --- ENVIRONMENT NAME ---
+# EnvName - Environment designation for resource naming and deletion policy
+#
+# Purpose -
+# - Used in resource naming
+# - Determines deletion policy and trusted EC2 principals
+# - Determines trust relationship configuration
+#
+# Allowed Values -
+# - nprd (Non-Production)
+# - prod (Production)
+#
+# Environment-Specific Behavior -
+# Production (prod) -
+# - DeletionPolicy: Retain (role preserved on stack deletion)
+# - UpdateReplacePolicy: Retain
+# - Trusts PROD EC2 instances: account 028485325974
+#
+# Non-Production (nprd) -
+# - DeletionPolicy: Delete (role deleted on stack deletion)
+# - UpdateReplacePolicy: Delete
+# - Trusts NPRD EC2 instances: account 899035119154
+#
+# Finding Your Value -
+# - Coordinate with your infrastructure team
+# - One role per account (PROD or NPRD)

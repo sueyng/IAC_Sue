@@ -1,0 +1,514 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: DMS Task to migrate data from SQL Server to PostgreSQL
+Metadata:
+  TemplateVersion: '1.1'
+  LastModified: '2026-04-15'
+  Author: 'Migration Team'
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Short application name for resource naming and tagging
+    Default: acpmigration
+  EnvName:
+    Type: String
+    Description: Environment name
+    Default: nprd
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-dev-a
+      - nprd-dev-b
+      - nprd-dev-c
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+  DmsInstanceClass:
+    Type: String
+    Default: dms.t3.medium
+    Description: DMS replication instance class
+  VpcSecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security group IDs for DMS instance
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: Subnet IDs for DMS instance
+  VpcId:
+    Type: String
+    Description: VPC ID where DMS instance will be deployed
+  CreateSharedResources:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Whether to create shared DMS resources (instance, security group, subnet group). Set to false for subsequent database migrations.
+  ExistingDmsInstanceId:
+    Type: String
+    Default: ''
+    Description: 'Existing DMS Replication Instance ID (required when CreateSharedResources=false). Example: hh-nprd-dev-dms-instance'
+  ExistingDmsInstanceArn:
+    Type: String
+    Default: ''
+    Description: 'Existing DMS Replication Instance ARN (required when CreateSharedResources=false). Example: arn:aws:dms:region:account:rep:INSTANCEID'
+  ExistingDmsSecurityGroupId:
+    Type: String
+    Default: ''
+    Description: 'Existing DMS Security Group ID (required when CreateSharedResources=false). Example: sg-1234567890abcdef0'
+  ExistingDmsSubnetGroupId:
+    Type: String
+    Default: ''
+    Description: 'Existing DMS Subnet Group ID (required when CreateSharedResources=false). Example: hh-nprd-dev-dms-subnet-group'
+  SqlServerSecurityGroup:
+    Type: String
+    Description: Security group ID for SQL Server RDS instance
+  PostgresSecurityGroup:
+    Type: String
+    Description: Security group ID for PostgreSQL RDS instance
+  SourceServerName:
+    Type: String
+    Description: SQL Server RDS endpoint hostname
+  TargetServerName:
+    Type: String
+    Description: PostgreSQL RDS endpoint hostname
+  SourceSecretArn:
+    Type: String
+    Description: ARN of AWS Secrets Manager secret containing SQL Server credentials
+    NoEcho: true
+  TargetSecretArn:
+    Type: String
+    Description: ARN of AWS Secrets Manager secret containing PostgreSQL credentials
+    NoEcho: true
+  SourceDatabaseName:
+    Type: String
+    Description: Source SQL Server database name
+  TargetDatabaseName:
+    Type: String
+    Description: Target PostgreSQL database name
+  
+  # Data Validation Parameters
+  EnableDataValidation:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable data validation for migrated data
+  ValidationMode:
+    Type: String
+    Default: 'ROW_LEVEL'
+    AllowedValues:
+      - 'ROW_LEVEL'
+      - 'TABLE_LEVEL'
+    Description: Data validation mode for migration verification
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  CreateSharedInfra: !Equals [!Ref CreateSharedResources, 'true']
+
+Resources:
+  DmsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateSharedInfra
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Security group for DMS replication instance
+      GroupName: !Sub '${AppShortName}-${EnvName}-dms-sg'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      SecurityGroupEgress: []
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-dms-sg'
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DmsSecurityGroupEgressToRdsSqlServer:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateSharedInfra
+    Properties:
+      GroupId: !Ref DmsSecurityGroup
+      IpProtocol: tcp
+      FromPort: !If [IsProduction, 53341, 53331]
+      ToPort: !If [IsProduction, 53341, 53331]
+      DestinationSecurityGroupId: !Ref SqlServerSecurityGroup
+      Description: !Sub 'Allow DMS replication instance to access RDS SQL Server on port ${EnvName}'
+
+  DmsSecurityGroupEgressToRdsPostgres:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateSharedInfra
+    Properties:
+      GroupId: !Ref DmsSecurityGroup
+      IpProtocol: tcp
+      FromPort: !If [IsProduction, 53341, 53331]
+      ToPort: !If [IsProduction, 53341, 53331]
+      DestinationSecurityGroupId: !Ref PostgresSecurityGroup
+      Description: !Sub 'Allow DMS replication instance to access RDS PostgreSQL on port ${EnvName}'
+
+  RdsSqlServerSecurityGroupIngressFromDms:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSharedInfra
+    Properties:
+      GroupId: !Ref SqlServerSecurityGroup
+      IpProtocol: tcp
+      FromPort: !If [IsProduction, 53341, 53331]
+      ToPort: !If [IsProduction, 53341, 53331]
+      SourceSecurityGroupId: !Ref DmsSecurityGroup
+      Description: !Sub 'Allow DMS replication instance to access RDS SQL Server on port ${EnvName}'
+
+  RdsPostgresSecurityGroupIngressFromDms:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSharedInfra
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: !If [IsProduction, 53341, 53331]
+      ToPort: !If [IsProduction, 53341, 53331]
+      SourceSecurityGroupId: !Ref DmsSecurityGroup
+      Description: !Sub 'Allow DMS replication instance to access RDS PostgreSQL on port ${EnvName}'
+  DmsReplicationSubnetGroup:
+    Type: AWS::DMS::ReplicationSubnetGroup
+    Condition: CreateSharedInfra
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ReplicationSubnetGroupDescription: DMS subnet group
+      SubnetIds: !Ref SubnetIds
+      ReplicationSubnetGroupIdentifier: !Sub '${AppShortName}-${EnvName}-dms-subnet-group'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-dms-subnet-group'
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DmsReplicationInstance:
+    Type: AWS::DMS::ReplicationInstance
+    Condition: CreateSharedInfra
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ReplicationInstanceClass: !Ref DmsInstanceClass
+      AllocatedStorage: 100
+      VpcSecurityGroupIds:
+        - !If [CreateSharedInfra, !Ref DmsSecurityGroup, !Ref ExistingDmsSecurityGroupId]
+      ReplicationSubnetGroupIdentifier: !If [CreateSharedInfra, !Ref DmsReplicationSubnetGroup, !Ref ExistingDmsSubnetGroupId]
+      MultiAZ: false
+      PubliclyAccessible: false
+      ReplicationInstanceIdentifier: !Sub '${AppShortName}-${EnvName}-dms-instance'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-dms-instance'
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DmsSourceEndpoint:
+    Type: AWS::DMS::Endpoint
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      EndpointIdentifier: !Sub
+        - '${AppShortName}-${EnvName}-${SourceDbNameClean}-sqlserver-source'
+        - SourceDbNameClean: !Join ['-', !Split ['_', !Ref SourceDatabaseName]]
+      EndpointType: source
+      EngineName: sqlserver
+      Username: !Sub '{{resolve:secretsmanager:${SourceSecretArn}:SecretString:username}}'
+      Password: !Sub '{{resolve:secretsmanager:${SourceSecretArn}:SecretString:password}}'
+      ServerName: !Ref SourceServerName
+      Port: !If [IsProduction, 53341, 53331]
+      DatabaseName: !Ref SourceDatabaseName
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${AppShortName}-${EnvName}-${SourceDbNameClean}-sqlserver-source'
+            - SourceDbNameClean: !Join ['-', !Split ['_', !Ref SourceDatabaseName]]
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: EndpointType
+          Value: Source
+        - Key: Engine
+          Value: SQLServer
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DmsTargetEndpoint:
+    Type: AWS::DMS::Endpoint
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      EndpointIdentifier: !Sub
+        - '${AppShortName}-${EnvName}-${TargetDbNameClean}-postgres-target'
+        - TargetDbNameClean: !Join ['-', !Split ['_', !Ref TargetDatabaseName]]
+      EndpointType: target
+      EngineName: postgres
+      Username: !Sub '{{resolve:secretsmanager:${TargetSecretArn}:SecretString:username}}'
+      Password: !Sub '{{resolve:secretsmanager:${TargetSecretArn}:SecretString:password}}'
+      ServerName: !Ref TargetServerName
+      Port: !If [IsProduction, 53341, 53331]
+      DatabaseName: !Ref TargetDatabaseName
+      SslMode: require
+      ExtraConnectionAttributes: "afterConnectScript=SET session_replication_role = replica"
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${AppShortName}-${EnvName}-${TargetDbNameClean}-postgres-target'
+            - TargetDbNameClean: !Join ['-', !Split ['_', !Ref TargetDatabaseName]]
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: EndpointType
+          Value: Target
+        - Key: Engine
+          Value: PostgreSQL
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DmsMigrationTask:
+    Type: AWS::DMS::ReplicationTask
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ReplicationTaskIdentifier: !Sub
+        - '${AppShortName}-${EnvName}-${TargetDbNameClean}-migration-task'
+        - TargetDbNameClean: !Join ['-', !Split ['_', !Ref TargetDatabaseName]]
+      SourceEndpointArn: !Ref DmsSourceEndpoint
+      TargetEndpointArn: !Ref DmsTargetEndpoint
+      ReplicationInstanceArn: !If [CreateSharedInfra, !Ref DmsReplicationInstance, !Ref ExistingDmsInstanceArn]
+      MigrationType: full-load
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${AppShortName}-${EnvName}-${TargetDbNameClean}-migration-task'
+            - TargetDbNameClean: !Join ['-', !Split ['_', !Ref TargetDatabaseName]]
+        - Key: Application
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Component
+          Value: DMS
+        - Key: MigrationType
+          Value: full-load
+        - Key: Version
+          Value: '1.1'
+        - Key: IaCVersion
+          Value: 'InfraPlatform-dms-v1.1'
+        - Key: ManagedBy
+          Value: CloudFormation
+      TableMappings: |
+        {
+          "rules": [
+            {
+              "rule-type": "selection",
+              "rule-id": "1",
+              "rule-name": "include-all-tables",
+              "rule-action": "include",
+              "object-locator": {
+                "schema-name": "%",
+                "table-name": "%"
+              }
+            },
+            {
+              "rule-type": "transformation",
+              "rule-id": "2",
+              "rule-name": "rename-dbo-to-public",
+              "rule-action": "rename",
+              "rule-target": "schema",
+              "object-locator": {
+                "schema-name": "dbo"
+              },
+              "value": "public"
+            },
+            {
+              "rule-type": "transformation",
+              "rule-id": "3",
+              "rule-name": "table-to-lowercase",
+              "rule-action": "convert-lowercase",
+              "rule-target": "table",
+              "object-locator": {
+                "schema-name": "%",
+                "table-name": "%"
+              }
+            },
+            {
+              "rule-type": "transformation",
+              "rule-id": "4",
+              "rule-name": "column-to-lowercase",
+              "rule-action": "convert-lowercase",
+              "rule-target": "column",
+              "object-locator": {
+                "schema-name": "%",
+                "table-name": "%",
+                "column-name": "%"
+              }
+            },
+            {
+              "rule-type": "transformation",
+              "rule-id": "5",
+              "rule-name": "bit-to-boolean",
+              "rule-target": "column",
+              "object-locator": {
+                "schema-name": "dbo",
+                "table-name": "%",
+                "column-name": "%",
+                "data-type": "bit"
+              },
+              "rule-action": "change-data-type",
+              "data-type": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      ReplicationTaskSettings: !Sub |
+        {
+          "ValidationSettings": {
+            "EnableValidation": ${EnableDataValidation},
+            "ValidationMode": "${ValidationMode}",
+            "ThreadCount": 10,
+            "PartitionSize": 50000,
+            "FailureMaxCount": 10000,
+            "RecordFailureDelayInMinutes": 5,
+            "RecordSuspendDelayInMinutes": 30,
+            "MaxKeyColumnSize": 8096,
+            "TableFailureMaxCount": 1000,
+            "ValidationQueryCdcDelaySeconds": 0,
+            "ValidationPartialLobSize": 0,
+            "ValidationOnlyOption": {
+              "EnableValidation": ${EnableDataValidation}
+            }
+          },
+          "TargetMetadata": {
+            "TargetSchema": "",
+            "SupportLobs": true,
+            "FullLobMode": false,
+            "LobChunkSize": 0,
+            "LimitedSizeLobMode": true,
+            "LobMaxSize": 32,
+            "InlineLobMaxSize": 0,
+            "LoadMaxFileSize": 0,
+            "ParallelLoadThreads": 0,
+            "ParallelLoadBufferSize": 0,
+            "BatchApplyEnabled": false,
+            "TaskRecoveryTableEnabled": false,
+            "LoadIndexesFromSource": false,
+            "LoadForeignKeysFromSource": false
+          },
+          "FullLoadSettings": {
+            "TargetTablePrepMode": "DO_NOTHING",
+            "CreatePkAfterFullLoad": false,
+            "StopTaskCachedChangesApplied": false,
+            "StopTaskCachedChangesNotApplied": false,
+            "MaxFullLoadSubTasks": 8,
+            "TransactionConsistencyTimeout": 600,
+            "CommitRate": 10000
+          },
+          "ControlTablesSettings": {
+            "historyTimeslotInMinutes": 5,
+            "ControlSchema": "dms_control",
+            "HistoryTimeslotInMinutes": 5,
+            "HistoryTableEnabled": true,
+            "SuspendedTablesTableEnabled": true,
+            "StatusTableEnabled": true
+          },
+          "Logging": {
+            "EnableLogging": true,
+            "LogComponents": [
+              {
+                "Id": "TRANSFORMATION",
+                "Severity": "LOGGER_SEVERITY_DEFAULT"
+              },
+              {
+                "Id": "SOURCE_UNLOAD",
+                "Severity": "LOGGER_SEVERITY_DEFAULT"
+              },
+              {
+                "Id": "TARGET_LOAD",
+                "Severity": "LOGGER_SEVERITY_DEFAULT"
+              },
+              {
+                "Id": "VALIDATOR_EXT",
+                "Severity": "LOGGER_SEVERITY_DEFAULT"
+              }
+            ]
+          }
+        }
+
+  # ==========================================
+  # Data Validation Resources
+Outputs:
+  DmsReplicationInstanceArn:
+    Value: !If [CreateSharedInfra, !Ref DmsReplicationInstance, !Ref ExistingDmsInstanceArn]
+    Description: ARN of the DMS replication instance
+  DmsSourceEndpointArn:
+    Value: !Ref DmsSourceEndpoint
+    Description: ARN of the DMS source endpoint
+  DmsTargetEndpointArn:
+    Value: !Ref DmsTargetEndpoint
+    Description: ARN of the DMS target endpoint
+  DmsMigrationTaskArn:
+    Value: !Ref DmsMigrationTask
+    Description: ARN of the DMS migration task

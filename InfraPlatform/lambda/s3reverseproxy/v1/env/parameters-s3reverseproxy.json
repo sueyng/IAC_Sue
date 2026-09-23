@@ -1,0 +1,54 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "myapp"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-dev"
+    },
+    {
+        "ParameterKey": "LambdaS3bucket",
+        "ParameterValue": "my-lambda-code-bucket"
+    },
+    {
+        "ParameterKey": "CodeZipFileName",
+        "ParameterValue": "s3reverseproxy.zip"
+    },
+    {
+        "ParameterKey": "LambdaRuntime",
+        "ParameterValue": "nodejs20.x"
+    },
+    {
+        "ParameterKey": "LambdaHandler",
+        "ParameterValue": "index.handler"
+    },
+    {
+        "ParameterKey": "APIGatewayToS3BucketMapping",
+        "ParameterValue": "abcd1234:myapp-nprd-dev-bucket-1, efgh5678:myapp-nprd-dev-bucket-2"
+    },
+    {
+        "ParameterKey": "LogRetentionInDays",
+        "ParameterValue": "14"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-09528f37a12368b13"
+    },
+    {
+        "ParameterKey": "SubnetIds",
+        "ParameterValue": "subnet-abcdef1234567890,subnet-0987654321fedcba"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAZ1",
+        "ParameterValue": "10.53.144.128/26"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAZ2",
+        "ParameterValue": "10.53.144.192/26"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAZ3",
+        "ParameterValue": ""
+    }
+]

@@ -1,0 +1,68 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Prerequisites:
+# - Primary SQL Server RDS instance must exist and be in 'available' state
+# - Primary instance must have automated backups enabled
+# - SSM parameter {AppShortName}-{EnvName}-parameter-RDSInstanceName must exist
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                           # 📝 e.g. myapp, api, db01 (must match primary)
+EnvName: "<edit_here>"                                # 📝 e.g. nprd, nprd-dev, prod (must match primary)
+DBEngine: "<edit_here>"                               # 📝 sqlserver-se or sqlserver-ee (must match primary)
+ReadReplicaRdsDBParameterGroupFamily: "<edit_here>"   # 📝 e.g. sqlserver-se-16.0, sqlserver-ee-15.0 (must match primary)
+ReadReplicaDBInstanceClass: "<edit_here>"             # 📝 e.g. db.m5.large, db.r5.xlarge (can differ from primary)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, db01)
+#   Must match primary RDS instance AppShortName
+#   Creates replica: {AppShortName}-{EnvName}-readreplica-rdssql
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Must match primary RDS instance EnvName
+#   Production (prod*): DeletionPolicy Retain, DeletionProtection enabled
+#   Non-Prod (nprd*): DeletionPolicy Delete, DeletionProtection enabled
+
+# DBEngine
+#   Allowed Values: sqlserver-se, sqlserver-ee
+#   Must match primary instance engine exactly
+#   sqlserver-se: Standard Edition (128 GB RAM limit)
+#   sqlserver-ee: Enterprise Edition (advanced features)
+#   Finding: RDS Console → Databases → primary instance → Configuration → Engine
+
+# ReadReplicaRdsDBParameterGroupFamily
+#   Value: Parameter group family (e.g. sqlserver-se-16.0, sqlserver-ee-15.0)
+#   Must match primary instance parameter group family
+#   Format: sqlserver-{edition}-{version}
+#   Finding: RDS Console → Databases → primary instance → Configuration → DB parameter group → note family
+
+# ReadReplicaDBInstanceClass
+#   Value: Instance type (e.g. db.m5.large, db.r5.xlarge, db.t3.xlarge)
+#   Can be different from primary instance:
+#     - Same as primary: For disaster recovery standby
+#     - Larger than primary: Heavy reporting/BI workload
+#     - Smaller than primary: Light read traffic, cost optimization
+#   Common types:
+#     - db.t3: Burstable, dev/test
+#     - db.m5/m6i: General purpose, balanced compute/memory
+#     - db.r5/r6i: Memory optimized, read-heavy workloads
+#   Recommendation: Match primary for disaster recovery, size for read workload if offloading reports

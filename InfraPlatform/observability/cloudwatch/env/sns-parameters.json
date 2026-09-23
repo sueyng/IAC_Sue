@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "InstituteName",
+    "ParameterValue": "myorg"
+  },
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  }
+]

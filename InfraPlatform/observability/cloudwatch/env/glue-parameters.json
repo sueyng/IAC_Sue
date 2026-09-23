@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "dataprocessing"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "GlueJobName",
+    "ParameterValue": "myorg-dataprocessing-prod-etl-job"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

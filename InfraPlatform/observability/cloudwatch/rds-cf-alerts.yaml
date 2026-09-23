@@ -1,0 +1,438 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation Template for RDS CloudWatch Alarms and Monitoring V1
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    
+  EnvName:
+    Type: String
+    Description: Environment Name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+      
+  RDSInstanceIdentifier1:
+    Type: String
+    Description: RDS Database Instance 1 Identifier for monitoring
+    
+  RDSInstanceIdentifier2:
+    Type: String
+    Description: RDS Database Instance 2 Identifier for monitoring (optional)
+    Default: ""
+    
+  RDSInstanceIdentifier3:
+    Type: String
+    Description: RDS Database Instance 3 Identifier for monitoring (optional)
+    Default: ""
+    
+  Team1SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 1 notifications (e.g., L2 Operations)
+    Default: ""
+    
+  Team2SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 2 notifications (e.g., L3 Support/Development)
+    Default: ""
+    
+  Team3SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Team 3 notifications (e.g., Infrastructure/Platform)
+    Default: ""
+
+  CPUThreshold:
+    Type: Number
+    Description: CPU utilization threshold percentage
+    Default: 80
+    
+  DatabaseConnectionsThreshold:
+    Type: Number
+    Description: Database connections threshold
+    Default: 80
+    
+  FreeableMemoryThreshold:
+    Type: Number
+    Description: Freeable memory threshold in bytes (default 2GB)
+    Default: 2147483648
+    
+  FreeStorageSpaceThreshold:
+    Type: Number
+    Description: Free storage space threshold in bytes (default 10GB)
+    Default: 10737418240
+    
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasTeam1Topic: !Not [!Equals [!Ref Team1SNSTopicArn, ""]]
+  HasTeam2Topic: !Not [!Equals [!Ref Team2SNSTopicArn, ""]]
+  HasTeam3Topic: !Not [!Equals [!Ref Team3SNSTopicArn, ""]]
+  HasRDS2: !Not [!Equals [!Ref RDSInstanceIdentifier2, ""]]
+  HasRDS3: !Not [!Equals [!Ref RDSInstanceIdentifier3, ""]]
+
+Resources:
+  # RDS Instance 1 Alarms
+  RDS1CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-CPUUtilization"
+      AlarmDescription: !Sub "RDS high CPU utilization for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}"
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-CPU-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS1DatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-DatabaseConnections"
+      AlarmDescription: !Sub "RDS high database connections for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}"
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DatabaseConnectionsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-Connections-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS1FreeableMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-FreeableMemory"
+      AlarmDescription: !Sub "RDS low freeable memory for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}"
+      MetricName: FreeableMemory
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeableMemoryThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-Memory-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS1FreeStorageSpaceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-FreeStorageSpace"
+      AlarmDescription: !Sub "RDS low free storage space for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}"
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeStorageSpaceThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier1}-Storage-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  # RDS Instance 2 Alarms (Conditional)
+  RDS2CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-CPUUtilization"
+      AlarmDescription: !Sub "RDS high CPU utilization for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}"
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier2
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-CPU-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS2DatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-DatabaseConnections"
+      AlarmDescription: !Sub "RDS high database connections for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}"
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DatabaseConnectionsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier2
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-Connections-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS2FreeableMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-FreeableMemory"
+      AlarmDescription: !Sub "RDS low freeable memory for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}"
+      MetricName: FreeableMemory
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeableMemoryThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier2
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-Memory-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS2FreeStorageSpaceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-FreeStorageSpace"
+      AlarmDescription: !Sub "RDS low free storage space for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}"
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeStorageSpaceThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier2
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier2}-Storage-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  # RDS Instance 3 Alarms (Conditional)
+  RDS3CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-CPUUtilization"
+      AlarmDescription: !Sub "RDS high CPU utilization for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}"
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-CPU-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS3DatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-DatabaseConnections"
+      AlarmDescription: !Sub "RDS high database connections for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}"
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref DatabaseConnectionsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-Connections-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS3FreeableMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-FreeableMemory"
+      AlarmDescription: !Sub "RDS low freeable memory for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}"
+      MetricName: FreeableMemory
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeableMemoryThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-Memory-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1
+
+  RDS3FreeStorageSpaceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasRDS3
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-FreeStorageSpace"
+      AlarmDescription: !Sub "RDS low free storage space for ${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}"
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref FreeStorageSpaceThreshold
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstanceIdentifier3
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasTeam1Topic, !Ref Team1SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam2Topic, !Ref Team2SNSTopicArn, !Ref "AWS::NoValue"]
+        - !If [HasTeam3Topic, !Ref Team3SNSTopicArn, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${RDSInstanceIdentifier3}-Storage-Alarm"
+        - Key: IaCVersion
+          Value: Observability-RDS-v1

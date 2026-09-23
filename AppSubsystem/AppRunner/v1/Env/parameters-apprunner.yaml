@@ -1,0 +1,315 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"             # 📝 e.g. gms, myapp, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod, prod-a
+
+# APP RUNNER SERVICE
+ServiceName: "<edit_here>"              # 📝 e.g. appservices, api-service
+
+# CONTAINER CONFIGURATION
+EcrImageUri: "<edit_here>"              # 📝 e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/my-app:v1.0.0
+ContainerPort: "<edit_here>"            # 📝 e.g. 80, 8080, 3000
+
+# VPC CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-02fb2e32bbb6ff24e
+SubnetIds: "<edit_here>"                # 📝 e.g. subnet-abc123,subnet-def456,subnet-ghi789 (private subnets, NO SPACES)
+AppRunnerVPCEndpoint: "<edit_here>"     # 📝 e.g. vpce-08f03eef9287fb0da (VPC endpoint for App Runner)
+
+# SECURITY GROUP EGRESS RULES
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.0.0.0/16 (primary VPC CIDR for HTTPS egress)
+VPCSubnetCidrDBAZ1: "<edit_here>"       # 📝 e.g. 10.0.151.0/24 (database subnet CIDR AZ1)
+VPCSubnetCidrDBAZ2: "<edit_here>"       # 📝 e.g. 10.0.152.0/24 (database subnet CIDR AZ2)
+VPCSubnetCidrDBAZ3: "<edit_here>"       # 📝 e.g. 10.0.153.0/24 (database subnet CIDR AZ3)
+VPCSubnetCidrAppAZ1: "<edit_here>"      # 📝 e.g. 10.0.101.0/24 (app subnet CIDR AZ1, for ElastiCache)
+VPCSubnetCidrAppAZ2: "<edit_here>"      # 📝 e.g. 10.0.102.0/24 (app subnet CIDR AZ2, for ElastiCache)
+VPCSubnetCidrAppAZ3: "<edit_here>"      # 📝 e.g. 10.0.103.0/24 (app subnet CIDR AZ3, for ElastiCache)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (leave empty if not needed)
+# ========================================================================
+# Compute Resources
+AppRunnerCpu: "1024"                    # CPU units - 256, 512, 1024, 2048, 4096 (default - 1024 = 1 vCPU)
+AppRunnerMemory: "2048"                 # Memory (MB) - 512-12288 (default - 2048 = 2 GB)
+
+# Additional VPC CIDRs (leave "" if not needed)
+VpcCidr2: ""                            # Additional VPC CIDR for HTTPS egress
+VpcCidr3: ""                            # Additional VPC CIDR for HTTPS egress
+VpcCidr4: ""                            # Additional VPC CIDR for HTTPS egress
+VpcCidr5: ""                            # Additional VPC CIDR for HTTPS egress
+
+# AWS Service Endpoints
+S3PrefixListId: "pl-6fa54006"           # S3 prefix list ID for egress (region-specific, ap-southeast-1 - pl-6fa54006)
+HCCVpceCidr: "10.48.42.0/24"            # HCC VPC Endpoint subnet CIDR (default - 10.48.42.0/24)
+
+# WAF Web ACL (optional)
+WAFWebACLArn: ""                        # WAF Web ACL ARN (leave "" to skip WAF)
+
+# Database Ports (environment-based)
+ProdDBPort: "53341"                     # Production database port (default - 53341)
+NProdDBPort: "53331"                    # Non-production database port (default - 53331)
+
+# Auto-Scaling
+MaxConcurrency: "100"                   # Max concurrent requests per instance (1-200, default - 100)
+MinInstances: "1"                       # Minimum instances (1-25, default - 1)
+MaxInstances: "2"                       # Maximum instances (1-25, default - 2)
+
+# Health Check
+HealthCheckPath: "/health"              # Health check endpoint (default - /health)
+HealthyThreshold: "2"                   # Consecutive successful checks (1-20, default - 2)
+UnhealthyThreshold: "2"                 # Consecutive failed checks (1-20, default - 2)
+HealthCheckInterval: "20"               # Interval in seconds (1-20, default - 20)
+Timeout: "5"                            # Timeout in seconds (1-20, default - 5)
+
+# HCC BCS Proxy Configuration (optional)
+HCCSubnetCidrBCSAZ1: ""             # HCC Proxy Subnet AZ1 (leave "" if not needed)
+HCCSubnetCidrBCSAZ2: ""             # HCC Proxy Subnet AZ2 (leave "" if not needed)
+BCSProxyPort: "4000"                # BCS Proxy Port (default - 4000)
+
+# Secrets Manager Integration (up to 7 secrets)
+AdditionalSecretsManagerSecretArns: ""  # Optional comma-separated extra secret ARNs/patterns for secrets not prefixed with AppShortName
+
+EnvVar1Name: ""                         # Secret environment variable name (leave "" to skip)
+EnvVar1Value: ""                        # Secret ARN from Secrets Manager
+
+EnvVar2Name: ""
+EnvVar2Value: ""
+
+EnvVar3Name: ""
+EnvVar3Value: ""
+
+EnvVar4Name: ""
+EnvVar4Value: ""
+
+EnvVar5Name: ""
+EnvVar5Value: ""
+
+EnvVar6Name: ""
+EnvVar6Value: ""
+
+EnvVar7Name: ""
+EnvVar7Value: ""
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application identifier (e.g. gms, myapp, webapp)
+#   Creates resources: {AppShortName}-{EnvName}-apprunner-*
+#   Format: Lowercase alphanumeric
+
+# EnvName
+#   Allowed Values:
+#     Non-prod: nprd, nprd-dev, nprd-stg, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a, nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c, nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#     Production: prod, prod-a, prod-b, prod-c
+#   Determines database port (prod: 53341, nprd: 53331)
+
+# ServiceName
+#   Value: App Runner service name (e.g. appservices, api-service)
+#   CloudWatch logs: /aws/apprunner/{ServiceName}
+#   Format: Lowercase alphanumeric with hyphens
+
+# --- CONTAINER CONFIGURATION ---
+
+# EcrImageUri
+#   Format: {account}.dkr.ecr.{region}.amazonaws.com/{repository}:{tag}
+#   Example: 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/my-app:v1.0.0
+#   Finding: ECR Console → Repositories → select repository → copy image URI
+#   Best practice: Use specific version tags (v1.0.0) instead of latest
+
+# ContainerPort
+#   Value: Port application listens on (e.g. 80, 8080, 3000)
+#   Must match application configuration and Dockerfile EXPOSE
+#   Common: 80 (HTTP), 8080 (alt HTTP), 3000 (Node.js), 8000 (Python)
+
+# --- VPC CONFIGURATION ---
+
+# VpcId
+#   Format: vpc-xxxxxxxxxxxxxxxxx
+#   Requirements: DNS hostnames and resolution enabled
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+
+# SubnetIds
+#   Format: subnet-abc123,subnet-def456,subnet-ghi789 (NO SPACES)
+#   Requirements:
+#     - Private subnets only
+#     - Minimum 2 subnets in different AZs
+#     - Routes to RDS/ElastiCache
+#     - Routes to NAT Gateway or VPC endpoints for internet access
+#   Finding: VPC Console → Subnets → filter by VPC → copy private subnet IDs
+
+# AppRunnerVPCEndpoint
+#   Format: vpce-xxxxxxxxxxxxxxxxx
+#   Purpose: Enables private access to App Runner service
+#   Creating: VPC Console → Endpoints → Create endpoint
+#     - Service: com.amazonaws.{region}.apprunner.requests
+#     - Type: Interface
+#     - VPC: Select VPC
+#     - Subnets: Select subnets
+#     - Security group: Allow HTTPS (443)
+#   Finding: VPC Console → Endpoints → filter by apprunner.requests
+
+# --- SECURITY GROUP EGRESS RULES ---
+
+# VpcCidr1
+#   Value: Primary VPC CIDR (e.g. 10.0.0.0/16)
+#   Purpose: HTTPS (443) egress to VPC endpoints (ECR, Secrets Manager, CloudWatch)
+#   Finding: VPC Console → Your VPCs → copy IPv4 CIDR
+
+# VpcCidr2 / VpcCidr3 / VpcCidr4 / VpcCidr5
+#   Value: Additional VPC CIDRs (e.g. 10.1.0.0/16, 10.2.0.0/16, 10.3.0.0/16, 10.4.0.0/16)
+#   Purpose: HTTPS (443) egress to secondary VPC CIDR blocks
+#   Use case: Multi-CIDR VPC configurations
+#   Finding: VPC Console → Your VPCs → CIDR blocks tab
+#   Leave "" if VPC has only one CIDR block
+
+# VPCSubnetCidrDBAZ1/2/3
+#   Value: Database subnet CIDRs (e.g. 10.0.151.0/24)
+#   Purpose: Egress to RDS on port 53341 (prod) or 53331 (nprd)
+#   Finding: VPC Console → Subnets → locate database subnets → copy CIDR
+
+# VPCSubnetCidrAppAZ1/2/3
+#   Value: Application subnet CIDRs (e.g. 10.0.101.0/24)
+#   Purpose: Egress to ElastiCache on ports 6379-6380 (Redis)
+#   Finding: VPC Console → Subnets → locate app subnets → copy CIDR
+
+# --- COMPUTE RESOURCES ---
+
+# AppRunnerCpu
+#   Options: 256 (0.25 vCPU), 512 (0.5 vCPU), 1024 (1 vCPU), 2048 (2 vCPU), 4096 (4 vCPU)
+#   Recommendations: Dev: 512, Staging: 1024, Prod: 2048+
+
+# AppRunnerMemory
+#   Range: 512-12288 MB
+#   Valid combinations (CPU : Memory):
+#     256: 512-1024, 512: 1024-3072, 1024: 2048-8192, 2048: 4096-12288, 4096: 8192-12288
+#   Recommendations: Dev: 1024, Staging: 2048, Prod: 4096+
+#   Best practice: Start with 2x CPU value (1024 CPU = 2048 MB)
+
+# --- AWS SERVICE ENDPOINTS ---
+
+# S3PrefixListId
+#   Value: AWS-managed prefix list for S3 (e.g. pl-6fa54006)
+#   Purpose: HTTPS egress to S3 without specifying all IP ranges
+#   Finding: VPC Console → Managed Prefix Lists → com.amazonaws.{region}.s3
+#   Common values:
+#     ap-southeast-1: pl-6fa54006, ap-southeast-2: pl-6ca54005
+#     us-east-1: pl-63a5400a, us-west-2: pl-68a54001, eu-west-1: pl-6da54004
+
+# HCCVpceCidr
+#   Value: HCC VPC Endpoint CIDR (e.g. 10.48.42.0/24)
+#   Purpose: HTTPS egress to HCC VPC endpoint
+#   Default: 10.48.42.0/24
+#   Leave "" if not using HCC VPC endpoints
+
+# HCCSubnetCidrBCSAZ1
+#   Value: HCC BCS Proxy Subnet CIDR for AZ1 (e.g. 10.48.50.0/24)
+#   Purpose: Egress to HCC BCS (Business Connectivity Services) proxy on port 4000
+#   Use case: Required when App Runner needs to connect through HCC proxy
+#   Finding: Check with HCC team for assigned subnet CIDRs
+#   Leave "" if not using HCC BCS proxy
+
+# HCCSubnetCidrBCSAZ2
+#   Value: HCC BCS Proxy Subnet CIDR for AZ2 (e.g. 10.48.51.0/24)
+#   Purpose: Egress to HCC BCS proxy (high availability - second AZ)
+#   Use case: Required when App Runner needs to connect through HCC proxy
+#   Finding: Check with HCC team for assigned subnet CIDRs
+#   Leave "" if not using HCC BCS proxy
+
+# BCSProxyPort
+#   Value: Port number for HCC BCS Proxy (default: 4000)
+#   Purpose: Defines the port for egress to HCC proxy service
+#   Default: 4000
+#   Use case: Change only if HCC team specifies a different port
+#   Leave default "4000" unless instructed otherwise
+
+# WAFWebACLArn
+#   Format: arn:aws:wafv2:{region}:{account}:regional/webacl/{name}/{id}
+#   Purpose: Protect App Runner with WAF rules (SQL injection, XSS, etc.)
+#   Finding: WAF Console → Web ACLs → select ACL → copy ARN
+#   Leave "" to skip WAF
+
+# --- DATABASE CONFIGURATION ---
+
+# ProdDBPort
+#   Value: Production database port (default: 53341)
+#   Purpose: Port for RDS database connection in production environments
+#   Used when EnvName = prod, prod-a, prod-b, or prod-c
+#   Default: 53341
+
+# NProdDBPort
+#   Value: Non-production database port (default: 53331)
+#   Purpose: Port for RDS database connection in non-production environments
+#   Used when EnvName = nprd, nprd-dev, nprd-stg, nprd-sit, nprd-uat, etc.
+#   Default: 53331
+
+# --- AUTO-SCALING ---
+
+# MaxConcurrency
+#   Range: 1-200
+#   Purpose: Max concurrent requests per instance before scaling out
+#   Recommendations: CPU-intensive: 50-80, I/O-intensive: 80-100, Lightweight APIs: 100-200
+
+# MinInstances / MaxInstances
+#   Range: 1-25
+#   Purpose: MinInstances = baseline (24/7), MaxInstances = scale-out limit
+#   Recommendations:
+#     Dev: Min 1 Max 2, Staging: Min 1 Max 5, Prod: Min 2 Max 10
+#   High availability: Set MinInstances ≥ 2 for production
+
+# --- HEALTH CHECK ---
+
+# HealthCheckPath
+#   Value: HTTP endpoint (e.g. /health, /healthcheck, /api/health)
+#   Requirements: Return HTTP 200 when healthy, lightweight, response time < timeout
+
+# HealthyThreshold / UnhealthyThreshold
+#   Range: 1-20
+#   Purpose: Consecutive checks to mark healthy/unhealthy
+#   Default: 2 for both (balances responsiveness and stability)
+
+# HealthCheckInterval
+#   Range: 1-20 seconds
+#   Purpose: Time between health checks
+#   Recommendations: Prod: 10-20 seconds, Dev: 20 seconds
+
+# Timeout
+#   Range: 1-20 seconds
+#   Purpose: Max wait for health check response
+#   Must be less than HealthCheckInterval
+
+# --- SECRETS MANAGER INTEGRATION ---
+
+# EnvVar1-7Name / EnvVar1-7Value
+#   Purpose: Inject secrets from Secrets Manager as environment variables
+#   Name format: Uppercase with underscores (e.g. DATABASE_PASSWORD)
+#   Value format: arn:aws:secretsmanager:{region}:{account}:secret:{name}-{suffix}
+#   Finding: Secrets Manager Console → Secrets → select secret → copy ARN
+#   Application access:
+#     .NET: Environment.GetEnvironmentVariable("DATABASE_PASSWORD")
+#     Java: System.getenv("DATABASE_PASSWORD")
+#     Node.js: process.env.DATABASE_PASSWORD
+#     Python: os.environ["DATABASE_PASSWORD"]
+#   Limit: Maximum 7 secrets per service
+#   Leave "" to skip
+
+# AdditionalSecretsManagerSecretArns
+#   Purpose: Extend the App Runner instance role permission to allow secrets that do not follow the AppShortName prefix
+#   Value format: comma-separated full secret ARNs or ARN patterns, no spaces
+#   Wildcard: allowed only in the secret name portion; do not use bare secret wildcard
+#   Example: arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:shared-db-*,arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:central-api-key-*
+#   Leave "" if all EnvVar secret ARNs start with AppShortName

@@ -1,0 +1,285 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'InfraPlatform SQS V2 - AWS CloudFormation template for Standard SQS Queues with Dead Letter Queue and optional SNS subscription support'
+
+Parameters:
+  # Core Application Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Queue Configuration
+  QueueName:
+    Type: String
+    Description: Descriptive name of the SQS queue
+
+  QueueDescription:
+    Type: String
+    Description: Description of the SQS queue purpose
+    Default: 'Standard SQS Queue for message processing'
+
+  # Queue Settings - Optimized defaults for standard queues
+  VisibilityTimeoutSeconds:
+    Type: Number
+    Description: The visibility timeout for the queue (in seconds)
+    Default: 300
+    MinValue: 0
+    MaxValue: 43200
+
+  MessageRetentionPeriod:
+    Type: Number
+    Description: The number of seconds Amazon SQS retains a message
+    Default: 1209600
+    MinValue: 60
+    MaxValue: 1209600
+
+  MaxReceiveCount:
+    Type: Number
+    Description: The number of times a message is delivered to the source queue before being moved to the dead-letter queue
+    Default: 5
+    MinValue: 1
+    MaxValue: 1000
+
+  DelaySeconds:
+    Type: Number
+    Description: The time in seconds that the delivery of all messages in the queue will be delayed
+    Default: 0
+    MinValue: 0
+    MaxValue: 900
+
+  ReceiveMessageWaitTimeSeconds:
+    Type: Number
+    Description: Specifies the duration, in seconds, that the ReceiveMessage action call waits for a message to arrive (long polling)
+    Default: 20
+    MinValue: 0
+    MaxValue: 20
+
+  MaxMessageSize:
+    Type: Number
+    Description: The limit of how many bytes a message can contain before Amazon SQS rejects it
+    Default: 262144
+    MinValue: 1024
+    MaxValue: 262144
+
+  # Dead Letter Queue Settings
+  EnableDeadLetterQueue:
+    Type: String
+    Description: Enable dead letter queue for failed messages
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  DeadLetterQueueMessageRetentionPeriod:
+    Type: Number
+    Description: Message retention period for dead letter queue (in seconds)
+    Default: 1209600
+    MinValue: 60
+    MaxValue: 1209600
+
+  # Encryption Settings
+  EnableServerSideEncryption:
+    Type: String
+    Description: Enable server-side encryption using AWS managed KMS keys
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  KmsMasterKeyId:
+    Type: String
+    Description: The ID of an AWS-managed customer master key (CMK) for Amazon SQS or a custom CMK
+    Default: 'alias/aws/sqs'
+
+  # SNS Subscription Settings
+  EnableSnsSubscription:
+    Type: String
+    Description: Create an SNS topic and subscribe the SQS queue to it
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  CustomSnsTopicName:
+    Type: String
+    Description: 'Optional custom name for the SNS topic. If left empty, defaults to "${AppShortName}-${EnvName}-sns-${QueueName}"'
+    Default: ''
+    AllowedPattern: '^$|^[a-zA-Z0-9_-]{1,256}$'
+    ConstraintDescription: 'Must be empty, or 1-256 characters using alphanumeric, hyphens, or underscores'
+
+Conditions:
+  # Production environment condition
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  
+  # Feature conditions
+  HasDeadLetterQueue: !Equals [!Ref EnableDeadLetterQueue, 'true']
+  HasServerSideEncryption: !Equals [!Ref EnableServerSideEncryption, 'true']
+  HasSnsSubscription: !Equals [!Ref EnableSnsSubscription, 'true']
+  HasCustomSnsTopicName: !Not [!Equals [!Ref CustomSnsTopicName, '']]
+
+Resources:
+  # Dead Letter Queue (created first if enabled) - Standard Queue Only
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Condition: HasDeadLetterQueue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      QueueName: !Sub "${AppShortName}-${EnvName}-sqs-${QueueName}-dlq"
+      MessageRetentionPeriod: !Ref DeadLetterQueueMessageRetentionPeriod
+      KmsMasterKeyId: !If [HasServerSideEncryption, !Ref KmsMasterKeyId, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-sqs-${QueueName}-dlq"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: InfraPlatform-SQS-V2
+
+  # Main Standard SQS Queue
+  SqsQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      QueueName: !Sub "${AppShortName}-${EnvName}-sqs-${QueueName}"
+      VisibilityTimeout: !Ref VisibilityTimeoutSeconds
+      MessageRetentionPeriod: !Ref MessageRetentionPeriod
+      DelaySeconds: !Ref DelaySeconds
+      ReceiveMessageWaitTimeSeconds: !Ref ReceiveMessageWaitTimeSeconds
+      MaximumMessageSize: !Ref MaxMessageSize
+      KmsMasterKeyId: !If [HasServerSideEncryption, !Ref KmsMasterKeyId, !Ref 'AWS::NoValue']
+      RedrivePolicy: !If
+        - HasDeadLetterQueue
+        - deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+          maxReceiveCount: !Ref MaxReceiveCount
+        - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-sqs-${QueueName}"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: InfraPlatform-SQS-V2
+
+  SnsTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasSnsSubscription
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      TopicName: !If
+        - HasCustomSnsTopicName
+        - !Ref CustomSnsTopicName
+        - !Sub "${AppShortName}-${EnvName}-sns-${QueueName}"
+      Tags:
+        - Key: Name
+          Value: !If
+            - HasCustomSnsTopicName
+            - !Ref CustomSnsTopicName
+            - !Sub "${AppShortName}-${EnvName}-sns-${QueueName}"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: InfraPlatform-SQS-V2
+
+  SnsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasSnsSubscription
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      TopicArn: !Ref SnsTopic
+      Protocol: sqs
+      Endpoint: !GetAtt SqsQueue.Arn
+      RawMessageDelivery: true
+
+  SnsToSqsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Condition: HasSnsSubscription
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Queues:
+        - !Ref SqsQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSnsTopicToSendMessages
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt SqsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SnsTopic
+
+Outputs:
+  # Main Queue Outputs
+  QueueUrl:
+    Description: URL of the Standard SQS Queue
+    Value: !Ref SqsQueue
+
+  QueueArn:
+    Description: ARN of the Standard SQS Queue
+    Value: !GetAtt SqsQueue.Arn
+
+  QueueName:
+    Description: Name of the Standard SQS Queue
+    Value: !GetAtt SqsQueue.QueueName
+
+  # Dead Letter Queue Outputs
+  DeadLetterQueueUrl:
+    Condition: HasDeadLetterQueue
+    Description: URL of the Dead Letter Queue
+    Value: !Ref DeadLetterQueue
+
+  DeadLetterQueueArn:
+    Condition: HasDeadLetterQueue
+    Description: ARN of the Dead Letter Queue
+    Value: !GetAtt DeadLetterQueue.Arn
+
+  DeadLetterQueueName:
+    Condition: HasDeadLetterQueue
+    Description: Name of the Dead Letter Queue
+    Value: !GetAtt DeadLetterQueue.QueueName
+
+  SnsTopicNameOutput:
+    Condition: HasSnsSubscription
+    Description: Name of the SNS Topic
+    Value: !GetAtt SnsTopic.TopicName

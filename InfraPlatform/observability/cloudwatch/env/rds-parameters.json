@@ -1,0 +1,50 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "RDS1Name",
+    "ParameterValue": "myapp-prod-db-primary"
+  },
+  {
+    "ParameterKey": "RDS2Name",
+    "ParameterValue": "myapp-prod-db-replica"
+  },
+  {
+    "ParameterKey": "RDS3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "CPUThreshold",
+    "ParameterValue": "80"
+  },
+  {
+    "ParameterKey": "DatabaseConnectionsThreshold",
+    "ParameterValue": "80"
+  },
+  {
+    "ParameterKey": "FreeableMemoryThreshold",
+    "ParameterValue": "2147483648"
+  },
+  {
+    "ParameterKey": "FreeStorageSpaceThreshold",
+    "ParameterValue": "10737418240"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

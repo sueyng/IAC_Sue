@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for API Gateway global account settings (CloudWatch logging)
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - prod
+
+Conditions:
+  IsProduction: !Equals [!Ref "EnvName", "prod"]
+
+Resources:
+  ApiGatewayCloudWatchRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RoleName: !Sub '${AppShortName}-${EnvName}-apigw-cloudwatch-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-APIGateway-v1
+
+  ApiGatewayAccount:
+    Type: 'AWS::ApiGateway::Account'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
+      

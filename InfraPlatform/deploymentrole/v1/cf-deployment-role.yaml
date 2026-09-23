@@ -1,0 +1,384 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template for IAM Deployment Role - for CloudFormation Stack Deployment"
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    Default: ''
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - prod
+    Default: nprd
+
+Conditions:
+  IsProduction: !Equals [!Ref EnvName, prod]
+
+Resources:
+  # ================================================================
+  # IAM Deployment Role
+  # ================================================================
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppShortName}-${EnvName}-depl-role"
+      Description: "Role for CloudFormation stack deployment"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-deploymentrole-v1
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: Application
+          Value: !Ref AppShortName
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              AWS: !If
+                - IsProduction
+                - - "arn:aws:sts::028485325974:assumed-role/HIP-ec2-role/i-0120280f586ce0dba"
+                  - "arn:aws:sts::028485325974:assumed-role/HIP-ec2-role/i-0ea761be26edc86d2"
+                  - "arn:aws:sts::028485325974:assumed-role/HIP-ec2-role/i-07f913f3f02a78d23"
+                  - "arn:aws:sts::028485325974:assumed-role/HIP-ec2-role/i-0cb778bccea61a275"
+                - - "arn:aws:sts::899035119154:assumed-role/HIP-ec2-role/i-05637073d644167ef"
+                  - "arn:aws:sts::899035119154:assumed-role/AmazonSSMRoleForInstancesMDCSetup/i-05a891f27a7134874"
+                  - "arn:aws:sts::899035119154:assumed-role/HIP-ec2-role/i-0d568c38e8f0e99fb"
+                  - "arn:aws:sts::899035119154:assumed-role/HIP-ec2-role/i-0721167e37d3ce455"
+            Action: "sts:AssumeRole"
+      MaxSessionDuration: 3600
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+
+  # ================================================================
+  # IAM Deployment Managed Policy (Combined)
+  # ================================================================
+  DeploymentPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${AppShortName}-${EnvName}-depl-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # ================================================================
+          # CloudFormation Permissions
+          # ================================================================
+          - Sid: "CloudFormationAccess"
+            Effect: Allow
+            Action:
+              - "cloudformation:*"
+            Resource: "*"
+
+          # ================================================================
+          # S3 Permissions
+          # ================================================================
+          - Sid: "S3Access"
+            Effect: Allow
+            Action:
+              - "s3:*"
+            Resource: "*"
+
+          # ================================================================
+          # ECR Permissions
+          # ================================================================
+          - Sid: "ECRAccess"
+            Effect: Allow
+            Action:
+              - "ecr:*"
+            Resource: "*"
+
+          # ================================================================
+          # ECS Permissions
+          # ================================================================
+          - Sid: "ECSAccess"
+            Effect: Allow
+            Action:
+              - "ecs:*"
+            Resource: "*"
+
+          # ================================================================
+          # Lambda Permissions
+          # ================================================================
+          - Sid: "LambdaAccess"
+            Effect: Allow
+            Action:
+              - "lambda:*"
+            Resource: "*"
+
+          # ================================================================
+          # IAM Permissions
+          # ================================================================
+          - Sid: "IAMAccess"
+            Effect: Allow
+            Action:
+              - "iam:*"
+            Resource: "*"
+
+          # ================================================================
+          # RDS Permissions
+          # ================================================================
+          - Sid: "RDSAccess"
+            Effect: Allow
+            Action:
+              - "rds:*"
+            Resource: "*"
+
+          # ================================================================
+          # CodeDeploy Permissions
+          # ================================================================
+          - Sid: "CodeDeployAccess"
+            Effect: Allow
+            Action:
+              - "codedeploy:*"
+            Resource: "*"
+
+          # ================================================================
+          # EC2 Permissions
+          # ================================================================
+          - Sid: "EC2Access"
+            Effect: Allow
+            Action:
+              - "ec2:*"
+            Resource: "*"
+
+          # ================================================================
+          # Secrets Manager Permissions
+          # ================================================================
+          - Sid: "SecretsManagerAccess"
+            Effect: Allow
+            Action:
+              - "secretsmanager:*"
+            Resource: "*"
+
+          # ================================================================
+          # CloudWatch & Logs Permissions
+          # ================================================================
+          - Sid: "CloudWatchLogsAccess"
+            Effect: Allow
+            Action:
+              - "logs:*"
+              - "cloudwatch:*"
+            Resource: "*"
+
+          # ================================================================
+          # ElastiCache Permissions
+          # ================================================================
+          - Sid: "ElastiCacheAccess"
+            Effect: Allow
+            Action:
+              - "elasticache:*"
+            Resource: "*"
+
+          # ================================================================
+          # SNS Permissions
+          # ================================================================
+          - Sid: "SNSAccess"
+            Effect: Allow
+            Action:
+              - "sns:*"
+            Resource: "*"
+
+          # ================================================================
+          # SQS Permissions
+          # ================================================================
+          - Sid: "SQSAccess"
+            Effect: Allow
+            Action:
+              - "sqs:*"
+            Resource: "*"
+
+          # ================================================================
+          # CloudFront Permissions
+          # ================================================================
+          - Sid: "CloudFrontAccess"
+            Effect: Allow
+            Action:
+              - "cloudfront:*"
+            Resource: "*"
+
+          # ================================================================
+          # AWS IAM Identity Center (SSO) Permissions
+          # ================================================================
+          - Sid: "SSOAccess"
+            Effect: Allow
+            Action:
+              - "sso:*"
+            Resource: "*"
+
+          # ================================================================
+          # Identity Store Permissions (SSO User/Group Management)
+          # ================================================================
+          - Sid: "IdentityStoreAccess"
+            Effect: Allow
+            Action:
+              - "identitystore:*"
+            Resource: "*"
+
+          # ================================================================
+          # SSO-OIDC Permissions
+          # ================================================================
+          - Sid: "SSOOIDCAccess"
+            Effect: Allow
+            Action:
+              - "sso-oidc:*"
+            Resource: "*"
+
+          # ================================================================
+          # KMS Permissions
+          # ================================================================
+          - Sid: "KMSAccess"
+            Effect: Allow
+            Action:
+              - "kms:*"
+            Resource: "*"
+
+          # ================================================================
+          # Systems Manager (SSM) Permissions
+          # ================================================================
+          - Sid: "SSMAccess"
+            Effect: Allow
+            Action:
+              - "ssm:*"
+            Resource: "*"
+
+          # ================================================================
+          # EKS Permissions
+          # ================================================================
+          - Sid: "EKSAccess"
+            Effect: Allow
+            Action:
+              - "eks:*"
+            Resource: "*"
+
+          # ================================================================
+          # Glue Permissions
+          # ================================================================
+          - Sid: "GlueAccess"
+            Effect: Allow
+            Action:
+              - "glue:*"
+            Resource: "*"
+
+          # ================================================================
+          # Step Functions (States) Permissions
+          # ================================================================
+          - Sid: "StatesAccess"
+            Effect: Allow
+            Action:
+              - "states:*"
+            Resource: "*"
+
+          # ================================================================
+          # EventBridge (Events) Permissions
+          # ================================================================
+          - Sid: "EventsAccess"
+            Effect: Allow
+            Action:
+              - "events:*"
+            Resource: "*"
+
+          # ================================================================
+          # Grafana Permissions
+          # ================================================================
+          - Sid: "GrafanaAccess"
+            Effect: Allow
+            Action:
+              - "grafana:*"
+            Resource: "*"
+
+          # ================================================================
+          # Amazon Managed Prometheus (APS) Permissions
+          # ================================================================
+          - Sid: "APSAccess"
+            Effect: Allow
+            Action:
+              - "aps:*"
+            Resource: "*"
+
+          # ================================================================
+          # Message Queue (MQ) Permissions
+          # ================================================================
+          - Sid: "MQAccess"
+            Effect: Allow
+            Action:
+              - "mq:*"
+            Resource: "*"
+
+          # ================================================================
+          # Elastic Load Balancing Permissions
+          # ================================================================
+          - Sid: "ELBAccess"
+            Effect: Allow
+            Action:
+              - "elasticloadbalancing:*"
+            Resource: "*"
+
+          # ================================================================
+          # API Gateway Permissions
+          # ================================================================
+          - Sid: "APIGatewayAccess"
+            Effect: Allow
+            Action:
+              - "apigateway:*"
+            Resource: "*"
+
+          # ================================================================
+          # Route 53 Permissions
+          # ================================================================
+          - Sid: "Route53Access"
+            Effect: Allow
+            Action:
+              - "route53:*"
+            Resource: "*"
+
+          # ================================================================
+          # AWS Batch Permissions
+          # ================================================================
+          - Sid: "BatchAccess"
+            Effect: Allow
+            Action:
+              - "batch:*"
+            Resource: "*"
+
+          # ================================================================
+          # AWS Scheduler Permissions
+          # ================================================================
+          - Sid: "SchedulerAccess"
+            Effect: Allow
+            Action:
+              - "scheduler:*"
+            Resource: "*"
+
+          # ================================================================
+          # Application Auto Scaling Permissions
+          # ================================================================
+          - Sid: "ApplicationAutoScalingAccess"
+            Effect: Allow
+            Action:
+              - "application-autoscaling:*"
+            Resource: "*"
+
+          # ================================================================
+          # GuardDuty Permissions
+          # ================================================================
+          - Sid: "GuardDutyAccess"
+            Effect: Allow
+            Action:
+              - "guardduty:*"
+            Resource: "*"
+
+          # ================================================================
+          # S3 Object Lambda Permissions
+          # ================================================================
+          - Sid: "S3ObjectLambdaAccess"
+            Effect: Allow
+            Action:
+              - "s3-object-lambda:*"
+            Resource: "*"
+
+      Roles:
+        - !Ref DeploymentRole

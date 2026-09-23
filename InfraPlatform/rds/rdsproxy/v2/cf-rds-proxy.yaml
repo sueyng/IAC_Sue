@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Setup for RDS Proxy
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+
+  DBSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of DB Subnet Ids
+
+  DBInstanceIdentifier:
+    Type: String
+    Description: The identifier of the RDS instance to associate with the proxy
+
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: AZ1 App Subnet
+  
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: AZ2 App Subnet
+
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: AZ3 App Subnet
+
+  DeploymentServer:
+    Type: String
+    Description: Deployment Server IP
+
+  DBProxySecretArn:
+    Type: String
+    Description: ARN of the Secret containing RDS Proxy credentials
+
+  ProdDBPort:
+    Type: String
+    Default: 53341
+    NoEcho: true
+
+  NProdDBPort:
+    Type: String
+    Default: 53331
+    NoEcho: true
+
+  MaxConnectionsPercent:
+    Type: Number
+    Description: Maximum connections as a percentage of max_connections setting
+    Default: 100
+    MinValue: 1
+    MaxValue: 100
+    
+  MaxIdleConnectionsPercent:
+    Type: Number
+    Description: Maximum idle connections as a percentage
+    Default: 50
+    MinValue: 1
+    MaxValue: 100
+
+  RDSInstanceSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security Group ID of the target RDS instance
+
+  VPCEndpointSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security Group ID for VPC Endpoints (Secrets Manager, KMS, CloudWatch Logs)
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+
+Resources:
+  # IAM Role for RDS Proxy
+  DBProxyRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: rds.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: ProxySecretAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource: !Ref DBProxySecretArn
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-role-RdsProxy'
+        - Key: IaCVersion
+          Value: InfraPlatform-rdsproxy-v2
+
+  RdsProxySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Security Group for RDS Proxy
+      GroupName: !Sub '${AppShortName}-${EnvName}-sg-Rds-Proxy'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-sg-Rds-Proxy'
+        - Key: IaCVersion
+          Value: InfraPlatform-rdsproxy-v2
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: Allow inbound from App AZ1 Subnet
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: Allow inbound from App AZ2 Subnet
+        - !If
+          - HasVPCSubnetCidrAppAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrAppAZ3
+            Description: Allow inbound from App Subnet AZ3
+          - !Ref "AWS::NoValue"
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref DeploymentServer
+          Description: Allow Deployment Server to Access the RDS Proxy
+      # Outbound: Where the RDS Proxy can connect TO
+      SecurityGroupEgress:
+        # Egress to RDS Instance
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          DestinationSecurityGroupId: !Ref RDSInstanceSecurityGroupId
+          Description: Allow outbound to RDS Instance
+        # Egress to VPC Endpoints (Secrets Manager, KMS, CloudWatch Logs)
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId: !Ref VPCEndpointSecurityGroupId
+          Description: Allow outbound HTTPS to VPC Endpoints (Secrets Manager, KMS, CloudWatch Logs)
+
+  RDSProxy:
+    Type: 'AWS::RDS::DBProxy'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      DBProxyName: !Sub '${AppShortName}-${EnvName}-rds-proxy'
+      EngineFamily: SQLSERVER
+      IdleClientTimeout: 1800  # 30 minutes
+      RequireTLS: true
+      RoleArn: !GetAtt DBProxyRole.Arn
+      Auth:
+        - AuthScheme: SECRETS
+          SecretArn: !Ref DBProxySecretArn
+          IAMAuth: DISABLED
+      VpcSecurityGroupIds: 
+        - !GetAtt RdsProxySecurityGroup.GroupId
+      VpcSubnetIds: !Ref DBSubnetIds
+      DebugLogging: !If [IsProduction, false, true]
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-rds-proxy'
+        - Key: IaCVersion
+          Value: InfraPlatform-rdsproxy-v2
+
+  ProxyTargetGroup:
+    Type: 'AWS::RDS::DBProxyTargetGroup'
+    DependsOn: RDSProxy
+    Properties:
+      DBProxyName: !Ref RDSProxy
+      TargetGroupName: default
+      DBInstanceIdentifiers: 
+        - !Ref DBInstanceIdentifier
+      ConnectionPoolConfigurationInfo:
+        MaxConnectionsPercent: !Ref MaxConnectionsPercent
+        MaxIdleConnectionsPercent: !Ref MaxIdleConnectionsPercent
+        ConnectionBorrowTimeout: 120
+
+Outputs:
+  RDSProxyEndpoint:
+    Description: The endpoint of the RDS Proxy
+    Value: !GetAtt RDSProxy.Endpoint
+  
+  RDSProxyArn:
+    Description: The ARN of the RDS Proxy
+    Value: !GetAtt RDSProxy.DBProxyArn
+
+  RDSProxySecurityGroupId:
+    Description: The Security Group ID for the RDS Proxy
+    Value: !GetAtt RdsProxySecurityGroup.GroupId

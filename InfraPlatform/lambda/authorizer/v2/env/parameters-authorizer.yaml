@@ -1,0 +1,225 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                     # 📝 e.g. myapp, api, authz
+EnvName: "<edit_here>"                          # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA CODE CONFIGURATION
+LambdaS3bucket: "<edit_here>"                   # 📝 e.g. myapp-nprd-cftemplates (bucket name, not ARN)
+CodeZipFileName: "<edit_here>"                  # 📝 e.g. lambda/Authorizer-1.0.0.zip (S3 key path)
+LambdaRuntime: "<edit_here>"                    # 📝 e.g. dotnet8, python3.12, nodejs20.x
+LambdaHandler: "<edit_here>"                    # 📝 e.g. Authorizer::MyApp.Function::Handler
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                            # 📝 e.g. vpc-0a1b2c3d4e5f6g7h8
+SubnetIds: "<edit_here>"                        # 📝 e.g. subnet-xxx,subnet-yyy (min 2, NO SPACES)
+SecurityGroupName: "<edit_here>"                # 📝 e.g. myapp-nprd-lambda-authorizer-sg
+
+# LAMBDA BEHAVIOR
+LambdaTimeout: "<edit_here>"                    # 📝 e.g. 15 (seconds, max 900)
+LogRetentionInDays: "<edit_here>"               # 📝 e.g. 14, 30, 90 (days)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+AppModuleName: ""                               # e.g. PatientAPI (for multi-module apps)
+AzureAdClientId: ""                             # e.g. 12345678-1234-1234-1234-123456789abc (GUID)
+AzureAdTenantId: ""                             # e.g. 87654321-4321-4321-4321-cba987654321 (GUID)
+ForwardProxyAddress: ""                         # e.g. http://proxy.example.com:8080
+ApiGWid: ""                                     # e.g. abc123def4 (API Gateway REST API ID)
+ProdHCCProxyCidr1: ""                           # e.g. 10.48.9.0/25 
+ProdHCCProxyCidr2: ""                           # e.g. 10.48.130.64/28 
+NprdHCCProxyCidr1: ""                           # e.g. 10.48.72.0/28 
+NprdHCCProxyCidr2: ""                           # e.g. 10.48.72.16/28 
+HCCProxyPort: "4000"                            # e.g. 4000
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, authz)
+#   Creates function: {AppShortName}-{EnvName}-LambdaAuthorizer
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*):
+#     - DeletionPolicy: Retain
+#     - Uses prod HCC proxy CIDRs
+#   Non-Prod (nprd*):
+#     - DeletionPolicy: Delete
+#     - Uses nprd HCC proxy CIDRs
+
+# --- LAMBDA CODE CONFIGURATION ---
+
+# LambdaS3bucket
+#   Value: S3 bucket name with Lambda code (NOT ARN)
+#   Example: myapp-nprd-cftemplates
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# CodeZipFileName
+#   Value: S3 key path to Lambda zip file
+#   Example: lambda/Authorizer-1.0.0.zip, alltemplates/MyApp-1.0.0.6.zip
+#   Finding: S3 Console → bucket → browse to file → copy key
+
+# LambdaRuntime
+#   Allowed Values:
+#     .NET: dotnet6, dotnet8
+#     Node.js: nodejs18.x, nodejs20.x
+#     Python: python3.9, python3.10, python3.11, python3.12
+#     Java: java11, java17, java21
+#   Recommendation: Use latest stable version (dotnet8, python3.12, nodejs20.x)
+
+# LambdaHandler
+#   Format by runtime:
+#     .NET: Assembly::Namespace.Class::Method
+#       Example: Authorizer::MyApp.Function::FunctionHandler
+#     Node.js: file.export
+#       Example: index.handler
+#     Python: file.function
+#       Example: lambda_function.lambda_handler
+#     Java: package.class::method
+#       Example: com.example.Authorizer::handleRequest
+#   Finding: Check application source code or build documentation
+
+# --- NETWORK CONFIGURATION ---
+
+# VpcId
+#   Value: VPC ID (e.g. vpc-0a1b2c3d4e5f6g7h8)
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+#   Note: Lambda in VPC requires NAT Gateway OR proxy for internet access
+
+# SubnetIds
+#   Value: Comma-separated private subnet IDs (NO SPACES)
+#   Format: subnet-xxx,subnet-yyy
+#   Requirements:
+#     - Minimum 2 subnets in different AZs
+#     - Must be private subnets
+#     - Need route to NAT Gateway OR proxy for Azure AD access
+#   Finding: VPC Console → Subnets → filter by VPC → copy private subnet IDs
+
+# SecurityGroupName
+#   Value: Security group name (e.g. myapp-nprd-lambda-authorizer-sg)
+#   Egress rules created:
+#     - TCP 4000 to HCC proxy CIDRs (environment-specific)
+#     - TCP to ForwardProxyAddress (if specified)
+
+# --- LAMBDA BEHAVIOR ---
+
+# LambdaTimeout
+#   Value: Timeout in seconds (1-900)
+#   Common values: 10, 15, 30
+#   API Gateway limit: 29 seconds
+#   Typical execution: 1-5 seconds (JWT validation)
+#   Recommendation: 15 seconds (allows debugging, under API Gateway limit)
+
+# LogRetentionInDays
+#   Allowed Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653
+#   Common values:
+#     - Development: 7-14 days
+#     - Staging: 30 days
+#     - Production: 90-365 days
+#   Recommendation: 90 days for production, 14 days for dev
+
+# --- OPTIONAL PARAMETERS ---
+
+# AppModuleName
+#   Value: Module name for multi-module apps (e.g. PatientAPI, DoctorAPI)
+#   Creates: {AppShortName}-{EnvName}-{AppModuleName}-LambdaAuthorizer
+#   Leave empty for single-module apps
+
+# AzureAdClientId
+#   Value: Azure AD Application (client) ID (GUID)
+#   Example: 12345678-1234-1234-1234-123456789abc
+#   Purpose: JWT audience (aud) claim validation
+#   Finding: Azure Portal → App registrations → Overview → Application (client) ID
+#   Leave empty if stored in Secrets Manager or hardcoded in Lambda
+
+# AzureAdTenantId
+#   Value: Azure AD Directory (tenant) ID (GUID)
+#   Example: 87654321-4321-4321-4321-cba987654321
+#   Purpose: JWT issuer (iss) claim validation
+#   Finding: Azure Portal → Azure AD → Overview → Directory (tenant) ID
+#   Leave empty if stored in Secrets Manager or multi-tenant app
+
+# ForwardProxyAddress
+#   Value: HTTP/HTTPS proxy address
+#   Format: http://hostname:port or https://hostname:port
+#   Example: http://proxy.example.com:8080, http://10.1.2.3:3128
+#   Purpose: Routes Lambda traffic to Azure AD through corporate proxy
+#   Use when: VPC without NAT Gateway, corporate proxy requirement
+#   Leave empty if using NAT Gateway
+
+# ApiGWid
+#   Value: API Gateway REST API ID (e.g. abc123def4)
+#   Purpose: Restricts Lambda invocation to specific API Gateway
+#   Finding: API Gateway Console → APIs → copy API ID
+#   Security: Prevents unauthorized invocations from other API Gateways
+#   Leave empty if: API Gateway not yet created, multiple API Gateways, dev/test
+
+# ProdHCCProxyCidr1, ProdHCCProxyCidr2 (optional)
+#   Defaults: 10.48.9.0/25, 10.48.130.64/28
+#   Purpose: Production HCC proxy CIDR ranges for security group egress
+#   Leave empty to use defaults
+
+# NprdHCCProxyCidr1, NprdHCCProxyCidr2 (optional)
+#   Defaults: 10.48.72.0/28, 10.48.72.16/28
+#   Purpose: Non-production HCC proxy CIDR ranges for security group egress
+#   Leave empty to use defaults
+
+# HCCProxyPort (optional)
+#   Default: 4000
+#   Purpose: HCC proxy port for security group egress
+#   Leave empty to use default
+
+# --- RESOURCES CREATED ---
+
+# Lambda Function
+#   Name: {AppShortName}-{EnvName}-LambdaAuthorizer (or with AppModuleName)
+#   Runtime: {LambdaRuntime}
+#   Handler: {LambdaHandler}
+#   Timeout: {LambdaTimeout} seconds
+#   Memory: 512 MB (fixed)
+#   VPC: {VpcId}, subnets: {SubnetIds}
+#   Environment variables: AZURE_AD_CLIENT_ID, AZURE_AD_TENANT_ID, FORWARD_PROXY_ADDRESS
+
+# IAM Execution Role
+#   Name: {AppShortName}-{EnvName}-lambda-authorizer-role
+#   Permissions:
+#     - CloudWatch Logs write (logs:CreateLogGroup, CreateLogStream, PutLogEvents)
+#     - VPC ENI management (ec2:CreateNetworkInterface, DescribeNetworkInterfaces, DeleteNetworkInterface)
+#     - S3 GetObject (Lambda code)
+
+# Security Group
+#   Name: {SecurityGroupName}
+#   VPC: {VpcId}
+#   Egress:
+#     - TCP 4000 to HCC proxy CIDRs (prod or nprd, based on EnvName)
+#     - TCP to ForwardProxyAddress (if specified)
+
+# CloudWatch Log Group
+#   Name: /aws/lambda/{AppShortName}-{EnvName}-LambdaAuthorizer
+#   Retention: {LogRetentionInDays} days
+
+# Lambda Permission (if ApiGWid specified)
+#   Principal: apigateway.amazonaws.com
+#   Action: lambda:InvokeFunction
+#   Source: arn:aws:execute-api:region:account:{ApiGWid}/authorizers/*
+
+

@@ -1,0 +1,122 @@
+[
+    {
+        "ParameterKey": "AWSRegion",
+        "ParameterValue": "ap-southeast-1"
+    },
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "gms"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-02fb2e32bbb6ff24e"
+    },
+    {
+        "ParameterKey": "AppSubnetIds",
+        "ParameterValue": "subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b,subnet-0e36eb3efe04524a6"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.0.101.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.0.102.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": "10.0.103.0/24"
+    },
+    {
+        "ParameterKey": "AppIngressNodePort",
+        "ParameterValue": "8443"
+    },
+    {
+        "ParameterKey": "InternalIngressNodePort",
+        "ParameterValue": "8443"
+    },
+    {
+        "ParameterKey": "HIPDeploymentServer01",
+        "ParameterValue": "10.50.196.37/32"
+    },
+    {
+        "ParameterKey": "HIPDeploymentServer02",
+        "ParameterValue": "10.50.196.36/32"
+    },
+    {
+        "ParameterKey": "HIPDeploymentServer03",
+        "ParameterValue": "10.50.196.36/32"
+    },
+    {
+        "ParameterKey": "DeploymentServerUTL01",
+        "ParameterValue": "10.53.26.197/32"
+    },
+    {
+        "ParameterKey": "NLBIngressSecurityGroupId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "HSGWSubnet01",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "HSGWSubnet02",
+        "ParameterValue": "10.50.196.38/32"
+    },
+    {
+        "ParameterKey": "HSGWSubnet03",
+        "ParameterValue": "10.50.196.39/32"
+    },
+    {
+        "ParameterKey": "HasCustomPorts",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CustomPortStart",
+        "ParameterValue": "7000"
+    },
+    {
+        "ParameterKey": "CustomPortEnd",
+        "ParameterValue": "15000"
+    },
+    {
+      "ParameterKey": "VpcCidr1",
+      "ParameterValue": "10.0.0.0/16"
+    },
+    {
+      "ParameterKey": "VpcCidr2",
+      "ParameterValue": ""
+    },
+    {
+      "ParameterKey": "VpcCidr3",
+      "ParameterValue": ""
+    },    
+    {
+      "ParameterKey": "S3PrefixListId",
+      "ParameterValue": "pl-6fa54006"
+    },
+    {
+      "ParameterKey": "HCCVpceCidr",
+      "ParameterValue": "10.48.42.0/24"
+    },
+    {
+      "ParameterKey": "DBSubnetCidrAZ1",
+      "ParameterValue": "10.0.151.0/24"
+    },
+    {
+      "ParameterKey": "DBSubnetCidrAZ2",
+      "ParameterValue": "10.0.152.0/24"
+    },
+    {
+      "ParameterKey": "DBSubnetCidrAZ3",
+      "ParameterValue": "10.0.153.0/24"
+    },
+    {
+      "ParameterKey": "PrefixListNLBIngress",
+      "ParameterValue": ""
+    }
+]

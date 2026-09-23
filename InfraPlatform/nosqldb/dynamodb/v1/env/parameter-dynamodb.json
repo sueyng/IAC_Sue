@@ -1,0 +1,27 @@
+{
+  "tables": [
+    {
+      "tableNameSuffix": "dedup",
+      "deletionProtection": "true",
+      "billingMode": "PAY_PER_REQUEST",
+      "keySchema": [
+        {
+          "attributeName": "messageId",
+          "keyType": "HASH",
+          "attributeType": "S"
+        }
+      ],
+      "ttl": {
+        "enabled": true,
+        "attributeName": "ttlTimestamp"
+      },
+      "tags": {
+        "FUNCTION": "DBS",
+        "BACKUP-DAILY": "YES",
+        "BACKUP-WEEKLY": "YES",
+        "BACKUP-MONTHLY": "YES",
+        "BACKUP-YEARLY": "YES"
+      }
+    }
+  ]
+}

@@ -1,0 +1,826 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "healthb"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "SubnetIds",
+        "ParameterValue": "subnet-0fe7a1d34484c75cf,subnet-0610b1fee398eb38b"
+    },
+    {
+        "ParameterKey": "LogRetentionInDays",
+        "ParameterValue": "14"
+    },
+    {
+        "ParameterKey": "LambdaS3bucket",
+        "ParameterValue": "health-nprd-cftemplates"
+    },
+    {
+        "ParameterKey": "NumberOfLambdaFunctions",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "Lambda1FunctionName",
+        "ParameterValue": "HealthBuddyAdmissionSubmitPayment"
+    },
+    {
+        "ParameterKey": "Lambda1CodeZipFileName",
+        "ParameterValue": "parent-child-stacks/HealthBuddy.Admission.SubmitPayment-1.0.0.4.zip"
+    },
+    {
+        "ParameterKey": "Lambda1Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda1Handler",
+        "ParameterValue": "HealthBuddy.Admission.SubmitPayment::HealthBuddy.Admission.SubmitPayment.Function::FunctionHandler"
+    },
+    {
+        "ParameterKey": "Lambda1MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda1Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda1ApiResourcePath",
+        "ParameterValue": "admissions/submit-payment"
+    },
+    {
+        "ParameterKey": "Lambda1ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda1TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda1AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda2FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda2CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda2Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda2Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda2MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda2Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda2ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda2ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda2TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda2AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda3FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda3CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda3Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda3Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda3MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda3Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda3ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda3ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda3TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda3AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda4FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda4CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda4Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda4Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda4MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda4Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda4ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda4ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda4TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda4AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda5FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda5CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda5Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda5Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda5MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda5Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda5ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda5ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda5TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda5AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda6FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda6CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda6Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda6Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda6MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda6Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda6ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda6ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda6TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda6AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda7FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda7CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda7Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda7Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda7MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda7Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda7ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda7ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda7TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda7AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda8FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda8CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda8Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda8Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda8MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda8Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda8ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda8ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda8TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda8AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda9FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda9CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda9Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda9Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda9MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda9Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda9ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda9ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda9TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda9AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda10FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda10CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda10Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda10Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda10MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda10Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda10ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda10ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda10TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda10AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda11FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda11CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda11Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda11Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda11MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda11Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda11ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda11ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda11TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda11AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda12FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda12CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda12Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda12Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda12MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda12Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda12ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda12ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda12TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda12AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda13FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda13CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda13Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda13Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda13MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda13Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda13ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda13ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda13TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda13AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda14FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda14CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda14Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda14Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda14MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda14Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda14ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda14ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda14TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda14AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda15FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda15CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda15Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda15Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda15MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda15Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda15ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda15ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda15TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda15AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda16FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda16CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda16Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda16Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda16MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda16Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda16ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda16ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda16TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda16AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda17FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda17CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda17Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda17Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda17MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda17Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda17ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda17ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda17TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda17AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda18FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda18CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda18Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda18Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda18MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda18Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda18ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda18ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda18TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda18AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda19FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda19CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda19Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda19Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda19MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda19Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda19ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda19ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda19TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda19AliasName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda20FunctionName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda20CodeZipFileName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda20Runtime",
+        "ParameterValue": "dotnet8"
+    },
+    {
+        "ParameterKey": "Lambda20Handler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda20MemorySize",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "Lambda20Timeout",
+        "ParameterValue": "25"
+    },
+    {
+        "ParameterKey": "Lambda20ApiResourcePath",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Lambda20ApiHttpMethod",
+        "ParameterValue": "POST"
+    },
+    {
+        "ParameterKey": "Lambda20TimeZone",
+        "ParameterValue": "Asia/Singapore"
+    },
+    {
+        "ParameterKey": "Lambda20AliasName",
+        "ParameterValue": ""
+    }
+]

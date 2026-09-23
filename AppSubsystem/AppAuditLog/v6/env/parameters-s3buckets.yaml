@@ -1,0 +1,98 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"             # 📝 e.g. mimo, myapp, webapp
+AWSEnvName: "<edit_here>"               # 📝 e.g. nprd, prod
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application identifier (e.g. mimo, myapp, webapp)
+#   Creates buckets:
+#     - {AppShortName}-{AWSEnvName}-app-artifact
+#     - {AppShortName}-{AWSEnvName}-app-runtime
+#     - {AppShortName}-{AWSEnvName}-data-lake
+#   Format: Lowercase alphanumeric, 1-10 characters
+#   Must match AppShortName in cf-app-auditlog.yaml
+#   Note: S3 bucket names must be globally unique across all AWS accounts
+
+# AWSEnvName
+#   Allowed Values:
+#     - nprd: Non-production (DeletionPolicy: Delete)
+#     - prod: Production (DeletionPolicy: Retain)
+#   Production (prod): Buckets preserved on stack deletion, must manually delete
+#   Non-Production (nprd): Buckets automatically deleted on stack deletion
+
+# --- RESOURCES CREATED ---
+
+# 1. Application Artifact Bucket
+#    Name: {AppShortName}-{AWSEnvName}-app-artifact
+#    Purpose: Lambda packages, Glue scripts, Step Functions definitions
+#    Versioning: Enabled
+#    Expected contents:
+#      - {AppEnvName}/lambda/lambda_function.zip
+#      - {AppEnvName}/lambda/lambda_layer.zip
+#      - {AppEnvName}/sf-script/auditlog_state_machine.json
+
+# 2. Application Runtime Bucket
+#    Name: {AppShortName}-{AWSEnvName}-app-runtime
+#    Purpose: Runtime data and Glue scripts
+#    Versioning: Enabled
+#    Expected contents:
+#      - {AppEnvName}/glue-script/audit_convert_iceberg.py
+#      - Temporary ETL files
+
+# 3. Data Lake Bucket
+#    Name: {AppShortName}-{AWSEnvName}-data-lake
+#    Purpose: Raw audit logs and Iceberg tables
+#    Versioning: Enabled
+#    Structure:
+#      - {AppEnvName}/landing-zone/auditlog/ (raw Parquet from Lambda)
+#      - {AppEnvName}/etl-trans/ (Iceberg tables from Glue)
+#      - athena-results/ (Athena query output)
+
+# All buckets:
+#   - Encryption: AES256 (AWS-managed keys)
+#   - Versioning: Enabled
+#   - Public access: Blocked (all settings)
+#   - TLS: 1.2+ enforced via bucket policy
+#   - HTTP: Denied
+
+# Bucket Policies:
+#   Each bucket has policy with:
+#   - EnforceTLSv12orHigher: Denies requests with TLS < 1.2
+#   - AllowSSLRequestsOnly: Denies HTTP (non-HTTPS) requests
+
+# --- DEPLOYMENT ORDER ---
+
+# 1. Deploy this template (cf_s3buckets.yaml)
+#    Creates three S3 buckets with security policies
+
+# 2. Upload artifacts to respective buckets
+#    CICD Pipeline → {AppShortName}-{AWSEnvName}-app-artifact
+#    Upload to correct folder structure:
+#      - {AppEnvName}/lambda/lambda_function.zip
+#      - {AppEnvName}/lambda/lambda_layer.zip
+#      - {AppEnvName}/sf-script/auditlog_state_machine.json
+#
+#    CICD Pipeline → {AppShortName}-{AWSEnvName}-app-runtime
+#    Upload:
+#      - {AppEnvName}/glue-script/audit_convert_iceberg.py
+
+# 3. Deploy audit log infrastructure (cf-app-auditlog.yaml)
+#    References these buckets for code and data storage
+

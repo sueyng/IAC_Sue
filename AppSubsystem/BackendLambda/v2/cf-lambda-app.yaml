@@ -1,0 +1,1015 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template for Lambda functions with individual IAM roles, environment variable support, and optional CloudWatch alarms
+
+Parameters:
+  # Core Application Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name 
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Lambda Function Configuration
+  LambdaFunctionName:
+    Type: String
+    Description: Descriptive name of the Lambda function (will be prefixed with AppShortName-EnvName)
+
+  LambdaS3BucketName:
+    Type: String
+    Description: S3 bucket name where Lambda deployment packages are stored
+
+  LambdaS3KeyPath:
+    Type: String
+    Description: S3 key path to the Lambda deployment package (.zip file)
+
+  LambdaHandler:
+    Type: String
+    Description: Lambda function handler
+    Default: 'lambda_function.lambda_handler'
+
+  LambdaRuntime:
+    Type: String
+    Description: Runtime for the Lambda function
+    Default: 'python3.12'
+ 
+  LambdaMemorySize:
+    Type: Number
+    Description: Memory size for the Lambda function in MB
+    Default: 512
+    MinValue: 128
+    MaxValue: 10240
+
+  LambdaTimeout:
+    Type: Number
+    Description: Timeout for the Lambda function in seconds
+    Default: 30
+    MinValue: 1
+    MaxValue: 900
+
+  LambdaDescription:
+    Type: String
+    Description: Description of the Lambda function
+    Default: 'Generic Lambda Function'
+
+  # Lambda Layers
+  LambdaLayerArns:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of Lambda Layer ARNs (leave blank if no layers needed)
+    Default: ''
+
+  # VPC Configuration
+  EnableVpcConfiguration:
+    Type: String
+    Description: Enable VPC configuration for Lambda function
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: "REQUIRED if EnableVpcConfiguration='true': Comma-separated list of subnet IDs for Lambda VPC configuration"
+    Default: ''
+
+  # Security Group Configuration - REQUIRED if EnableVpcConfiguration='true'
+  LambdaSecurityGroupId:
+    Type: String
+    Description: "REQUIRED if EnableVpcConfiguration='true': Security group ID for Lambda functions"
+    Default: ''
+
+  # Service Access Configuration
+  EnableS3Access:
+    Type: String
+    Description: "Enable S3 access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: true
+
+  # S3 Configuration (Optional - for tighter security)
+  S3SpecificBucketNames:
+    Type: CommaDelimitedList
+    Description: "Optional: Comma-separated list of specific S3 bucket names to grant access to. If provided, overrides default pattern-based access. Both bucket-level and object-level permissions will be granted."
+    Default: ''
+
+  EnableSESAccess:
+    Type: String
+    Description: "Enable SES (email) access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: false
+
+  EnableSNSAccess:
+    Type: String
+    Description: "Enable SNS (notifications) access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: false
+
+  EnableEventBridgeAccess:
+    Type: String
+    Description: "Enable EventBridge access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: false
+
+  EnableDynamoDBAccess:
+    Type: String
+    Description: "Enable DynamoDB access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: true
+
+  EnableSQSAccess:
+    Type: String
+    Description: "Enable SQS access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: true
+
+  EnableSecretsManagerAccess:
+    Type: String
+    Description: "Enable Secrets Manager access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: true
+
+  EnableSSMAccess:
+    Type: String
+    Description: "Enable SSM Parameter Store access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: true
+
+  EnableLambdaInvokeAccess:
+    Type: String
+    Description: "Enable Lambda invoke access for Lambda functions"
+    AllowedValues: [true, false]
+    Default: false
+
+  # Event Source Configuration
+  EventSourceType:
+    Type: String
+    Description: Type of event source for the Lambda function (choose 'none' if no event source needed)
+    Default: 'none'
+    AllowedValues:
+      - none
+      - sqs
+      - eventbridge
+      - apigateway
+
+  # SQS Event Source Parameters (Standard SQS Only) - REQUIRED if EventSourceType = 'sqs'
+  SqsQueueArn:
+    Type: String
+    Description: "REQUIRED if EventSourceType='sqs': Standard SQS Queue ARN for event source mapping (FIFO queues not supported)"
+    Default: ''
+
+  SqsBatchSize:
+    Type: Number
+    Description: Batch size for SQS event source mapping (only used if EventSourceType='sqs')
+    Default: 10
+    MinValue: 1
+    MaxValue: 1000
+
+  SqsMaxBatchingWindow:
+    Type: Number
+    Description: Maximum batching window in seconds for SQS (only used if EventSourceType='sqs')
+    Default: 0
+    MinValue: 0
+    MaxValue: 300
+
+  SqsMaxConcurrency:
+    Type: Number
+    Description: Maximum concurrency for SQS event source mapping (only used if EventSourceType='sqs')
+    Default: 10
+    MinValue: 2
+    MaxValue: 1000
+
+  # EventBridge Parameters - REQUIRED if EventSourceType = 'eventbridge'
+  ScheduleExpression:
+    Type: String
+    Description: "REQUIRED if EventSourceType='eventbridge': Schedule expression (e.g., 'cron(0 1 * * ? *)' or 'rate(5 minutes)')"
+    Default: ''
+
+  # API Gateway Parameters - REQUIRED if EventSourceType = 'apigateway'
+  ApiGatewayId:
+    Type: String
+    Description: "REQUIRED if EventSourceType='apigateway': API Gateway ID for Lambda permissions"
+    Default: ''
+
+  # Dead Letter Queue (Standard SQS Only)
+  DeadLetterQueueArn:
+    Type: String
+    Description: ARN of the Standard SQS Dead Letter Queue (FIFO queues not supported for DLQ)
+    Default: ''
+
+  # Monitoring & Logging
+  LogRetentionInDays:
+    Type: Number
+    Description: CloudWatch Logs retention period in days
+    Default: 14
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+  ReservedConcurrency:
+    Type: Number
+    Description: Reserved concurrency for the Lambda function (0 = unreserved)
+    Default: 0
+    MinValue: 0
+
+  EnableXRayTracing:
+    Type: String
+    Description: Enable AWS X-Ray tracing
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  # Alarm Configuration (Optional)
+  EnableAlarms:
+    Type: String
+    Description: Enable CloudWatch alarms for Lambda function monitoring
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  AdminAlertsTopicArn:
+    Type: String
+    Description: "REQUIRED if EnableAlarms='true': ARN of the SNS topic for alarm notifications"
+    Default: ''
+
+  ErrorRateThreshold:
+    Type: Number
+    Description: "Error rate threshold in percent (only used if EnableAlarms='true')"
+    Default: 5
+    MinValue: 0
+    MaxValue: 100
+
+  ThrottlesThreshold:
+    Type: Number
+    Description: "Throttles threshold count per minute (only used if EnableAlarms='true')"
+    Default: 1
+    MinValue: 0
+
+  DurationThresholdMs:
+    Type: Number
+    Description: "Duration threshold in milliseconds (only used if EnableAlarms='true')"
+    Default: 30000
+    MinValue: 1000
+
+  #============================================================================
+  # ENVIRONMENT VARIABLES SECTION
+  #============================================================================
+
+  # Core Environment Variables
+  LogLevel:
+    Type: String
+    Description: Log level for the Lambda function
+    Default: 'INFO'
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARNING
+      - ERROR
+      - CRITICAL
+
+  # Database Configuration
+  DbSecretArn:
+    Type: String
+    Description: ARN of the database credentials secret
+    Default: ''
+
+  DbHost:
+    Type: String
+    Description: Database host endpoint
+    Default: ''
+
+  DbPort:
+    Type: String
+    Description: Database port
+    Default: '3306'
+
+  DbName:
+    Type: String
+    Description: Database name
+    Default: ''
+
+  # DynamoDB Configuration
+  DedupDynamoDbTableName:
+    Type: String
+    Description: Name of the DynamoDB deduplication table
+    Default: ''
+
+  # SQS Configuration
+  SqsQueueUrl:
+    Type: String
+    Description: URL of the SQS queue for message processing
+    Default: ''
+
+  # FormSG Configuration
+  FormSgSecretArn:
+    Type: String
+    Description: ARN of the FormSG secret for form validation
+    Default: ''
+
+  FormId:
+    Type: String
+    Description: FormSG Form ID
+    Default: ''
+
+  EnableFormSg:
+    Type: String
+    Description: Enable FormSG integration
+    AllowedValues: [true, false]
+    Default: false
+
+  # External Service Secret ARNs
+  ForSgSecretArn:
+    Type: String
+    Description: ARN of the For.sg API key secret
+    Default: ''
+
+  TwilioSecretArn:
+    Type: String
+    Description: ARN of the Twilio API credentials secret
+    Default: ''
+
+  # Twilio Configuration
+  TwilioWhatsappNumber:
+    Type: String
+    Description: Twilio WhatsApp number for sending messages
+    Default: ''
+
+  TwilioTemplateSidMap:
+    Type: String
+    Description: Twilio template SID mapping configuration
+    Default: 'PLACEHOLDER'
+
+  TwilioAccountSid:
+    Type: String
+    Description: Twilio Account SID
+    Default: ''
+
+  # Proxy Configuration
+  ProxyUrl:
+    Type: String
+    Description: Proxy URL for external API calls
+    Default: ''
+
+Conditions:
+  # Environment conditions
+  IsProduction: !Or 
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+  # Core conditions
+  HasLayers: !Not [!Equals [!Join ['', !Ref LambdaLayerArns], '']]
+  HasReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
+  EnableTracing: !Equals [!Ref EnableXRayTracing, 'true']
+  EnableVpc: !Equals [!Ref EnableVpcConfiguration, 'true']
+  
+  # Service access conditions
+  NeedsS3Access: !Equals [!Ref EnableS3Access, true]
+  
+  # S3 conditions
+  HasSpecificS3Buckets: !Not [!Equals [!Join ['', !Ref S3SpecificBucketNames], '']]
+  
+  NeedsSESAccess: !Equals [!Ref EnableSESAccess, true]
+  NeedsSNSAccess: !Equals [!Ref EnableSNSAccess, true]
+  NeedsEventBridgeAccess: !Equals [!Ref EnableEventBridgeAccess, true]
+  NeedsDynamoDBAccess: !Equals [!Ref EnableDynamoDBAccess, true]
+  NeedsSQSAccess: !Equals [!Ref EnableSQSAccess, true]
+  NeedsSecretsManagerAccess: !Equals [!Ref EnableSecretsManagerAccess, true]
+  NeedsSSMAccess: !Equals [!Ref EnableSSMAccess, true]
+  NeedsLambdaInvokeAccess: !Equals [!Ref EnableLambdaInvokeAccess, true]
+  
+  # Event source type checks
+  EventSourceIsSqs: !Equals [!Ref EventSourceType, 'sqs']
+  EventSourceIsEventBridge: !Equals [!Ref EventSourceType, 'eventbridge']
+  EventSourceIsApiGateway: !Equals [!Ref EventSourceType, 'apigateway']
+  
+  # Parameter validation conditions
+  SqsQueueArnProvided: !Not [!Equals [!Ref SqsQueueArn, '']]
+  ScheduleExpressionProvided: !Not [!Equals [!Ref ScheduleExpression, '']]
+  ApiGatewayIdProvided: !Not [!Equals [!Ref ApiGatewayId, '']]
+  
+  # Event source conditions - Enhanced with proper validation
+  HasSqsEventSource: !And
+    - !Condition EventSourceIsSqs
+    - !Condition SqsQueueArnProvided
+  HasEventBridgeSource: !And
+    - !Condition EventSourceIsEventBridge
+    - !Condition ScheduleExpressionProvided
+  HasApiGatewaySource: !And
+    - !Condition EventSourceIsApiGateway
+    - !Condition ApiGatewayIdProvided
+  HasDeadLetterQueue: !Not [!Equals [!Ref DeadLetterQueueArn, '']]
+   
+  # Alarm conditions
+  AlarmsEnabled: !Equals [!Ref EnableAlarms, 'true']
+  AdminAlertsTopicProvided: !Not [!Equals [!Ref AdminAlertsTopicArn, '']]
+  HasValidAlarmConfig: !And
+    - !Condition AlarmsEnabled
+    - !Condition AdminAlertsTopicProvided
+
+  # Database conditions
+  HasDbSecretArn: !Not [!Equals [!Ref DbSecretArn, '']]
+  HasDbHost: !Not [!Equals [!Ref DbHost, '']]
+  HasDbName: !Not [!Equals [!Ref DbName, '']]
+  
+  # DynamoDB conditions
+  HasDedupDynamoDbTableName: !Not [!Equals [!Ref DedupDynamoDbTableName, '']]
+  
+  # SQS conditions
+  HasSqsQueueUrl: !Not [!Equals [!Ref SqsQueueUrl, '']]
+  
+  # FormSG conditions
+  HasFormSgSecretArn: !Not [!Equals [!Ref FormSgSecretArn, '']]
+  HasFormId: !Not [!Equals [!Ref FormId, '']]
+  
+  # External service secret conditions
+  HasForSgSecretArn: !Not [!Equals [!Ref ForSgSecretArn, '']]
+  HasTwilioSecretArn: !Not [!Equals [!Ref TwilioSecretArn, '']]
+  
+  # Twilio conditions
+  HasTwilioWhatsappNumber: !Not [!Equals [!Ref TwilioWhatsappNumber, '']]
+  HasTwilioAccountSid: !Not [!Equals [!Ref TwilioAccountSid, '']]
+  
+  # Proxy conditions
+  HasProxyUrl: !Not [!Equals [!Ref ProxyUrl, '']]
+
+Resources:
+  #----------------------------------------------------------------------------
+  # Individual Lambda Execution Role
+  #----------------------------------------------------------------------------
+  
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RoleName: !Sub "${AppShortName}-${EnvName}-${LambdaFunctionName}-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - !If
+          - EnableVpc
+          - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          - !Ref "AWS::NoValue"
+        - !If
+          - EnableTracing
+          - "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+          - !Ref "AWS::NoValue"
+      Policies:
+        # Base Lambda policy for CloudWatch Logs
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: 
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}:*"
+
+        # Conditional service access policies
+        - !If
+          - NeedsSecretsManagerAccess
+          - PolicyName: SecretsManagerAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "secretsmanager:GetSecretValue"
+                    - "secretsmanager:DescribeSecret"
+                  Resource: 
+                    # Standard patterns
+                    - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AppShortName}-${EnvName}-*"
+                    - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AppShortName}-*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsLambdaInvokeAccess
+          - PolicyName: LambdaInvokeAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "lambda:InvokeFunction"
+                    - "lambda:InvokeAsync"
+                  Resource: 
+                    - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AppShortName}-${EnvName}-*"
+                    - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AppShortName}-*"
+                    - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*-${EnvName}-*"
+                    - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*lambda*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsSQSAccess
+          - PolicyName: SQSAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "sqs:SendMessage"
+                    - "sqs:ReceiveMessage"
+                    - "sqs:DeleteMessage"
+                    - "sqs:GetQueueAttributes"
+                    - "sqs:GetQueueUrl"
+                    - "sqs:ChangeMessageVisibility"
+                    - "sqs:ChangeMessageVisibilityBatch"
+                  Resource: 
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${AppShortName}-${EnvName}-*"
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${AppShortName}-*"
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*-${EnvName}-*"
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*sqs*"
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*dlq*"
+                    - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*DLQ*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsDynamoDBAccess
+          - PolicyName: DynamoDBAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "dynamodb:BatchGetItem"
+                    - "dynamodb:BatchWriteItem"
+                    - "dynamodb:ConditionCheckItem"
+                    - "dynamodb:PutItem"
+                    - "dynamodb:DescribeTable"
+                    - "dynamodb:DeleteItem"
+                    - "dynamodb:GetItem"
+                    - "dynamodb:Scan"
+                    - "dynamodb:Query"
+                    - "dynamodb:UpdateItem"
+                  Resource: 
+                    - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AppShortName}-${EnvName}-*"
+                    - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AppShortName}-*"
+                    - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*-${EnvName}-*"
+                    - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*dynamodb*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsSSMAccess
+          - PolicyName: SSMParameterStoreAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "ssm:GetParameter"
+                    - "ssm:GetParameters"
+                    - "ssm:GetParametersByPath"
+                  Resource: 
+                    - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AppShortName}/${EnvName}/*"
+                    - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AppShortName}/*"
+                    - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*/${EnvName}/*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsS3Access
+          - PolicyName: S3AccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:GetObject"
+                    - "s3:PutObject"
+                    - "s3:DeleteObject"
+                    - "s3:ListBucket"
+                    - "s3:GetBucketLocation"
+                  Resource: !If
+                    - HasSpecificS3Buckets
+                    - !Split
+                      - ','
+                      - !Sub
+                        - "${bucketArns},${objectArns}"
+                        - bucketArns: !Join
+                          - ','
+                          - !Split
+                            - ','
+                            - !Sub
+                              - "arn:aws:s3:::${inner}"
+                              - inner: !Join
+                                - ",arn:aws:s3:::"
+                                - !Ref S3SpecificBucketNames
+                          objectArns: !Join
+                          - ','
+                          - !Split
+                            - ','
+                            - !Sub
+                              - "arn:aws:s3:::${inner}/*"
+                              - inner: !Join
+                                - "/*,arn:aws:s3:::"
+                                - !Ref S3SpecificBucketNames
+                    - # Default pattern-based resources (backward compatible)
+                      - !Sub "arn:aws:s3:::${AppShortName}-${EnvName}-*"
+                      - !Sub "arn:aws:s3:::${AppShortName}-${EnvName}-*/*"
+                      - !Sub "arn:aws:s3:::${AppShortName}-*"
+                      - !Sub "arn:aws:s3:::${AppShortName}-*/*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsSESAccess
+          - PolicyName: SESAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "ses:SendEmail"
+                    - "ses:SendRawEmail"
+                    - "ses:SendBulkTemplatedEmail"
+                    - "ses:SendTemplatedEmail"
+                  Resource: "*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsSNSAccess
+          - PolicyName: SNSAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "sns:Publish"
+                    - "sns:Subscribe"
+                    - "sns:Unsubscribe"
+                    - "sns:ListSubscriptionsByTopic"
+                  Resource: 
+                    - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AppShortName}-${EnvName}-*"
+                    - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AppShortName}-*"
+          - !Ref "AWS::NoValue"
+
+        - !If
+          - NeedsEventBridgeAccess
+          - PolicyName: EventBridgeAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "events:PutEvents"
+                    - "events:ListRules"
+                    - "events:DescribeRule"
+                  Resource: 
+                    - !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/*"
+                    - !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
+          - !Ref "AWS::NoValue"
+
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-${LambdaFunctionName}-lambda-role"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+  # CloudWatch Log Group
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}"
+      RetentionInDays: !Ref LogRetentionInDays
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}-logs"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+  # Lambda Function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LambdaLogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Sub "${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}"
+      Description: !Ref LambdaDescription
+      Runtime: !Ref LambdaRuntime
+      Handler: !Ref LambdaHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref LambdaS3BucketName
+        S3Key: !Ref LambdaS3KeyPath
+      Layers: !If [HasLayers, !Ref LambdaLayerArns, !Ref 'AWS::NoValue']
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      ReservedConcurrencyLimit: !If [HasReservedConcurrency, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
+      TracingConfig:
+        Mode: !If [EnableTracing, 'Active', 'PassThrough']
+      VpcConfig: !If
+        - EnableVpc
+        - SecurityGroupIds:
+            - !Ref LambdaSecurityGroupId
+          SubnetIds: !Ref SubnetIds
+        - !Ref 'AWS::NoValue'
+      DeadLetterConfig: !If
+        - HasDeadLetterQueue
+        - TargetArn: !Ref DeadLetterQueueArn
+        - !Ref 'AWS::NoValue'
+      Environment:
+        Variables:
+          LOG_LEVEL: !Ref LogLevel
+          TWILIO_TEMPLATE_SID_MAP: !Ref TwilioTemplateSidMap
+          ENABLE_FORMSG: !Ref EnableFormSg
+          # Conditional database variables
+          DB_SECRET_ARN: !If [HasDbSecretArn, !Ref DbSecretArn, !Ref 'AWS::NoValue']
+          DB_HOST: !If [HasDbHost, !Ref DbHost, !Ref 'AWS::NoValue']
+          DB_PORT: !If [HasDbHost, !Ref DbPort, !Ref 'AWS::NoValue']
+          DB_NAME: !If [HasDbName, !Ref DbName, !Ref 'AWS::NoValue']
+          # DynamoDB variables
+          DEDUP_DDB_TABLE_NAME: !If [HasDedupDynamoDbTableName, !Ref DedupDynamoDbTableName, !Ref 'AWS::NoValue']
+          # SQS variables
+          SQS_QUEUE_URL: !If [HasSqsQueueUrl, !Ref SqsQueueUrl, !Ref 'AWS::NoValue']
+          # FormSG variables
+          FORMSG_SECRET_ARN: !If [HasFormSgSecretArn, !Ref FormSgSecretArn, !Ref 'AWS::NoValue']
+          FORM_ID: !If [HasFormId, !Ref FormId, !Ref 'AWS::NoValue']
+          # External service secret variables
+          FORSG_SECRET_ARN: !If [HasForSgSecretArn, !Ref ForSgSecretArn, !Ref 'AWS::NoValue']
+          TWILIO_SECRET_ARN: !If [HasTwilioSecretArn, !Ref TwilioSecretArn, !Ref 'AWS::NoValue']
+          # Twilio configuration variables
+          TWILIO_WHATSAPP_NUMBER: !If [HasTwilioWhatsappNumber, !Ref TwilioWhatsappNumber, !Ref 'AWS::NoValue']
+          TWILIO_ACCOUNT_SID: !If [HasTwilioAccountSid, !Ref TwilioAccountSid, !Ref 'AWS::NoValue']
+          # Proxy configuration
+          PROXY_URL: !If [HasProxyUrl, !Ref ProxyUrl, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+  # SQS Event Source Mapping (Standard SQS Only)
+  SqsEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: HasSqsEventSource
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      EventSourceArn: !Ref SqsQueueArn
+      FunctionName: !Ref LambdaFunction
+      BatchSize: !Ref SqsBatchSize
+      MaximumBatchingWindowInSeconds: !Ref SqsMaxBatchingWindow
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+      ScalingConfig:
+        MaximumConcurrency: !Ref SqsMaxConcurrency
+
+  # EventBridge Rule for scheduled functions
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Condition: HasEventBridgeSource
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-lambda-${LambdaFunctionName}-rule"
+      Description: !Sub "EventBridge rule for ${LambdaFunctionName}"
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: !Sub "lambda-${LambdaFunctionName}Target"
+          Arn: !GetAtt LambdaFunction.Arn
+
+  # Lambda Permission for EventBridge
+  EventBridgeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasEventBridgeSource
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeRule.Arn
+
+  # Lambda Permission for API Gateway
+  ApiGatewayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasApiGatewaySource
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*"
+
+  #----------------------------------------------------------------------------
+  # CloudWatch Alarms (Optional)
+  #----------------------------------------------------------------------------
+
+  # Error Rate Alarm
+  ErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasValidAlarmConfig
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-errorrate"
+      AlarmDescription: !Sub "Alarm when there is a high error rate for the ${LambdaFunctionName} Lambda function. ACTION REQUIRED: Review the Lambda function's logs for errors; this may be a sign of system impairment"
+      Metrics:
+        - Id: m1
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref LambdaFunction
+            Stat: Sum
+            Period: 60
+          ReturnData: False
+        - Id: m2
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref LambdaFunction
+            Stat: Sum
+            Period: 60
+          ReturnData: False
+        - Id: e1
+          Label: Error Rate
+          Expression: "m1/m2 * 100"
+          ReturnData: True
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: !Ref ErrorRateThreshold
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AdminAlertsTopicArn
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-errorrate"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+  # Throttles Alarm
+  ThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasValidAlarmConfig
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-throttles"
+      AlarmDescription: !Sub "Alarm when there are throttles for the ${LambdaFunctionName} Lambda function. ACTION REQUIRED: Review the Lambda function's invocation patterns; if the volume of invocations is legitimate, the account/function's Lambda concurrency limit may need to be raised"
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref LambdaFunction
+      Statistic: Sum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: !Ref ThrottlesThreshold
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: notBreaching
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AdminAlertsTopicArn
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-throttles"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+  # Duration Alarm
+  DurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasValidAlarmConfig
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AlarmName: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-duration"
+      AlarmDescription: !Sub "Alarm when the duration is high for the ${LambdaFunctionName} Lambda function. ACTION REQUIRED: Determine the cause of the higher than expected invocation durations; if legitimate, raise the function's timeout to avoid failed invocations"
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref LambdaFunction
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: !Ref DurationThresholdMs
+      EvaluationPeriods: 1
+      Period: 60
+      TreatMissingData: notBreaching
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AdminAlertsTopicArn
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-alarm-${LambdaFunctionName}-duration"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+Outputs:
+  # Lambda Function Outputs
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt LambdaFunction.Arn
+
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref LambdaFunction
+
+  LambdaExecutionRoleArn:
+    Description: ARN of the Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn
+
+  LogGroupName:
+    Description: Name of the CloudWatch Log Group
+    Value: !Ref LambdaLogGroup
+
+  LogGroupArn:
+    Description: ARN of the CloudWatch Log Group
+    Value: !GetAtt LambdaLogGroup.Arn
+
+  # Event Source Outputs
+  SqsEventSourceMappingId:
+    Condition: HasSqsEventSource
+    Description: ID of the SQS Event Source Mapping
+    Value: !Ref SqsEventSourceMapping
+
+  EventBridgeRuleArn:
+    Condition: HasEventBridgeSource
+    Description: ARN of the EventBridge Rule
+    Value: !GetAtt EventBridgeRule.Arn
+
+  # Alarm Outputs (Conditional)
+  ErrorRateAlarmArn:
+    Condition: HasValidAlarmConfig
+    Description: "ARN of the Lambda Error Rate Alarm"
+    Value: !GetAtt ErrorRateAlarm.Arn
+
+  ThrottlesAlarmArn:
+    Condition: HasValidAlarmConfig
+    Description: "ARN of the Lambda Throttles Alarm"
+    Value: !GetAtt ThrottlesAlarm.Arn
+
+  DurationAlarmArn:
+    Condition: HasValidAlarmConfig
+    Description: "ARN of the Lambda Duration Alarm"
+    Value: !GetAtt DurationAlarm.Arn

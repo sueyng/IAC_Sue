@@ -1,0 +1,26 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-sit1"
+    },
+    {
+        "ParameterKey": "BucketName",
+        "ParameterValue": "mybucket"
+    },
+    {
+        "ParameterKey": "EnableCorsConfiguration",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "AllowedOrigins",
+        "ParameterValue": "*"
+    },
+    {
+        "ParameterKey": "EnableEventBridgeForS3Bucket",
+        "ParameterValue": "false"
+    }
+]

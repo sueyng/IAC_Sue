@@ -1,0 +1,58 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "grm"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-uat"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    },
+    {
+        "ParameterKey": "DBSubnetIds",
+        "ParameterValue": "subnet-08170d48a795103d2,subnet-083fba964c347656f,subnet-0e54709c5b9c524e1"
+    },
+    {
+        "ParameterKey": "DBInstanceIdentifier",
+        "ParameterValue": "grm-nprd-uat-rdssql"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.1.128.0/20"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.1.144.0/20"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": "10.1.160.0/20"
+    },
+    {
+        "ParameterKey": "DeploymentServer",
+        "ParameterValue": "10.53.26.197/32"
+    },
+    {
+        "ParameterKey": "DBProxySecretArn",
+        "ParameterValue": "arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:rds-proxy-secret"
+    },
+    {
+        "ParameterKey": "ProdDBPort",
+        "ParameterValue": "53341"
+    },
+    {
+        "ParameterKey": "NProdDBPort",
+        "ParameterValue": "53331"
+    },
+    {
+        "ParameterKey": "MaxConnectionsPercent",
+        "ParameterValue": "100"
+    },
+    {
+        "ParameterKey": "MaxIdleConnectionsPercent",
+        "ParameterValue": "50"
+    }
+]

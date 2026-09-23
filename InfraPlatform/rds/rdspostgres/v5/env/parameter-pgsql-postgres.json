@@ -1,0 +1,126 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhirtrgpg"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-02fb2e32bbb6ff24e"
+    },
+    {
+        "ParameterKey": "AvailabilityZone",
+        "ParameterValue": "ap-southeast-1b"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.0.102.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.0.103.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ4",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ5",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ6",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "DBSubnetIds",
+        "ParameterValue": "subnet-054fa74f69bf99d68,subnet-04be9fd2348c74663"
+    },
+    {
+        "ParameterKey": "DeploymentServer",
+        "ParameterValue": "10.0.1.9/32"
+    },
+    {
+        "ParameterKey": "MultiAZ",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "PgsqlDBParameterGroupFamily",
+        "ParameterValue": "postgres16"
+    },
+    {
+        "ParameterKey": "PgsqlDBInstanceClass",
+        "ParameterValue": "db.t3.xlarge"
+    },
+    {
+        "ParameterKey": "PgsqlDBEngine",
+        "ParameterValue": "postgres"
+    },
+    {
+        "ParameterKey": "PgsqlDBMajorEngineVersion",
+        "ParameterValue": "16"
+    },
+    {
+        "ParameterKey": "PgsqlEngineVersion",
+        "ParameterValue": "16.4"
+    },
+    {
+        "ParameterKey": "PgsqlAllocatedStorage",
+        "ParameterValue": "100"
+    },
+    {
+        "ParameterKey": "PgsqlMaxAllocatedStorage",
+        "ParameterValue": "1000"
+    },
+    {
+        "ParameterKey": "PgsqlStorageType",
+        "ParameterValue": "gp3"
+    },
+    {
+        "ParameterKey": "PgsqlStorageIops",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnableIAMDatabaseAuthentication",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "VpcCidr1",
+        "ParameterValue": "10.0.0.0/16"
+    },
+    {
+        "ParameterKey": "VpcCidr2",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr4",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr5",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "S3PrefixListId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "HCCVpceCidr",
+        "ParameterValue": "10.48.42.0/24"
+    },
+    {
+        "ParameterKey": "KMSKeyRotationPeriod",
+        "ParameterValue": "365"
+    }
+]

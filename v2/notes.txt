@@ -1,0 +1,3 @@
+Previously, HCC provisioned 1 CIDR range for VPC. Nowadays, HCC provision 2 CIDR range for VPC in new onboarding projects.
+Update in v2 template:
+- covers for 2 CIDR range

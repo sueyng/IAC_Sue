@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "hxis"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd-dev"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-09528f37a12368b13"
+  }
+]

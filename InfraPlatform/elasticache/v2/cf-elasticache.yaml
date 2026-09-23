@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev-b
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c 
+    Description: Environment
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: VPC Subnet ids for App
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: AZ1 App Subnet
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: AZ2 App Subnet
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: AZ3 App Subnet
+  RedisCacheInstanceType:
+    Type: String
+    Description: Redis Cache Instance Type
+  RedisAuthToken:
+    Type: String
+    Description: Redis Cluster Authentication Token
+    NoEcho: true
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+Resources:
+  ElasticacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      CacheSubnetGroupName: !Sub ${AppShortName}-${EnvName}-ecredis-SubnetGroup
+      Description: SubnetGroup for ElastiCache Redis Cluster
+      SubnetIds: !Ref AppSubnetIds
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ElastiCache-v2
+
+  ElasticacheSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-elasticache
+      GroupDescription: Security Group for Elasticache Redis Cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: App Subnet AZ1
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: App Subnet AZ2
+        - !If 
+            - "HasVPCSubnetCidrAppAZ3"
+            - IpProtocol: tcp
+              FromPort: 6379
+              ToPort: 6379
+              CidrIp: !Ref VPCSubnetCidrAppAZ3
+              Description: App Subnet AZ3
+            - !Ref AWS::NoValue
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ElastiCache-v2
+
+  ElasticacheLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AppShortName}-${EnvName}-elasticache
+      RetentionInDays: 365  # Adjust retention period as needed
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ElastiCache-v2
+
+  RedisCluster:
+    Type: 'AWS::ElastiCache::ReplicationGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ReplicationGroupId: !Sub ${AppShortName}-${EnvName}-elasticache
+      AtRestEncryptionEnabled: true
+      AuthToken: !Ref RedisAuthToken
+      TransitEncryptionEnabled: true
+      AutomaticFailoverEnabled: true
+      CacheNodeType: !Ref RedisCacheInstanceType
+      CacheParameterGroupName: default.redis7.cluster.on
+      MultiAZEnabled: true
+      CacheSubnetGroupName: !Ref ElasticacheSubnetGroup
+      Engine: redis
+#        EngineVersion: '7.0'
+      NumNodeGroups: '1'
+      ReplicasPerNodeGroup: '1'
+      Port: 6379
+      PreferredMaintenanceWindow: 'sun:05:00-sun:09:00'
+      ReplicationGroupDescription: Elasti Cache Redis Cluster
+      SecurityGroupIds:
+        - !GetAtt ElasticacheSecurityGroup.GroupId
+      SnapshotRetentionLimit: 5
+      SnapshotWindow: '10:00-12:00'
+      LogDeliveryConfigurations:
+        - DestinationType: cloudwatch-logs
+          LogFormat: json
+          DestinationDetails:
+            CloudWatchLogsDetails:
+              LogGroup: !Ref ElasticacheLogGroup
+          LogType: slow-log
+        - DestinationType: cloudwatch-logs
+          LogFormat: json
+          DestinationDetails:
+            CloudWatchLogsDetails:
+              LogGroup: !Ref ElasticacheLogGroup
+          LogType: engine-log
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-ElastiCache-v2

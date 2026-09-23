@@ -1,0 +1,215 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, processor
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+Lambda1FunctionName: "<edit_here>"               # 📝 e.g. myapp-prod-processor
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+Lambda2FunctionName: ""                          # e.g. myapp-prod-scheduler
+Lambda3FunctionName: ""                          # e.g. myapp-prod-notifier
+Team1SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:ops-team
+Team2SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:dev-team
+Team3SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:infra-team
+ErrorThreshold: "5"                              # e.g. 5 (default is 5)
+DurationThreshold: "30000"                       # e.g. 30000 (default is 30000 milliseconds)
+ThrottleThreshold: "2"                           # e.g. 1 (default is 1)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates alarm names: {AppShortName}-{EnvName}-{FunctionName}-*
+# - Used for alarm organization and filtering
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, processor
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a,
+#   nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#   nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (alarms preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (alarms deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- LAMBDA 1 FUNCTION NAME ---
+# Lambda1FunctionName: Name of the first Lambda function to monitor
+#
+# Purpose:
+# - Specifies primary Lambda function for CloudWatch alarms
+# - Creates alarms for errors, duration, throttles, dead letter queue, concurrent executions
+#
+# Format: Function name
+# Example: myapp-prod-processor, api-dev-handler
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to Lambda Console → Functions
+# 2. Find your Lambda function
+# 3. Copy the function name
+
+# --- LAMBDA 2 FUNCTION NAME (OPTIONAL) ---
+# Lambda2FunctionName: Name of the second Lambda function to monitor
+#
+# Purpose:
+# - Optional second Lambda function for CloudWatch alarms
+# - Creates same set of alarms as Lambda1
+#
+# Format: Function name or empty string
+# Example: myapp-prod-scheduler or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to Lambda Console → Functions
+# 2. Find your Lambda function
+# 3. Copy the function name
+# 4. Leave empty ("") if not monitoring a second function
+
+# --- LAMBDA 3 FUNCTION NAME (OPTIONAL) ---
+# Lambda3FunctionName: Name of the third Lambda function to monitor
+#
+# Purpose:
+# - Optional third Lambda function for CloudWatch alarms
+# - Creates same set of alarms as Lambda1
+#
+# Format: Function name or empty string
+# Example: myapp-prod-notifier or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to Lambda Console → Functions
+# 2. Find your Lambda function
+# 3. Copy the function name
+# 4. Leave empty ("") if not monitoring a third function
+
+# --- TEAM 1 SNS TOPIC ARN (OPTIONAL) ---
+# Team1SNSTopicArn: SNS Topic ARN for Team 1 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 1 (typically L2 Operations)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:ops-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 1 / L2 Operations
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 1 notifications
+
+# --- TEAM 2 SNS TOPIC ARN (OPTIONAL) ---
+# Team2SNSTopicArn: SNS Topic ARN for Team 2 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 2 (typically L3 Support/Development)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:dev-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 2 / L3 Support
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 2 notifications
+
+# --- TEAM 3 SNS TOPIC ARN (OPTIONAL) ---
+# Team3SNSTopicArn: SNS Topic ARN for Team 3 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 3 (typically Infrastructure/Platform)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:infra-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 3 / Infrastructure
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 3 notifications
+
+# --- ERROR THRESHOLD (OPTIONAL) ---
+# ErrorThreshold: Error count threshold for alarms
+#
+# Purpose:
+# - Number of errors that trigger the error alarm
+# - Applied across all monitored Lambda functions
+#
+# Format: Number or empty string
+# Default: 5
+# Example: 5, 10, 20, or ""
+#
+# Finding Your Value:
+# - Use default (5) for most applications
+# - Increase for high-volume functions with acceptable error rates
+# - Leave empty ("") to use default value
+
+# --- DURATION THRESHOLD (OPTIONAL) ---
+# DurationThreshold: Duration threshold in milliseconds
+#
+# Purpose:
+# - Maximum execution time before triggering duration alarm
+# - Applied across all monitored Lambda functions
+#
+# Format: Number (milliseconds) or empty string
+# Default: 30000 (30 seconds)
+# Example: 30000, 60000, 120000, or ""
+#
+# Finding Your Value:
+# - Consider Lambda timeout setting
+# - Set to 80-90% of timeout to catch performance issues
+# - Leave empty ("") to use default value (30 seconds)
+
+# --- THROTTLE THRESHOLD (OPTIONAL) ---
+# ThrottleThreshold: Throttle count threshold
+#
+# Purpose:
+# - Number of throttled invocations that trigger alarm
+# - Applied across all monitored Lambda functions
+#
+# Format: Number or empty string
+# Default: 1
+# Example: 1, 5, 10, or ""
+#
+# Finding Your Value:
+# - Use default (1) for immediate throttle detection
+# - Increase if occasional throttles are acceptable
+# - Leave empty ("") to use default value

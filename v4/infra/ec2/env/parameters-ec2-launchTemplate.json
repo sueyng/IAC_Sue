@@ -1,0 +1,34 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xyz"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    },
+    {
+        "ParameterKey": "EC2IAMRoleName",
+        "ParameterValue": "xyz-nprd-ec2-role"
+    },
+    {
+        "ParameterKey": "EC2InstanceProfileName",
+        "ParameterValue": "xyz-nprd-ec2-profile"
+    },
+    {
+        "ParameterKey": "EC2KeyPairName",
+        "ParameterValue": "xyz-nprd-ec2-kp"
+    },
+    {
+        "ParameterKey": "EC2LaunchTemplateName",
+        "ParameterValue": "xyz-nprd-ec2-launch-template"
+    },
+    {
+        "ParameterKey": "EC2InfraSecurityGroupName",
+        "ParameterValue": "xyz-nprd-sg-ec2-infra"
+    }
+]

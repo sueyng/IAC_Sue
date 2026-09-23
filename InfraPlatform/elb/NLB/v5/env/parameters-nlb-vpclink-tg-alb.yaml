@@ -1,0 +1,178 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. fhir, myapp, api (max 10 characters)
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+NLBName: "<edit_here>"                  # 📝 e.g. apt-nprd-nlb-vpclink, fhir-prod-nlb
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+NLBsubnetIds: "<edit_here>"             # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets, comma-separated)
+
+# TARGET CONFIGURATION
+TargetALBArn: ""                        # Target ALB ARN (leave empty if ALB not yet created)
+HealthCheckPath: "/ALBhealth"           # Health check path for ALB target
+
+# APPLICATION SUBNET CIDRS (for egress rules to ALB)
+VPCSubnetCidrAppAZ1: "<edit_here>"      # 📝 e.g. 10.53.144.128/26 (AZ1 app subnet where ALB is)
+VPCSubnetCidrAppAZ2: "<edit_here>"      # 📝 e.g. 10.53.144.192/26 (AZ2 app subnet)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# SECURITY - ACCESS CONTROL
+PrefixListNLBIngress: ""                # Prefix List ID for NLB ingress (443)
+APIGWVPCESecurityGroupID: ""            # API Gateway VPC Endpoint security group ID
+
+# ADDITIONAL APPLICATION SUBNET
+VPCSubnetCidrAppAZ3: ""                 # AZ3 app subnet CIDR (optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Used in stack naming convention
+# - Enables multi-application deployments
+#
+# Format: Lowercase alphanumeric
+# Example: fhir, myapp, api
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Determines resource lifecycle policies
+# - Used in resource naming
+#
+# Example: nprd, prod, nprd-dev
+
+# --- NLB NAME ---
+# NLBName: Unique identifier for the Network Load Balancer
+#
+# Purpose:
+# - Internal NLB for API Gateway VPC Link integration
+# - Static IPs per AZ for consistent access
+#
+# Format: Descriptive name
+# Example: apt-nprd-nlb-vpclink, fhir-prod-nlb-apigw
+#
+# Architecture:
+# API Gateway → VPC Link → NLB → Target Group → ALB → Backend
+
+# --- VPC ID ---
+# VpcId: VPC where NLB will be deployed
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-0d99a0c727b301d67
+
+# --- NLB SUBNET IDs ---
+# NLBsubnetIds: Comma-separated list of subnet IDs for NLB deployment
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones
+# - Must be private subnets
+# - Each subnet must have at least /27 CIDR (32 IPs)
+#
+# Format: subnet-xxx,subnet-yyy
+# Example: subnet-08170d48a795103d2,subnet-083fba964c347656f
+#
+# Best Practice:
+# - Use separate subnets for NLB, ALB, and application tiers
+
+# --- TARGET ALB ARN ---
+# TargetALBArn: ARN of target Application Load Balancer
+#
+# Two-Phase Deployment:
+# 1. Deploy without ALB ARN (creates NLB, target group, security groups)
+# 2. Update with ALB ARN and redeploy (registers ALB as target)
+#
+# Format: arn:aws:elasticloadbalancing:region:account:loadbalancer/app/name/id
+# Leave empty if ALB not yet created
+
+# --- HEALTH CHECK PATH ---
+# HealthCheckPath: HTTP(S) path for ALB health checks
+#
+# Format: /path
+# Example: /ALBhealth, /health, /api/status
+#
+# Important for VPC Link:
+# - Health check must succeed for VPC Link to work
+# - API Gateway checks VPC Link status (depends on NLB target health)
+# - Unhealthy target → API Gateway returns 503
+
+# --- APPLICATION SUBNET CIDRs ---
+# VPCSubnetCidrAppAZ1/AZ2: Application subnet CIDRs for egress rules
+#
+# Purpose:
+# - Security group egress rules allowing NLB → ALB traffic
+# - These are subnet CIDRs where ALB or ALB targets are deployed
+#
+# Format: CIDR notation (x.x.x.x/x)
+# Example: 10.53.144.128/26
+#
+# Egress Rules Created:
+# - Protocol: TCP, Port: 443
+# - Destination: Application subnet CIDRs
+#
+# How to determine:
+# aws elbv2 describe-load-balancers --names {alb-name} \
+#   --query 'LoadBalancers[0].AvailabilityZones[*].SubnetId' --output text | \
+#   xargs -I {} aws ec2 describe-subnets --subnet-ids {} \
+#   --query 'Subnets[0].CidrBlock' --output text
+
+# --- PREFIX LIST NLB INGRESS (OPTIONAL) ---
+# PrefixListNLBIngress: Prefix List ID for NLB ingress
+#
+# Purpose: Additional access control beyond API Gateway VPC Endpoint
+#
+# Use Cases:
+# - VPN client access for testing
+# - Cross-VPC peered traffic
+# - On-premises network via Direct Connect
+#
+# Format: pl-xxxxxxxxxxxxxxxxx or empty
+#
+# Leave empty for production API Gateway VPC Link (use APIGWVPCESecurityGroupID only)
+
+# --- API GATEWAY VPC ENDPOINT SECURITY GROUP ---
+# APIGWVPCESecurityGroupID: Security group ID of API Gateway VPC Endpoint
+#
+# Purpose: Allow traffic from API Gateway VPC Endpoint to NLB
+#
+# Format: sg-xxxxxxxxxxxxxxxxx or empty
+# Example: sg-0a1b2c3d4e5f6g7h8
+#
+# How to find:
+# aws ec2 describe-vpc-endpoints --vpc-endpoint-ids vpce-xxxxx \
+#   --query 'VpcEndpoints[0].Groups[0].GroupId' --output text
+#
+# Security Group Rule Created:
+# - Protocol: TCP, Port: 443
+# - Source: APIGWVPCESecurityGroupID
+#
+# Best Practice: Always specify for API Gateway VPC Link deployments
+
+# --- VPC SUBNET CIDR APP AZ3 (OPTIONAL) ---
+# VPCSubnetCidrAppAZ3: Application subnet CIDR for third AZ
+#
+# Format: CIDR notation or empty
+# Example: 10.53.144.256/26
+#
+# Leave empty for standard 2-AZ deployment
+

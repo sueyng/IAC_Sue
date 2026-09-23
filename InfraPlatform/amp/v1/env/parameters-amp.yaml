@@ -1,0 +1,59 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, xxx, demo
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+#
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates AMP workspace alias: {AppShortName}-{EnvName}-amp
+# - Creates CloudWatch log group: {AppShortName}-{EnvName}-logs-amp
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: myapp, xxx, demo
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-stg, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit-a,
+#   nprd-sit-b, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-pt, nprd-pp,
+#   nprd-pp-a, nprd-pp-b
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (workspace preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (workspace deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources

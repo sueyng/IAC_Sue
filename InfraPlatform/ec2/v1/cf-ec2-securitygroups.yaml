@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: 2010-09-09
+## Provisioning of EC2
+Description: EC2
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp-c
+      - prod
+      - prod-c
+  VpcId:
+    Type: String
+    Description: VPC ID
+  Function:
+    Type: String
+    Description: Server Function (eg, APP, UTL, DB)
+    AllowedValues:
+      - APP
+      - RP
+      - WEB
+      - DB
+      - UTL
+      - DBS
+  ALBSecurityGroupId:
+    Type: String
+    Description: Application Locad Balancer Security Group id
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasALBSecurityGroup: !Not [!Equals [!Ref ALBSecurityGroupId, '']]
+
+Resources:
+  EC2InfraSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      GroupDescription: Common Infra Security Group for EC2
+      GroupName:  !Sub sg_${AppShortName}-${EnvName}-ec2-infra
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v1
+#      SecurityGroupIngress:
+  EC2AppSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Common Security Group for EC2
+      GroupName:  !Sub sg_${AppShortName}-${EnvName}-ec2-${Function}
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - !If 
+            - "HasALBSecurityGroup"
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              SourceSecurityGroupId: !Ref ALBSecurityGroupId
+              Description: ApplicationLoadBalancer SecurityGroup ID
+            - !Ref AWS::NoValue
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v1
+
+Outputs:
+  EC2InfraSecurityGroupID:
+    Description: EC2 Infra Security Group ID
+    Value: !GetAtt EC2InfraSecurityGroup.GroupId
+    Export:
+      Name: "EC2InfraSecurityGroupID"
+  EC2AppSecurityGroupID:
+    Description: EC2 App Security Group ID
+    Value: !GetAtt EC2AppSecurityGroup.GroupId
+    Export:
+      Name: "EC2AppSecurityGroupID"

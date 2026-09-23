@@ -1,0 +1,432 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. grm, myapp, api
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, nprd-uat, prod
+VpcId: "<edit_here>"                             # 📝 e.g. vpc-0d99a0c727b301d67
+DBSubnetIds: "<edit_here>"                       # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets)
+DBInstanceIdentifier: "<edit_here>"              # 📝 e.g. grm-nprd-uat-rdssql
+DBProxySecretArn: "<edit_here>"                  # 📝 e.g. arn:aws:secretsmanager:region:account:secret:name
+VPCSubnetCidrAppAZ1: "<edit_here>"               # 📝 e.g. 10.1.128.0/20
+VPCSubnetCidrAppAZ2: "<edit_here>"               # 📝 e.g. 10.1.144.0/20
+VPCSubnetCidrAppAZ3: "<edit_here>"               # 📝 e.g. 10.1.160.0/20 (optional, leave empty if not needed)
+RDSInstanceSecurityGroupId: "<edit_here>"        # 📝 e.g. sg-0abc123def (RDS instance security group)
+VPCEndpointSecurityGroupId: "<edit_here>"        # 📝 e.g. sg-0xyz789ghi (VPC Endpoints security group)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# RDS PROXY PORT (NEW in v2.1)
+RDSProxyPort: "1433"                   # Port clients use to connect to proxy (default SQL Server port)
+
+# RDS INSTANCE PORTS (DO NOT CHANGE - locked values)
+ProdDBPort: "53341"                    # Production RDS port (Proxy to RDS egress) - DO NOT CHANGE
+NProdDBPort: "53331"                   # Non-production RDS port (Proxy to RDS egress) - DO NOT CHANGE
+
+# CONNECTION POOL SETTINGS
+MaxConnectionsPercent: "100"           # e.g. 100 (range 1-100)
+MaxIdleConnectionsPercent: "50"        # e.g. 50 (range 1-100)
+
+# DEPLOYMENT SERVER
+DeploymentServer: ""                   # e.g. 10.53.26.197/32 (CIDR notation)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates RDS Proxy name: {AppShortName}-{EnvName}-rds-proxy
+# - Used in IAM role naming
+# - Used in security group naming
+# - Used in SSM parameter paths
+#
+# Format: Lowercase alphanumeric, no special characters
+# Example: grm, myapp, api
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match AppShortName used in related RDS infrastructure
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines database port selection (prod vs nprd)
+# - Sets deletion policies (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-dev1, nprd-dev2, nprd-sit, nprd-sit1, nprd-sit2,
+#   nprd-sit3, nprd-sit-a, nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a,
+#   nprd-uat-b, nprd-uat-c, nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match EnvName used in related RDS infrastructure
+
+# --- VPC ID ---
+# VpcId: VPC where RDS Proxy will be deployed
+#
+# Purpose:
+# - RDS Proxy creates elastic network interfaces in this VPC
+# - Must be same VPC as target RDS instance
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx (17 characters after "vpc-")
+# Example: vpc-0d99a0c727b301d67
+#
+# Requirements:
+# - Must exist before deployment
+# - Must be same VPC as target RDS instance
+# - Must have DNS resolution enabled
+# - Must have DNS hostnames enabled
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Locate the VPC where your RDS instance is deployed
+# 3. Copy the VPC ID from the list
+
+# --- DB SUBNET IDs ---
+# DBSubnetIds: Comma-separated list of subnet IDs for RDS Proxy deployment
+#
+# Purpose:
+# - RDS Proxy creates elastic network interfaces in these subnets
+# - Must be same subnets as RDS DB subnet group (or overlapping)
+#
+# Format: subnet-xxx,subnet-yyy,subnet-zzz (comma-separated, no spaces)
+# Example: subnet-08170d48a795103d2,subnet-083fba964c347656f,subnet-0e54709c5b9c524e1
+#
+# Requirements:
+# - Minimum 2 subnets in different availability zones (recommended 3 for HA)
+# - Must be private subnets (no direct internet access)
+# - Must be in the VPC specified in VpcId parameter
+# - Subnets must have available IP addresses for ENI creation
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Subnet groups
+# 2. Locate the subnet group used by your RDS instance
+# 3. Copy the subnet IDs from the subnet group
+#
+# Alternative (from VPC Console):
+# 1. Navigate to VPC Console → Subnets
+# 2. Filter by VPC ID
+# 3. Select subnets tagged for database tier
+# 4. Ensure subnets are in different availability zones
+
+# --- DB INSTANCE IDENTIFIER ---
+# DBInstanceIdentifier: RDS database instance identifier to proxy
+#
+# Purpose:
+# - Identifies the target RDS instance for RDS Proxy
+# - RDS Proxy will route connections to this instance
+#
+# Format: RDS instance identifier (not ARN)
+# Example: grm-nprd-uat-rdssql, myapp-prod-postgres
+#
+# Requirements:
+# - RDS instance must exist before deploying RDS Proxy
+# - Instance must be in same VPC as RDS Proxy
+# - Instance must be in same region
+# - Supported engines: PostgreSQL, MySQL, MariaDB, SQL Server
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Locate your RDS instance
+# 3. Copy the "DB identifier" value (first column)
+# 4. Do NOT use the endpoint or ARN - use the identifier only
+
+# --- DB PROXY SECRET ARN ---
+# DBProxySecretArn: Secrets Manager secret ARN containing database credentials
+#
+# Purpose:
+# - RDS Proxy uses this secret to authenticate to the RDS instance
+# - Secret must contain database username and password
+#
+# Format: arn:aws:secretsmanager:region:account-id:secret:secret-name-suffix
+# Example: arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:rds-proxy-secret-AbCdEf
+#
+# Required Secret Format (JSON):
+# {
+#   "username": "admin",
+#   "password": "YourSecurePassword"
+# }
+#
+# Requirements:
+# - Secret must exist before deployment
+# - Username and password must match RDS master credentials
+# - Secret must be in same region as RDS Proxy
+# - Secret must not be encrypted with a customer-managed KMS key (use default AWS managed key)
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to Secrets Manager Console → Secrets
+# 2. Locate secret containing RDS master credentials
+# 3. Copy the "Secret ARN" value from secret details
+#
+# Creating a New Secret:
+# 1. Navigate to Secrets Manager Console → Store a new secret
+# 2. Select "Other type of secret"
+# 3. Add key-value pairs:
+#    - Key: username, Value: your-db-username
+#    - Key: password, Value: your-db-password
+# 4. Use default AWS managed encryption key
+# 5. Name: {AppShortName}-{EnvName}-rds-proxy-secret
+# 6. Copy the ARN after creation
+
+# --- VPC SUBNET CIDR APP AZ1/AZ2/AZ3 ---
+# VPCSubnetCidrAppAZ1: Application subnet CIDR in Availability Zone 1
+# VPCSubnetCidrAppAZ2: Application subnet CIDR in Availability Zone 2
+# VPCSubnetCidrAppAZ3: Application subnet CIDR in Availability Zone 3
+#
+# Purpose:
+# - Creates security group ingress rules allowing application → RDS Proxy access
+# - Allows applications in these subnets to connect to RDS Proxy
+#
+# Format: CIDR notation (x.x.x.x/x)
+# Example: 10.1.128.0/20, 10.1.144.0/20, 10.1.160.0/20
+#
+# Requirements:
+# - Specify at least 2 availability zones for high availability
+# - Use subnet CIDRs where applications run (ECS tasks, Lambda functions, EC2 instances)
+# - CIDRs must be valid and exist in the VPC
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Subnets
+# 2. Filter by VPC ID
+# 3. Locate subnets where your applications run (tagged as app/application tier)
+# 4. Copy the "IPv4 CIDR" value for each subnet
+# 5. Ensure you have subnets from at least 2 different availability zones
+#
+# Security Group Rules Created:
+# - Ingress: Allow RDSProxyPort from VPCSubnetCidrAppAZ1
+# - Ingress: Allow RDSProxyPort from VPCSubnetCidrAppAZ2
+# - Ingress: Allow RDSProxyPort from VPCSubnetCidrAppAZ3
+
+# --- RDS INSTANCE SECURITY GROUP ID ---
+# RDSInstanceSecurityGroupId: Security Group ID of the target RDS instance
+#
+# Purpose:
+# - Creates security group egress rule allowing RDS Proxy → RDS Instance access
+# - Enables RDS Proxy to establish connections to the database
+# - Using security group reference (instead of CIDR) is AWS best practice
+#
+# Format: sg-xxxxxxxxxxxxxxxxx
+# Example: sg-0abc123def456789a
+#
+# Requirements:
+# - Security group must exist before deployment
+# - Must be attached to the target RDS instance
+# - RDS instance security group must have inbound rule allowing traffic from RDS Proxy SG
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Select your RDS instance
+# 3. Go to "Connectivity & security" tab
+# 4. Under "Security" section, find "VPC security groups"
+# 5. Copy the security group ID (sg-xxxxxxxxx)
+#
+# Post-Deployment Action Required:
+# After deploying this template, add the following inbound rule to your RDS instance security group:
+# - Type: Custom TCP
+# - Port: Your database port (53331 or 53341)
+# - Source: RDS Proxy Security Group ID (from stack outputs)
+# - Description: Allow inbound from RDS Proxy
+
+# --- VPC ENDPOINT SECURITY GROUP ID ---
+# VPCEndpointSecurityGroupId: Security Group ID for VPC Endpoints
+#
+# Purpose:
+# - Creates security group egress rule allowing RDS Proxy → AWS Services access
+# - RDS Proxy needs to communicate with:
+#   * Secrets Manager (to retrieve database credentials)
+#   * KMS (to decrypt secrets if using CMK encryption)
+#   * CloudWatch Logs (for debug logging in non-production)
+# - Using security group reference ensures traffic stays within VPC (no internet)
+#
+# Format: sg-xxxxxxxxxxxxxxxxx
+# Example: sg-0xyz789ghi012345b
+#
+# Requirements:
+# - VPC Endpoints must exist for the following services:
+#   * com.amazonaws.{region}.secretsmanager
+#   * com.amazonaws.{region}.kms
+#   * com.amazonaws.{region}.logs
+# - All VPC Endpoints should share the same security group (or use separate SGs)
+# - VPC Endpoint security group must allow inbound HTTPS (443) from RDS Proxy SG
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Endpoints
+# 2. Locate your Secrets Manager VPC Endpoint (com.amazonaws.{region}.secretsmanager)
+# 3. Click on the endpoint
+# 4. Under "Security groups" tab, copy the security group ID
+# 5. Verify the same SG is attached to KMS and CloudWatch Logs endpoints
+#
+# If VPC Endpoints Don't Exist:
+# Contact your infrastructure team to create the required VPC Endpoints
+# with a shared security group before deploying this template.
+#
+# Post-Deployment Action Required:
+# After deploying this template, add the following inbound rule to your VPC Endpoint security group:
+# - Type: HTTPS
+# - Port: 443
+# - Source: RDS Proxy Security Group ID (from stack outputs)
+# - Description: Allow inbound from RDS Proxy
+
+# ================================================================================
+# v2.1 NEW/UPDATED PARAMETERS
+# ================================================================================
+
+# --- RDS PROXY PORT (NEW in v2.1) ---
+# RDSProxyPort: Port the RDS Proxy listens on for client connections
+#
+# Purpose:
+# - Defines the port applications use to connect TO the RDS Proxy
+# - Creates security group ingress rules on this port
+# - Separate from the RDS instance port (which is used for egress)
+#
+# Default: 1433 (standard SQL Server port)
+#
+# Traffic Flow:
+# - Application → Port 1433 (RDSProxyPort) → RDS Proxy → Port 53331/53341 → RDS Instance
+#
+# When to Change:
+# - Usually keep default 1433 for SQL Server
+# - Change if your application expects a different port
+#
+# Note: This is the port clients connect to. The RDS instance runs on a different
+# port (53331/53341) which is handled by ProdDBPort/NProdDBPort parameters.
+
+# --- DATABASE PORTS (UPDATED in v2.1) ---
+# ProdDBPort: Database port for production environments (Proxy → RDS egress)
+# NProdDBPort: Database port for non-production environments (Proxy → RDS egress)
+#
+# Purpose:
+# - Defines the port RDS Proxy uses to connect TO the RDS instance
+# - Creates security group egress rules on this port
+# - Template selects the appropriate port based on EnvName
+#
+# IMPORTANT: These values are now LOCKED with AllowedValues constraint
+# - ProdDBPort: Can ONLY be 53341
+# - NProdDBPort: Can ONLY be 53331
+#
+# Why Locked?
+# - Prevents accidental misconfiguration (e.g., using default 1433)
+# - Ensures egress rules match actual RDS instance port
+# - Reduces troubleshooting time from port mismatch issues
+#
+# Traffic Flow:
+# - Application → Port 1433 (RDSProxyPort) → RDS Proxy → Port 53331/53341 → RDS Instance
+#
+# Note: DO NOT CHANGE these values. If your RDS instance uses different ports,
+# contact the infrastructure team to update the template AllowedValues.
+
+# --- MAX CONNECTIONS PERCENT ---
+# MaxConnectionsPercent: Maximum percentage of database connections RDS Proxy can use
+#
+# Purpose:
+# - Limits the maximum number of database connections RDS Proxy can establish
+# - Calculated as percentage of RDS instance max_connections parameter
+#
+# Format: Integer from 1 to 100
+# Example: 100, 80, 75
+#
+# How It Works:
+# - If RDS max_connections = 1000 and MaxConnectionsPercent = 80
+# - RDS Proxy can use up to 800 connections to the database
+# - Remaining 200 connections available for direct access or other proxies
+#
+# Common Values:
+# - 100: Lambda/serverless workloads (proxy handles all connections)
+# - 75-90: ECS/EC2 mixed workloads (reserve connections for direct access)
+# - 80: General purpose (balanced approach)
+#
+# Finding RDS max_connections (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Select your RDS instance
+# 3. Go to Configuration tab → Parameter groups
+# 4. Search for "max_connections" parameter
+# 5. Note the value to calculate your desired percentage
+
+# --- MAX IDLE CONNECTIONS PERCENT ---
+# MaxIdleConnectionsPercent: Maximum percentage of idle connections to maintain
+#
+# Purpose:
+# - Percentage of total connections to keep idle in the connection pool
+# - Idle connections are ready for immediate reuse (reduces latency)
+#
+# Format: Integer from 1 to 100
+# Example: 50, 60, 40
+#
+# How It Works:
+# - If MaxConnectionsPercent = 100 and MaxIdleConnectionsPercent = 50
+# - RDS Proxy keeps up to 50% of maximum connections idle for fast reuse
+# - Reduces connection establishment overhead for new requests
+#
+# Common Values:
+# - 50: Balanced approach (default)
+# - 60-70: High concurrency workloads (Lambda, API Gateway)
+# - 25-40: Low concurrency workloads (reduces idle connection overhead)
+#
+# Benefits of Idle Connections:
+# - Faster response times (connections already established)
+# - Reduced CPU load on database (no connection handshake overhead)
+# - Better performance for bursty workloads
+
+# --- DEPLOYMENT SERVER (OPTIONAL) ---
+# DeploymentServer: CIDR of deployment or bastion server for database access
+#
+# Purpose:
+# - Allows deployment/bastion server to access RDS Proxy for administrative tasks
+# - Creates security group ingress rule for this CIDR
+#
+# Format: CIDR notation (typically /32 for single IP)
+# Example: 10.53.26.197/32, 10.0.1.0/24
+#
+# Use Cases:
+# - Bastion host for database administration
+# - Deployment server for schema migrations
+# - DevOps workstation for troubleshooting
+#
+# Finding Your Value (AWS Console):
+# 1. Identify the IP address of your deployment/bastion server
+# 2. For single server: use IP/32 (e.g., 10.53.26.197/32)
+# 3. For subnet: use subnet CIDR (e.g., 10.0.1.0/24)
+#
+# Leave empty ("") if not needed
+
+# ================================================================================
+# EXAMPLE FILLED PARAMETERS
+# ================================================================================
+#
+# AppShortName: "grm"
+# EnvName: "nprd-uat"
+# VpcId: "vpc-0d99a0c727b301d67"
+# DBSubnetIds: "subnet-08170d48a795103d2,subnet-083fba964c347656f,subnet-0e54709c5b9c524e1"
+# DBInstanceIdentifier: "grm-nprd-uat-rdssql"
+# DBProxySecretArn: "arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:grm-nprd-uat-rds-proxy-secret-AbCdEf"
+# VPCSubnetCidrAppAZ1: "10.1.128.0/20"
+# VPCSubnetCidrAppAZ2: "10.1.144.0/20"
+# VPCSubnetCidrAppAZ3: "10.1.160.0/20"
+# RDSInstanceSecurityGroupId: "sg-0abc123def456789a"
+# VPCEndpointSecurityGroupId: "sg-0xyz789ghi012345b"
+# RDSProxyPort: "1433"
+# ProdDBPort: "53341"
+# NProdDBPort: "53331"
+# MaxConnectionsPercent: "100"
+# MaxIdleConnectionsPercent: "50"
+# DeploymentServer: "10.53.26.197/32"

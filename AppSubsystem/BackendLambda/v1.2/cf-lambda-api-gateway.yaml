@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision and deploy a private API with swagger json file
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+    Default: 'healthb'
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+
+  SwaggerFile:
+    Description: Swagger File location and filename, s3bucketname/filename
+    Type: String
+    Default: ""
+
+  ApigwVpceId:
+    Type: String
+    Description: VPC Endpoint ID for APIGW, execute-api
+    Default: vpce-09855052bcd07c8b0
+
+  APIName:
+    Type: String
+    Description: API Name
+    Default: health-api
+
+  StageName:
+    Description: Stage Name for api setup, Use dev for non-prod env and prod for production env
+    Type: String
+    Default: dev
+
+  CustomDomainName:
+    Type: String
+    Description: The custom domain name for the API Gateway (e.g., api.example.com).
+    Default: ""
+
+  SSLCertificateArn:
+    Type: String
+    Description: The ARN of the SSL certificate for the custom domain name.
+    Default: ""
+    
+  LambdaAuthorizerFunctionArn:
+    Type: String
+    Description: The ARN of the Lambda Authorizer Function
+    Default: ""
+
+  AccessLogFormat:
+    Type: String
+    Description: Format string for API Gateway access logs (leave empty to disable access logging)
+    Default: ""
+
+  LogRetentionInDays:
+    Type: Number
+    Description: Number of days to retain API Gateway access logs
+    Default: 30
+
+  EnableCompression:
+    Type: String
+    Description: Enable API Gateway gzip response compression (yes/no). When yes, MinimumCompressionSize is applied. Default 'no' — project teams should audit client gzip handling (esp. .NET HttpClient AutomaticDecompression) before enabling.
+    AllowedValues: ['yes', 'no']
+    Default: 'no'
+
+  MinimumCompressionSize:
+    Type: Number
+    Description: Minimum response payload size in bytes to trigger gzip compression (only used when EnableCompression=yes). Valid range 0 to 10485760.
+    Default: 10240
+    MinValue: 0
+    MaxValue: 10485760
+
+Conditions:
+  EnableCustomDomain: !And
+    - !Not [!Equals [!Ref CustomDomainName, ""]]
+    - !Not [!Equals [!Ref SSLCertificateArn, ""]]
+  EnableLambdaAuthorizer: !Not [!Equals [!Ref LambdaAuthorizerFunctionArn, ""]]
+  EnableAccessLogs: !Not [!Equals [!Ref AccessLogFormat, ""]]
+  CompressionEnabled: !Equals [!Ref EnableCompression, 'yes']
+  IsProduction: !Or
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+Resources:
+  ApiGatewayAccessLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Condition: EnableAccessLogs
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${APIName}-access-logs'
+      RetentionInDays: !Ref LogRetentionInDays
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.2
+
+  ApiGatewayDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref CustomDomainName
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+          CertificateArn: !Ref SSLCertificateArn
+
+  ApiGatewayBasePathMapping:
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref ApiGatewayDomainName
+      RestApiId: !Ref PrivateApi
+      Stage: !Ref StageName
+      BasePath: ''   # Leave empty for the root path
+    DependsOn:
+      - ApiDeployment
+
+  PrivateApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Metadata:
+      DependsOn: !If [EnableCustomDomain, !Ref ApiGatewayDomainName, !Ref 'AWS::NoValue']
+    Properties:
+      Name: !Ref APIName
+      MinimumCompressionSize: !If
+        - CompressionEnabled
+        - !Ref MinimumCompressionSize
+        - !Ref 'AWS::NoValue'
+      FailOnWarnings: false
+      Body:
+        Fn::Transform:
+          Name: 'AWS::Include'
+          Parameters:
+            Location: !Ref SwaggerFile
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - !Ref ApigwVpceId
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: 'execute-api:Invoke'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:SourceVpce: !Ref ApigwVpceId
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-BackendLambda-v1.2
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+
+  ApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref PrivateApi
+      StageName: !Ref StageName
+      StageDescription: !If
+        - EnableAccessLogs
+        - AccessLogSetting:
+            DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+            Format: !Ref AccessLogFormat
+        - !Ref 'AWS::NoValue'
+
+  ApiGatewayAuthorizer:
+    Type: 'AWS::ApiGateway::Authorizer'
+    Condition: EnableLambdaAuthorizer
+    Properties:
+      Name: !Sub 'LambdaAuthorizer-${AppShortName}-${EnvName}'
+      Type: 'REQUEST'  # You can also use 'REQUEST' based on your use case
+      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizerFunctionArn}/invocations'
+      IdentitySource: 'method.request.header.Authorization'
+      RestApiId: !Ref PrivateApi
+
+  # API Gateway Permission to Invoke Lambda Authorizer
+  LambdaAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Condition: EnableLambdaAuthorizer
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref LambdaAuthorizerFunctionArn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PrivateApi}/authorizers/*"
+    DependsOn: ApiGatewayAuthorizer
+
+  ApiGatewayIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/lambda/${AppShortName}/${EnvName}/apigw_id"
+      Type: String
+      Value: !Ref PrivateApi
+      Description: !Sub "API Gateway ID for Lambda permissions - ${EnvName}"
+
+Outputs:
+  ApiId:
+    Description: ID of the REST API
+    Value: !Ref PrivateApi
+
+  ApiEndpoint:
+    Description: URL of the API Gateway endpoint
+    Value: !Sub "https://${PrivateApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
+
+  ApiStage:
+    Description: Name of the API Gateway stage
+    Value: !Ref StageName
+
+  ApiExecutionArn:
+    Description: Execution ARN of the API Gateway
+    Value: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PrivateApi}"
+
+  CustomDomainUrl:
+    Condition: EnableCustomDomain
+    Description: Custom domain URL for the API
+    Value: !Sub "https://${CustomDomainName}"
+
+  ApiAuthorizerId:
+    Condition: EnableLambdaAuthorizer
+    Description: ID of the Lambda Authorizer
+    Value: !Ref ApiGatewayAuthorizer

@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortNameBucket
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  BucketName:
+    Type: String
+    Description: S3 bucket name suffix
+
+  # CORS Configuration Parameters
+  EnableCorsConfiguration:
+    Type: String
+    Description: Enable CORS configuration for bucket
+    AllowedValues: 
+      - "true"
+      - "false"
+    Default: "false"
+
+  AllowedOrigins:
+    Type: String
+    Description: Comma-separated list of allowed origins for CORS (e.g., "https://example1.com,https://example2.com")
+    Default: "*"
+
+  EnableEventBridgeForS3Bucket:
+    Type: String
+    Description: Enable EventBridge notifications for bucket
+    AllowedValues: 
+      - "true"
+      - "false"
+    Default: "false"
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  IsCorsEnabled: !Equals [!Ref "EnableCorsConfiguration", "true"]
+  IsEventBridgeEnabled: !Equals [!Ref "EnableEventBridgeForS3Bucket", "true"]
+
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-${BucketName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration: !If
+        - IsEventBridgeEnabled
+        - EventBridgeConfiguration:
+            EventBridgeEnabled: true
+        - !Ref "AWS::NoValue"        
+      CorsConfiguration: !If 
+        - IsCorsEnabled
+        - CorsRules:
+            - AllowedHeaders: 
+                - "Authorization"
+                - "Content-Type"
+                - "x-amz-date"
+                - "x-amz-security-token"
+                - "x-amz-user-agent"
+              AllowedMethods: 
+                - "GET"
+              AllowedOrigins: !Split [",", !Ref AllowedOrigins]
+              ExposedHeaders:
+                - "ETag"
+                - "x-amz-server-side-encryption"
+                - "x-amz-request-id"
+                - "x-amz-id-2"
+              MaxAge: 3600
+        - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-s3-v3
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'

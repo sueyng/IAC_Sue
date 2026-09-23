@@ -1,0 +1,335 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Standalone template for CloudFront distribution with multiple S3 buckets
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+
+  CloudFrontCertArn:
+    Type: String
+    Description: The ARN of the ACM certificate to use with CloudFront
+
+  DefaultPage:
+    Type: String
+    Description: Default page
+    Default: index.html
+
+  CustomDomainName:
+    Type: String
+    Description: Custom domain name for CloudFront Distribution
+
+  PrimaryBucketName:
+    Type: String
+    Description: Name suffix for the primary S3 bucket
+
+  SecondaryBucketName:
+    Type: String
+    Description: Name suffix for the secondary S3 bucket
+
+  GeoLocation:
+    Type: String
+    Description: Comma-separated list of two-letter ISO country codes (e.g., "VN,PH,SG")
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref EnvName, "prod"], !Equals [!Ref EnvName, "prod-a"], !Equals [!Ref EnvName, "prod-b"]]
+
+Resources:
+  # Primary S3 Bucket
+  PrimaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${PrimaryBucketName}"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  PrimaryBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PrimaryBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${PrimaryBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt PrimaryBucket.Arn
+              - !Join ['', [!GetAtt PrimaryBucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt PrimaryBucket.Arn
+              - !Join ['', [!GetAtt PrimaryBucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # Secondary S3 Bucket
+  SecondaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${SecondaryBucketName}"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  SecondaryBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SecondaryBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${SecondaryBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt SecondaryBucket.Arn
+              - !Join ['', [!GetAtt SecondaryBucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt SecondaryBucket.Arn
+              - !Join ['', [!GetAtt SecondaryBucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # Logs S3 Bucket
+  LogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AppShortName}-${EnvName}-${PrimaryBucketName}-logs"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  LogsBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref LogsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: "Allow"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Sub "${LogsBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt LogsBucket.Arn
+              - !Join ['', [!GetAtt LogsBucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt LogsBucket.Arn
+              - !Join ['', [!GetAtt LogsBucket.Arn, '/*']]
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # CloudFront Resources
+  CloudFrontOriginAccessControlPrimary:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref PrimaryBucket
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontOriginAccessControlSecondary:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref SecondaryBucket
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Join ["-", [!Sub "${AppShortName}-${EnvName}-CacheDisabledPolicy", !Select [4, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+        Comment: "Custom policy with caching disabled"
+        DefaultTTL: 0
+        MaxTTL: 0
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: false
+          CookiesConfig:
+            CookieBehavior: "none"
+          HeadersConfig:
+            HeaderBehavior: "none"
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        HttpVersion: http2and3
+        DefaultRootObject: !Ref DefaultPage
+        Origins:
+          - Id: !Ref PrimaryBucket
+            DomainName: !Sub "${PrimaryBucket}.s3.${AWS::Region}.amazonaws.com"
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControlPrimary
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - Id: !Ref SecondaryBucket
+            DomainName: !Sub "${SecondaryBucket}.s3.${AWS::Region}.amazonaws.com"
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControlSecondary
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: !Ref PrimaryBucket
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: !Ref CloudFrontCachePolicy
+          Compress: true
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+        CacheBehaviors:
+          - PathPattern: "/swagger/*"
+            TargetOriginId: !Ref SecondaryBucket
+            ViewerProtocolPolicy: redirect-to-https
+            CachePolicyId: !Ref CloudFrontCachePolicy
+            Compress: true
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: !Sub "/${DefaultPage}"
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: !Sub "/${DefaultPage}"
+            ErrorCachingMinTTL: 10
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CloudFrontCertArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Aliases:
+          - !Ref CustomDomainName
+        PriceClass: PriceClass_200
+        Logging:
+          Bucket: !Sub ${LogsBucket}.s3.${AWS::Region}.amazonaws.com
+          IncludeCookies: true
+          Prefix: logs/
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: whitelist
+            Locations: !Split 
+              - ","
+              - !Ref GeoLocation
+

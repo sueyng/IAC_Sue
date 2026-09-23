@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS EKS Fargate Profile
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Description: Environment
+  FargateProfileName:
+    Type: String
+    Description: Fargate Profile Name
+  Namespace1:
+    Type: String
+    Description: First Kubernetes Namespace
+  Namespace2:
+    Type: String
+    Description: Second Kubernetes Namespace
+  Namespace3:
+    Type: String
+    Default: ""
+    Description: Third Kubernetes Namespace
+  Namespace4:
+    Type: String
+    Default: ""
+    Description: Fourth Kubernetes Namespace
+  Namespace5:
+    Type: String
+    Default: ""
+    Description: Fifth Kubernetes Namespace
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of App Subnet IDs
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+  HasNamespace1: !Not [!Equals [!Ref Namespace1, ""]]
+  HasNamespace2: !Not [!Equals [!Ref Namespace2, ""]]
+  HasNamespace3: !Not [!Equals [!Ref Namespace3, ""]]
+  HasNamespace4: !Not [!Equals [!Ref Namespace4, ""]]
+  HasNamespace5: !Not [!Equals [!Ref Namespace5, ""]]
+
+Resources:
+  EKSFargateProfile:
+    Type: 'AWS::EKS::FargateProfile'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FargateProfileName: !Sub fp_${FargateProfileName}
+      ClusterName: !Sub '{{resolve:ssm:${AppShortName}-${EnvName}-parameter-EKSControlPlane}}'      
+      PodExecutionRoleArn: !Sub '{{resolve:ssm:${AppShortName}-${EnvName}-parameter-FargatePodExecutionRoleArn}}'
+      Subnets: !Ref AppSubnetIds
+      Selectors:
+        - Fn::If:
+          - HasNamespace1
+          - { Namespace: !Ref Namespace1 }
+          - !Ref "AWS::NoValue"
+        - Fn::If:
+          - HasNamespace2
+          - { Namespace: !Ref Namespace2 }
+          - !Ref "AWS::NoValue"
+        - Fn::If:
+          - HasNamespace3
+          - { Namespace: !Ref Namespace3 }
+          - !Ref "AWS::NoValue"
+        - Fn::If:
+          - HasNamespace4
+          - { Namespace: !Ref Namespace4 }
+          - !Ref "AWS::NoValue"
+        - Fn::If:
+          - HasNamespace5
+          - { Namespace: !Ref Namespace5 }
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EKS-v2

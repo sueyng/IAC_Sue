@@ -1,0 +1,97 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Common private REST API sample using VPC Link V2",
+    "version": "1.0.0",
+    "title": "replace-with-api-name"
+  },
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/{proxy+}": {
+      "options": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "proxy",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS response",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Methods": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Headers": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Methods": "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Origin": "'https://frontend.example.com'"
+              }
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "passthroughBehavior": "when_no_match",
+          "type": "mock"
+        }
+      },
+      "x-amazon-apigateway-any-method": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "proxy",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proxy response"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "https://backend.internal.example.com:443/{proxy}",
+          "connectionId": "replace-with-vpclink-v2-id",
+          "integrationTarget": "arn:aws:elasticloadbalancing:ap-southeast-1:123456789012:loadbalancer/app/replace-with-alb-name/replace-with-alb-id",
+          "httpMethod": "ANY",
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "requestParameters": {
+            "integration.request.path.proxy": "method.request.path.proxy"
+          },
+          "connectionType": "VPC_LINK",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "type": "http_proxy"
+        }
+      }
+    }
+  }
+}

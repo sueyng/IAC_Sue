@@ -1,0 +1,242 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, data
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+RDSInstanceIdentifier1: "<edit_here>"            # 📝 e.g. myapp-prod-db-primary
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+RDSInstanceIdentifier2: ""                       # e.g. myapp-prod-db-replica
+RDSInstanceIdentifier3: ""                       # e.g. myapp-prod-db-readonly
+Team1SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:ops-team
+Team2SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:dev-team
+Team3SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:infra-team
+CPUThreshold: ""                                 # e.g. 80 (default is 80)
+DatabaseConnectionsThreshold: "80"               # e.g. 80 (default is 80)
+FreeableMemoryThreshold: "2147483648"            # e.g. 2147483648 (default is 2GB in bytes)
+FreeStorageSpaceThreshold: "10737418240"         # e.g. 10737418240 (default is 10GB in bytes)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates alarm names: {AppShortName}-{EnvName}-{InstanceIdentifier}-*
+# - Used for alarm organization and filtering
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, data
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a,
+#   nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#   nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (alarms preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (alarms deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- RDS INSTANCE IDENTIFIER 1 ---
+# RDSInstanceIdentifier1: DB instance identifier for first RDS database
+#
+# Purpose:
+# - Specifies primary RDS instance for CloudWatch alarms
+# - Creates alarms for CPU, connections, memory, storage
+#
+# Format: DB instance identifier
+# Example: myapp-prod-db-primary, api-dev-postgres
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Find your RDS database instance
+# 3. Copy the DB instance identifier
+
+# --- RDS INSTANCE IDENTIFIER 2 (OPTIONAL) ---
+# RDSInstanceIdentifier2: DB instance identifier for second RDS database
+#
+# Purpose:
+# - Optional second RDS instance for CloudWatch alarms
+# - Creates same set of alarms as RDS Instance 1
+#
+# Format: DB instance identifier or empty string
+# Example: myapp-prod-db-replica or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Find your RDS database instance
+# 3. Copy the DB instance identifier
+# 4. Leave empty ("") if not monitoring a second instance
+
+# --- RDS INSTANCE IDENTIFIER 3 (OPTIONAL) ---
+# RDSInstanceIdentifier3: DB instance identifier for third RDS database
+#
+# Purpose:
+# - Optional third RDS instance for CloudWatch alarms
+# - Creates same set of alarms as RDS Instance 1
+#
+# Format: DB instance identifier or empty string
+# Example: myapp-prod-db-readonly or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to RDS Console → Databases
+# 2. Find your RDS database instance
+# 3. Copy the DB instance identifier
+# 4. Leave empty ("") if not monitoring a third instance
+
+# --- TEAM 1 SNS TOPIC ARN (OPTIONAL) ---
+# Team1SNSTopicArn: SNS Topic ARN for Team 1 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 1 (typically L2 Operations)
+# - CPU and database connections alarms send to this topic
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:ops-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 1 / L2 Operations
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 1 notifications
+
+# --- TEAM 2 SNS TOPIC ARN (OPTIONAL) ---
+# Team2SNSTopicArn: SNS Topic ARN for Team 2 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 2 (typically L3 Support/Development)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:dev-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 2 / L3 Support
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 2 notifications
+
+# --- TEAM 3 SNS TOPIC ARN (OPTIONAL) ---
+# Team3SNSTopicArn: SNS Topic ARN for Team 3 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 3 (typically Infrastructure/Platform)
+# - Database connections, memory, and storage alarms send to this topic
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:infra-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 3 / Infrastructure
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 3 notifications
+
+# --- CPU THRESHOLD (OPTIONAL) ---
+# CPUThreshold: CPU utilization threshold percentage
+#
+# Purpose:
+# - CPU utilization percentage that triggers alarm
+# - Applied across all monitored RDS instances
+#
+# Format: Number or empty string
+# Default: 80
+# Example: 80, 85, 90, or ""
+#
+# Finding Your Value:
+# - Use default (80%) for most applications
+# - Adjust based on workload characteristics
+# - Leave empty ("") to use default value
+
+# --- DATABASE CONNECTIONS THRESHOLD (OPTIONAL) ---
+# DatabaseConnectionsThreshold: Database connections threshold
+#
+# Purpose:
+# - Number of database connections that triggers alarm
+# - Applied across all monitored RDS instances
+#
+# Format: Number or empty string
+# Default: 80
+# Example: 80, 100, 200, or ""
+#
+# Finding Your Value:
+# - Consider max_connections setting for your RDS instance
+# - Set to 60-80% of max_connections
+# - Leave empty ("") to use default value
+
+# --- FREEABLE MEMORY THRESHOLD (OPTIONAL) ---
+# FreeableMemoryThreshold: Freeable memory threshold in bytes
+#
+# Purpose:
+# - Minimum freeable memory before triggering alarm
+# - Applied across all monitored RDS instances
+#
+# Format: Number (bytes) or empty string
+# Default: 2147483648 (2 GB)
+# Example: 2147483648, 4294967296, or ""
+#
+# Common Values:
+# - 2147483648: 2 GB
+# - 4294967296: 4 GB
+# - 8589934592: 8 GB
+#
+# Finding Your Value:
+# - Consider RDS instance memory allocation
+# - Set to 10-20% of total instance memory
+# - Leave empty ("") to use default value (2 GB)
+
+# --- FREE STORAGE SPACE THRESHOLD (OPTIONAL) ---
+# FreeStorageSpaceThreshold: Free storage space threshold in bytes
+#
+# Purpose:
+# - Minimum free storage space before triggering alarm
+# - Applied across all monitored RDS instances
+#
+# Format: Number (bytes) or empty string
+# Default: 10737418240 (10 GB)
+# Example: 10737418240, 21474836480, or ""
+#
+# Common Values:
+# - 10737418240: 10 GB
+# - 21474836480: 20 GB
+# - 53687091200: 50 GB
+#
+# Finding Your Value:
+# - Consider RDS storage allocation and growth rate
+# - Set based on expected data growth
+# - Leave empty ("") to use default value (10 GB)

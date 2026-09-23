@@ -1,0 +1,268 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+ECSClusterName: "<edit_here>"                    # 📝 e.g. myapp-prod-cluster
+ECSService1Name: "<edit_here>"                   # 📝 e.g. myapp-prod-web-service
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+ECSService2Name: ""                              # e.g. myapp-prod-api-service
+ECSService3Name: ""                              # e.g. myapp-prod-worker-service
+CPUUtilizationCriticalThreshold: "90"              # e.g. 90 (default is 90)
+CPUUtilizationWarningThreshold: "80"               # e.g. 80 (default is 80)
+MemoryUtilizationCriticalThreshold: "90"           # e.g. 90 (default is 90)
+MemoryUtilizationWarningThreshold: "90"            # e.g. 80 (default is 80)
+DesiredCountThreshold: "80"                        # e.g. 1 (default is 1)
+RunningTaskCountThreshold: "1"                     # e.g. 1 (default is 1)
+Team1SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:ops-team
+Team2SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:dev-team
+Team3SNSTopicArn: ""                             # e.g. arn:aws:sns:region:account:infra-team
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates alarm names: {AppShortName}-{EnvName}-{ServiceName}-*
+# - Used for alarm organization and filtering
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Should match naming used in other infrastructure components
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a,
+#   nprd-sit-b, nprd-sit-c, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#   nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (alarms preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (alarms deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- ECS CLUSTER NAME ---
+# ECSClusterName: ECS cluster name for monitoring
+#
+# Purpose:
+# - Specifies ECS cluster for CloudWatch alarms
+# - Creates cluster-level alarms for CPU/memory reservation
+#
+# Format: Cluster name
+# Example: myapp-prod-cluster, api-dev-cluster
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to ECS Console → Clusters
+# 2. Find your ECS cluster
+# 3. Copy the cluster name
+
+# --- ECS SERVICE 1 NAME ---
+# ECSService1Name: ECS service 1 name for monitoring
+#
+# Purpose:
+# - Specifies primary ECS service for CloudWatch alarms
+# - Creates alarms for CPU, memory, running tasks, desired count
+#
+# Format: Service name
+# Example: myapp-prod-web-service, api-dev-service
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to ECS Console → Clusters → Your Cluster → Services
+# 2. Find your ECS service
+# 3. Copy the service name
+
+# --- ECS SERVICE 2/3 NAMES (OPTIONAL) ---
+# ECSService2Name, ECSService3Name: Additional ECS services for monitoring
+#
+# Purpose:
+# - Monitor additional ECS services (optional)
+# - Creates same set of alarms as Service 1
+#
+# Format: Service name or empty string
+# Example: myapp-prod-api-service or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to ECS Console → Clusters → Your Cluster → Services
+# 2. Find your ECS service
+# 3. Copy the service name
+# 4. Leave empty ("") if not monitoring additional services
+
+# --- CPU UTILIZATION CRITICAL THRESHOLD (OPTIONAL) ---
+# CPUUtilizationCriticalThreshold: CPU utilization critical threshold percentage
+#
+# Purpose:
+# - CPU utilization percentage that triggers critical alarm
+# - Applied across all monitored ECS services
+#
+# Format: Number (50-100) or empty string
+# Default: 90
+# Example: 90, 85, 95, or ""
+#
+# Finding Your Value:
+# - Use default (90%) for most applications
+# - Lower for latency-sensitive applications
+# - Leave empty ("") to use default value
+
+# --- CPU UTILIZATION WARNING THRESHOLD (OPTIONAL) ---
+# CPUUtilizationWarningThreshold: CPU utilization warning threshold percentage
+#
+# Purpose:
+# - CPU utilization percentage that triggers warning alarm
+# - Applied across all monitored ECS services
+# - Should be lower than critical threshold
+#
+# Format: Number (50-100) or empty string
+# Default: 80
+# Example: 80, 75, 85, or ""
+#
+# Finding Your Value:
+# - Should be 10-15% below critical threshold
+# - Provides early warning before critical state
+# - Leave empty ("") to use default value
+
+# --- MEMORY UTILIZATION CRITICAL THRESHOLD (OPTIONAL) ---
+# MemoryUtilizationCriticalThreshold: Memory utilization critical threshold percentage
+#
+# Purpose:
+# - Memory utilization percentage that triggers critical alarm
+# - Applied across all monitored ECS services
+#
+# Format: Number (50-100) or empty string
+# Default: 90
+# Example: 90, 85, 95, or ""
+#
+# Finding Your Value:
+# - Use default (90%) for most applications
+# - Consider memory leak detection requirements
+# - Leave empty ("") to use default value
+
+# --- MEMORY UTILIZATION WARNING THRESHOLD (OPTIONAL) ---
+# MemoryUtilizationWarningThreshold: Memory utilization warning threshold percentage
+#
+# Purpose:
+# - Memory utilization percentage that triggers warning alarm
+# - Applied across all monitored ECS services
+# - Should be lower than critical threshold
+#
+# Format: Number (50-100) or empty string
+# Default: 80
+# Example: 80, 75, 85, or ""
+#
+# Finding Your Value:
+# - Should be 10-15% below critical threshold
+# - Provides early warning before critical state
+# - Leave empty ("") to use default value
+
+# --- DESIRED COUNT THRESHOLD (OPTIONAL) ---
+# DesiredCountThreshold: Minimum desired count threshold for running tasks
+#
+# Purpose:
+# - Minimum number of desired tasks before triggering alarm
+# - Applied across all monitored ECS services
+#
+# Format: Number (minimum 1) or empty string
+# Default: 1
+# Example: 1, 2, 3, or ""
+#
+# Finding Your Value:
+# - Set to match service's minimum healthy count
+# - Consider high availability requirements
+# - Leave empty ("") to use default value (1)
+
+# --- RUNNING TASK COUNT THRESHOLD (OPTIONAL) ---
+# RunningTaskCountThreshold: Minimum running task count threshold
+#
+# Purpose:
+# - Minimum number of running tasks before triggering alarm
+# - Applied across all monitored ECS services
+#
+# Format: Number (minimum 1) or empty string
+# Default: 1
+# Example: 1, 2, 3, or ""
+#
+# Finding Your Value:
+# - Set to match service's minimum healthy count
+# - Consider high availability requirements
+# - Leave empty ("") to use default value (1)
+
+# --- TEAM 1 SNS TOPIC ARN (OPTIONAL) ---
+# Team1SNSTopicArn: SNS Topic ARN for Team 1 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 1 (typically L2 Operations)
+# - All alarms send to this topic when triggered
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:ops-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 1 / L2 Operations
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 1 notifications
+
+# --- TEAM 2 SNS TOPIC ARN (OPTIONAL) ---
+# Team2SNSTopicArn: SNS Topic ARN for Team 2 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 2 (typically L3 Support/Development)
+# - Critical and warning alarms send to this topic
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:dev-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 2 / L3 Support
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 2 notifications
+
+# --- TEAM 3 SNS TOPIC ARN (OPTIONAL) ---
+# Team3SNSTopicArn: SNS Topic ARN for Team 3 notifications
+#
+# Purpose:
+# - Sends alarm notifications to Team 3 (typically Infrastructure/Platform)
+# - Critical alarms and cluster-level alarms send to this topic
+#
+# Format: arn:aws:sns:region:account-id:topic-name or empty string
+# Example: arn:aws:sns:ap-southeast-1:123456789012:infra-team or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to SNS Console → Topics
+# 2. Find the topic for Team 3 / Infrastructure
+# 3. Copy the ARN
+# 4. Leave empty ("") if not using Team 3 notifications

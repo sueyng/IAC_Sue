@@ -1,0 +1,14 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-sit1"
+    },
+    {
+        "ParameterKey": "BucketNames",
+        "ParameterValue": "dataloading,extraction"
+    }
+]

@@ -1,0 +1,693 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for CloudFront distribution with flexible number of existing S3 bucket origins (1-4) and configurable domain settings with WAF support
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  NumberOfBuckets:
+    Type: Number
+    Description: Number of S3 bucket origins to use (1-4)
+    MinValue: 1
+    MaxValue: 4
+    Default: 1
+
+  DefaultPage:
+    Type: String
+    Description: Default page
+    Default: index.html
+
+  UseCustomDomain:
+    Type: String
+    Description: Choose whether to use a custom domain name or CloudFront default domain
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  CustomDomainName:
+    Type: String
+    Description: Custom domain name for CloudFront Distribution (required if UseCustomDomain is true)
+    Default: ""
+
+  CloudFrontCertArn:
+    Type: String
+    Description: The ARN of the ACM certificate to use with CloudFront (required if UseCustomDomain is true)
+    Default: ""
+
+  GeoLocation:
+    Type: String
+    Description: Comma-separated list of two-letter ISO country codes (e.g., "VN,PH,SG")
+
+  # WAF Parameters
+  WAFWebACLArn:
+    Type: String
+    Description: The ARN of the WAF Web ACL to associate with the CloudFront distribution (leave empty to disable WAF)
+    Default: ""
+
+  # Bucket parameters
+  Bucket1Name:
+    Type: String
+    Description: Name of the existing first S3 bucket
+
+  Bucket1FunctionEnabled:
+    Type: String
+    Description: Enable CloudFront Function for Bucket1
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  Bucket1FunctionName:
+    Type: String
+    Description: Name for Bucket1's CloudFront Function (required if Bucket1FunctionEnabled is true)
+    Default: ""
+    MinLength: 0
+    MaxLength: 64
+    AllowedPattern: "^$|[a-zA-Z0-9-_]+"
+    ConstraintDescription: "Function name can only contain letters, numbers, hyphens, and underscores"
+
+  Bucket2Name:
+    Type: String
+    Description: Name of the existing second S3 bucket (if needed)
+    Default: ""
+
+  Bucket2PathPattern:
+    Type: String
+    Description: Path pattern for second bucket
+    Default: ""
+
+  Bucket2FunctionEnabled:
+    Type: String
+    Description: Enable CloudFront Function for Bucket2
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  Bucket2FunctionName:
+    Type: String
+    Description: Name for Bucket2's CloudFront Function (required if Bucket2FunctionEnabled is true)
+    Default: ""
+    MinLength: 0
+    MaxLength: 64
+    AllowedPattern: "^$|[a-zA-Z0-9-_]+"
+    ConstraintDescription: "Function name can only contain letters, numbers, hyphens, and underscores"
+
+  Bucket3Name:
+    Type: String
+    Description: Name of the existing third S3 bucket (if needed)
+    Default: ""
+
+  Bucket3PathPattern:
+    Type: String
+    Description: Path pattern for third bucket
+    Default: ""
+
+  Bucket3FunctionEnabled:
+    Type: String
+    Description: Enable CloudFront Function for Bucket3
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  Bucket3FunctionName:
+    Type: String
+    Description: Name for Bucket3's CloudFront Function (required if Bucket3FunctionEnabled is true)
+    Default: ""
+    MinLength: 0
+    MaxLength: 64
+    AllowedPattern: "^$|[a-zA-Z0-9-_]+"
+    ConstraintDescription: "Function name can only contain letters, numbers, hyphens, and underscores"
+
+  Bucket4Name:
+    Type: String
+    Description: Name of the existing fourth S3 bucket (if needed)
+    Default: ""
+
+  Bucket4PathPattern:
+    Type: String
+    Description: Path pattern for fourth bucket
+    Default: ""
+
+  Bucket4FunctionEnabled:
+    Type: String
+    Description: Enable CloudFront Function for Bucket4
+    Default: "false"
+    AllowedValues: ["true", "false"]
+
+  Bucket4FunctionName:
+    Type: String
+    Description: Name for Bucket4's CloudFront Function (required if Bucket4FunctionEnabled is true)
+    Default: ""
+    MinLength: 0
+    MaxLength: 64
+    AllowedPattern: "^$|[a-zA-Z0-9-_]+"
+    ConstraintDescription: "Function name can only contain letters, numbers, hyphens, and underscores"
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref EnvName, "prod"], !Equals [!Ref EnvName, "prod-a"], !Equals [!Ref EnvName, "prod-b"], !Equals [!Ref EnvName, "prod-c"]]
+  CreateBucket2: !Not [!Equals [!Ref NumberOfBuckets, 1]]
+  CreateBucket3: !Or [!Equals [!Ref NumberOfBuckets, 3], !Equals [!Ref NumberOfBuckets, 4]]
+  CreateBucket4: !Equals [!Ref NumberOfBuckets, 4]
+  UseCustomDomainConfig: !Equals [!Ref UseCustomDomain, "true"]
+  UseWAFConfig: !Not [!Equals [!Ref WAFWebACLArn, ""]]
+
+  # Validate function names when enabled
+  ValidateBucket1FunctionName: !And
+    - !Equals [!Ref Bucket1FunctionEnabled, "true"]
+    - !Not [!Equals [!Ref Bucket1FunctionName, ""]]
+  ValidateBucket2FunctionName: !And
+    - !Equals [!Ref Bucket2FunctionEnabled, "true"]
+    - !Not [!Equals [!Ref Bucket2FunctionName, ""]]
+  ValidateBucket3FunctionName: !And
+    - !Equals [!Ref Bucket3FunctionEnabled, "true"]
+    - !Not [!Equals [!Ref Bucket3FunctionName, ""]]
+  ValidateBucket4FunctionName: !And
+    - !Equals [!Ref Bucket4FunctionEnabled, "true"]
+    - !Not [!Equals [!Ref Bucket4FunctionName, ""]]
+
+  # Update function creation conditions to include validation
+  CreateBucket1Function: !And
+    - !Equals [!Ref Bucket1FunctionEnabled, "true"]
+    - !Condition ValidateBucket1FunctionName
+  CreateBucket2Function: !And 
+    - !Equals [!Ref Bucket2FunctionEnabled, "true"]
+    - !Condition CreateBucket2
+    - !Condition ValidateBucket2FunctionName
+  CreateBucket3Function: !And 
+    - !Equals [!Ref Bucket3FunctionEnabled, "true"]
+    - !Condition CreateBucket3
+    - !Condition ValidateBucket3FunctionName
+  CreateBucket4Function: !And 
+    - !Equals [!Ref Bucket4FunctionEnabled, "true"]
+    - !Condition CreateBucket4
+    - !Condition ValidateBucket4FunctionName
+
+Resources:
+  # Bucket policies
+  Bucket1Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Bucket1Name
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${Bucket1Name}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket1Name}"
+              - !Sub "arn:aws:s3:::${Bucket1Name}/*"
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket1Name}"
+              - !Sub "arn:aws:s3:::${Bucket1Name}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  Bucket2Policy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateBucket2
+    Properties:
+      Bucket: !Ref Bucket2Name
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${Bucket2Name}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket2Name}"
+              - !Sub "arn:aws:s3:::${Bucket2Name}/*"
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket2Name}"
+              - !Sub "arn:aws:s3:::${Bucket2Name}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  Bucket3Policy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateBucket3
+    Properties:
+      Bucket: !Ref Bucket3Name
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${Bucket3Name}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket3Name}"
+              - !Sub "arn:aws:s3:::${Bucket3Name}/*"
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket3Name}"
+              - !Sub "arn:aws:s3:::${Bucket3Name}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  Bucket4Policy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateBucket4
+    Properties:
+      Bucket: !Ref Bucket4Name
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${Bucket4Name}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket4Name}"
+              - !Sub "arn:aws:s3:::${Bucket4Name}/*"
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub "arn:aws:s3:::${Bucket4Name}"
+              - !Sub "arn:aws:s3:::${Bucket4Name}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # CloudFront Origin Access Controls
+  CloudFrontOriginAccessControl1:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref Bucket1Name
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontOriginAccessControl2:
+    Type: AWS::CloudFront::OriginAccessControl
+    Condition: CreateBucket2
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref Bucket2Name
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontOriginAccessControl3:
+    Type: AWS::CloudFront::OriginAccessControl
+    Condition: CreateBucket3
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref Bucket3Name
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontOriginAccessControl4:
+    Type: AWS::CloudFront::OriginAccessControl
+    Condition: CreateBucket4
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref Bucket4Name
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Join ["-", [!Sub "${AppShortName}-${EnvName}-CacheDisabledPolicy", !Select [4, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+        Comment: "Custom policy with caching disabled"
+        DefaultTTL: 0
+        MaxTTL: 0
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: false
+          CookiesConfig:
+            CookieBehavior: "none"
+          HeadersConfig:
+            HeaderBehavior: "none"
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+
+  Bucket1CloudFrontFunction:
+    Type: AWS::CloudFront::Function
+    Condition: CreateBucket1Function
+    Properties:
+      Name: !Ref Bucket1FunctionName
+      AutoPublish: true
+      FunctionConfig:
+        Comment: !Sub "Function for ${Bucket1Name} origin - update code via console"
+        Runtime: "cloudfront-js-2.0"
+      FunctionCode: |
+        function handler(event) {
+          return event.request;
+        }
+
+  Bucket2CloudFrontFunction:
+    Type: AWS::CloudFront::Function
+    Condition: CreateBucket2Function
+    Properties:
+      Name: !Ref Bucket2FunctionName
+      AutoPublish: true
+      FunctionConfig:
+        Comment: !Sub "Function for ${Bucket2Name} origin - update code via console"
+        Runtime: "cloudfront-js-2.0"
+      FunctionCode: |
+        function handler(event) {
+          return event.request;
+        }
+
+  Bucket3CloudFrontFunction:
+    Type: AWS::CloudFront::Function
+    Condition: CreateBucket3Function
+    Properties:
+      Name: !Ref Bucket3FunctionName
+      AutoPublish: true
+      FunctionConfig:
+        Comment: !Sub "Function for ${Bucket3Name} origin - update code via console"
+        Runtime: "cloudfront-js-2.0"
+      FunctionCode: |
+        function handler(event) {
+          return event.request;
+        }
+
+  Bucket4CloudFrontFunction:
+    Type: AWS::CloudFront::Function
+    Condition: CreateBucket4Function
+    Properties:
+      Name: !Ref Bucket4FunctionName
+      AutoPublish: true
+      FunctionConfig:
+        Comment: !Sub "Function for ${Bucket4Name} origin - update code via console"
+        Runtime: "cloudfront-js-2.0"
+      FunctionCode: |
+        function handler(event) {
+          return event.request;
+        }
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        HttpVersion: http2and3
+        DefaultRootObject: !Ref DefaultPage
+        WebACLId: !If
+          - UseWAFConfig
+          - !Ref WAFWebACLArn
+          - !Ref "AWS::NoValue"
+        Origins:
+          - Id: !Ref Bucket1Name
+            DomainName: !Sub "${Bucket1Name}.s3.${AWS::Region}.amazonaws.com"
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl1
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - !If 
+            - CreateBucket2
+            - Id: !Ref Bucket2Name
+              DomainName: !Sub "${Bucket2Name}.s3.${AWS::Region}.amazonaws.com"
+              OriginAccessControlId: !Ref CloudFrontOriginAccessControl2
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+            - !Ref "AWS::NoValue"
+          - !If 
+            - CreateBucket3
+            - Id: !Ref Bucket3Name
+              DomainName: !Sub "${Bucket3Name}.s3.${AWS::Region}.amazonaws.com"
+              OriginAccessControlId: !Ref CloudFrontOriginAccessControl3
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+            - !Ref "AWS::NoValue"
+          - !If 
+            - CreateBucket4
+            - Id: !Ref Bucket4Name
+              DomainName: !Sub "${Bucket4Name}.s3.${AWS::Region}.amazonaws.com"
+              OriginAccessControlId: !Ref CloudFrontOriginAccessControl4
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+            - !Ref "AWS::NoValue"
+        DefaultCacheBehavior:
+          TargetOriginId: !Ref Bucket1Name
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: !Ref CloudFrontCachePolicy
+          Compress: true
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          FunctionAssociations: !If
+            - CreateBucket1Function
+            - - EventType: viewer-request
+                FunctionARN: !GetAtt Bucket1CloudFrontFunction.FunctionARN
+            - []
+        CacheBehaviors:
+          - !If 
+            - CreateBucket2
+            - PathPattern: !Ref Bucket2PathPattern
+              TargetOriginId: !Ref Bucket2Name
+              ViewerProtocolPolicy: redirect-to-https
+              CachePolicyId: !Ref CloudFrontCachePolicy
+              Compress: true
+              AllowedMethods:
+                - GET
+                - HEAD
+              CachedMethods:
+                - GET
+                - HEAD
+              FunctionAssociations: !If
+                - CreateBucket2Function
+                - - EventType: viewer-request
+                    FunctionARN: !GetAtt Bucket2CloudFrontFunction.FunctionARN
+                - []
+            - !Ref "AWS::NoValue"
+          - !If 
+            - CreateBucket3
+            - PathPattern: !Ref Bucket3PathPattern
+              TargetOriginId: !Ref Bucket3Name
+              ViewerProtocolPolicy: redirect-to-https
+              CachePolicyId: !Ref CloudFrontCachePolicy
+              Compress: true
+              AllowedMethods:
+                - GET
+                - HEAD
+              CachedMethods:
+                - GET
+                - HEAD
+              FunctionAssociations: !If
+                - CreateBucket3Function
+                - - EventType: viewer-request
+                    FunctionARN: !GetAtt Bucket3CloudFrontFunction.FunctionARN
+                - []
+            - !Ref "AWS::NoValue"
+          - !If 
+            - CreateBucket4
+            - PathPattern: !Ref Bucket4PathPattern
+              TargetOriginId: !Ref Bucket4Name
+              ViewerProtocolPolicy: redirect-to-https
+              CachePolicyId: !Ref CloudFrontCachePolicy
+              Compress: true
+              AllowedMethods:
+                - GET
+                - HEAD
+              CachedMethods:
+                - GET
+                - HEAD
+              FunctionAssociations: !If
+                - CreateBucket4Function
+                - - EventType: viewer-request
+                    FunctionARN: !GetAtt Bucket4CloudFrontFunction.FunctionARN
+                - []
+            - !Ref "AWS::NoValue"
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: !Sub "/${DefaultPage}"
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: !Sub "/${DefaultPage}"
+            ErrorCachingMinTTL: 10
+        ViewerCertificate: !If
+          - UseCustomDomainConfig
+          - AcmCertificateArn: !Ref CloudFrontCertArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+            MinimumProtocolVersion: TLSv1.2_2021
+        Aliases: !If
+          - UseCustomDomainConfig
+          - - !Ref CustomDomainName
+          - !Ref "AWS::NoValue"
+        PriceClass: PriceClass_200
+        Logging:
+          Bucket: !Sub ${LogsBucket}.s3.${AWS::Region}.amazonaws.com
+          IncludeCookies: true
+          Prefix: logs/
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: whitelist
+            Locations: !Split 
+              - ","
+              - !Ref GeoLocation
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubSystem-SPAInternet-v3
+
+  # Logs Bucket
+  LogsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Join ["-", [!Sub "${AppShortName}-${EnvName}-cf-logs", !Select [4, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubSystem-SPAInternet-v3
+
+  LogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${LogsBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt LogsBucket.Arn
+              - !Join ['', [!GetAtt LogsBucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt LogsBucket.Arn
+              - !Join ['', [!GetAtt LogsBucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'

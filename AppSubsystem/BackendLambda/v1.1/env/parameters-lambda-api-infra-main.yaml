@@ -1,0 +1,325 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Template: cf-lambda-api-infra-main.yaml
+# Provisions: Security Group, IAM Role, API Gateway, Lambda Authorizer
+# IaCVersion: AppSubsystem-BackendLambda-v1.1
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. gms, myapp, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod, prod-a
+
+# VPC CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-02fb2e32bbb6ff24e
+SubnetIds: "<edit_here>"                # 📝 e.g. subnet-xxx,subnet-yyy (comma-separated)
+SecurityGroupName: "<edit_here>"        # 📝 e.g. myapp-nprd-lambda-securitygroup
+
+# NETWORK - VPC CIDRs (for security group egress rules)
+VpcCidr1: "<edit_here>"                 # 📝 Primary VPC CIDR, e.g. 10.55.53.0/24
+VpcCidr2: ""                            # Optional secondary VPC CIDR
+VpcCidr3: ""                            # Optional tertiary VPC CIDR
+VpcCidr4: ""                            # Optional quaternary VPC CIDR
+VpcCidr5: ""                            # Optional quinary VPC CIDR
+
+# NETWORK - Database Subnets
+VPCSubnetCidrDBAZ1: "<edit_here>"       # 📝 DB subnet AZ1, e.g. 10.55.53.128/27
+VPCSubnetCidrDBAZ2: "<edit_here>"       # 📝 DB subnet AZ2, e.g. 10.55.53.160/27
+VPCSubnetCidrDBAZ3: ""                  # Optional DB subnet AZ3
+# ProdDBPort: "53341"                   # Default: 53341 (typically not overridden)
+# NProdDBPort: "53331"                  # Default: 53331 (typically not overridden)
+
+# NETWORK - S3 & HCC VPC Endpoints
+S3PrefixListId: "<edit_here>"           # 📝 e.g. pl-0f8e90357f89b3f45
+HCCVpceCidr: ""                         # HCC VPC endpoint CIDR, e.g. 10.48.42.0/24
+
+# NETWORK - HCC Forward Proxy
+EnableBCSProxy: "false"                 # Set to "true" to enable forward proxy egress
+HCCProxyPort: "4000"                    # Forward proxy port (default: 4000)
+ProdHCCProxyCidr1: ""                   # Prod proxy subnet 1, e.g. 10.x.x.x/xx
+ProdHCCProxyCidr2: ""                   # Prod proxy subnet 2
+NprdHCCProxyCidr1: ""                   # Non-prod proxy subnet 1
+NprdHCCProxyCidr2: ""                   # Non-prod proxy subnet 2
+
+# NETWORK - ElastiCache Redis (dedicated subnets, optional)
+ElastiCacheSubnetAZ1: ""                # Dedicated ElastiCache subnet AZ1
+ElastiCacheSubnetAZ2: ""                # Dedicated ElastiCache subnet AZ2
+ElastiCacheSubnetAZ3: ""                # Dedicated ElastiCache subnet AZ3
+
+# API GATEWAY CONFIGURATION
+ApigwVpceId: "<edit_here>"              # 📝 e.g. vpce-09855052bcd07c8b0
+CustomDomainName: "<edit_here>"         # 📝 e.g. myapi.example.com
+SSLCertificateArn: "<edit_here>"        # 📝 ACM certificate ARN for custom domain
+SwaggerFile: "<edit_here>"              # 📝 e.g. parent-child-stacks/swagger.json
+
+# AZURE AD CONFIGURATION
+AzureAdClientId: ""                     # Azure AD Client ID
+AzureAdTenantId: ""                     # Azure AD Tenant ID
+
+# LAMBDA AUTHORIZER
+EnableLambdaAuthorizer: "true"          # "true" or "false"
+LogRetentionInDays: "14"                # Log retention in days
+LambdaS3bucket: "<edit_here>"           # 📝 S3 bucket for Lambda code
+AuthorizerCodeZipFileName: "<edit_here>"  # 📝 e.g. parent-child-stacks/Authorizer-1.0.0.zip
+AuthorizerLambdaRuntime: "dotnet8"      # Lambda runtime
+AuthorizerLambdaHandler: "<edit_here>"  # 📝 Lambda handler
+
+# IAM ROLE
+LambdaExecutionRoleName: "<edit_here>"  # 📝 e.g. myapp-nprd-lambda-execution-role
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates resource names: {AppShortName}-{EnvName}-lambda-securitygroup
+# - Scopes IAM permissions to resources matching: {AppShortName}-{EnvName}-*
+# - Used in API Gateway, Lambda, and nested stack naming
+#
+# Format: Lowercase alphanumeric
+# Example: gms, myapp, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in resource naming
+# - Determines DeletionPolicy (Retain for prod, Delete for nprd)
+#
+# Common Values:
+# - nprd: Base non-production
+# - nprd-dev, nprd-dev1, nprd-dev2: Development
+# - nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3, nprd-sit-a, nprd-sit-b, nprd-sit-c: SIT environments
+# - nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c: UAT environments
+# - nprd-pt: Performance testing
+# - nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c: Pre-production
+# - prod, prod-a, prod-b, prod-c: Production
+
+# --- VPC ID ---
+# VpcId: VPC identifier where Lambda security group is created
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-02fb2e32bbb6ff24e
+#
+# Finding VPC ID:
+# AWS Console → VPC → Your VPCs
+# - Locate the VPC for your environment
+# - Copy VPC ID from the list
+
+# --- SUBNET IDS ---
+# SubnetIds: Private subnet IDs for Lambda function execution
+#
+# Format: subnet-abc123,subnet-def456 (comma-separated, no spaces)
+# Example: subnet-0abc123def456789a,subnet-0def456abc789123b
+#
+# Requirements:
+# - Must be private subnets (NEVER public)
+# - Minimum 2 subnets recommended (for high availability)
+# - Subnets should be in different Availability Zones
+# - All subnets must be in same VPC as VpcId
+
+# --- SECURITY GROUP NAME ---
+# SecurityGroupName: Name for the Lambda security group
+#
+# Format: {AppShortName}-{EnvName}-lambda-securitygroup
+# Example: myapp-nprd-lambda-securitygroup
+#
+# Notes:
+# - Security group created with CIDR-based egress rules (v1.1)
+# - Egress rules controlled by VPC CIDR, DB subnet, S3, HCC, and ElastiCache parameters
+
+# --- VPC CIDRs ---
+# VpcCidr1-5: VPC CIDR blocks for security group egress rules
+#
+# Purpose: Allow Lambda to access resources within VPC on port 443 (HTTPS)
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.55.53.0/24
+#
+# VpcCidr1 (Required): Primary VPC CIDR block
+# VpcCidr2-5 (Optional): Additional VPC CIDR blocks for peering or extended ranges
+#
+# Finding VPC CIDRs:
+# AWS Console → VPC → Your VPCs → Select VPC → CIDR blocks tab
+
+# --- DATABASE SUBNET CIDRs ---
+# VPCSubnetCidrDBAZ1/AZ2/AZ3: Database subnet CIDRs for security group egress rules
+#
+# Purpose: Allow Lambda to connect to RDS databases
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.55.53.128/27
+#
+# VPCSubnetCidrDBAZ1 (Required): Database subnet in AZ1
+# VPCSubnetCidrDBAZ2 (Required): Database subnet in AZ2
+# VPCSubnetCidrDBAZ3 (Optional): Database subnet in AZ3 (for 3-AZ deployment)
+#
+# Port Conventions:
+# - Production (prod*): Port 53341
+# - Non-Production (nprd*): Port 53331
+# - ProdDBPort/NProdDBPort defaults used automatically based on EnvName
+#
+# Finding Database Subnet CIDRs:
+# AWS Console → VPC → Subnets → Filter by "database" or "db" in subnet name
+
+# --- S3 PREFIX LIST ID ---
+# S3PrefixListId: Managed prefix list ID for S3 service
+#
+# Purpose: Allow Lambda to access S3 via VPC gateway endpoint
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0f8e90357f89b3f45
+#
+# Finding S3 Prefix List ID:
+# AWS Console → VPC → Managed Prefix Lists → Search for "s3"
+# AWS CLI: aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.ap-southeast-1.s3"
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: HCC VPC endpoint CIDR for corporate connectivity
+#
+# Purpose: Allow Lambda to route through HCC VPC endpoint on port 443
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.48.42.0/24
+#
+# Leave empty ("") if not using HCC VPC endpoint
+
+# --- HCC FORWARD PROXY ---
+# EnableBCSProxy: Enable HCC Forward Proxy egress rule in security group
+#
+# Values:
+# - "true": Adds egress rules for HCC Forward Proxy connectivity
+# - "false": No HCC Forward Proxy egress rules (default)
+#
+# When enabled, provide:
+# - HCCProxyPort: Proxy port number (default: 4000)
+# - ProdHCCProxyCidr1/2: Production proxy subnet CIDRs (used when EnvName=prod*)
+# - NprdHCCProxyCidr1/2: Non-production proxy subnet CIDRs (used when EnvName=nprd*)
+#
+# Template automatically selects prod or nprd CIDRs based on EnvName
+# Only need to specify 1 CIDR per environment (2nd is optional)
+#
+# Finding HCC Forward Proxy Details:
+# - Check with your network/infrastructure team for proxy subnet CIDRs and port
+
+# --- ELASTICACHE REDIS SUBNETS ---
+# ElastiCacheSubnetAZ1/AZ2/AZ3: Dedicated ElastiCache subnet CIDRs
+#
+# Purpose: Allow Lambda to connect to ElastiCache Redis on ports 6379-6380
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.55.54.0/27
+#
+# When to use:
+# - ElastiCache sits in dedicated subnets separate from VPC CIDRs
+# - The base VPC CIDR rules (port 6379-6380) don't cover ElastiCache subnets
+#
+# When NOT needed:
+# - ElastiCache subnets fall within VpcCidr1-5 ranges (already covered)
+# - Lambda doesn't use ElastiCache Redis
+#
+# Leave empty ("") if not using dedicated ElastiCache subnets
+
+# --- API GATEWAY VPC ENDPOINT ---
+# ApigwVpceId: VPC endpoint ID for private API Gateway access
+#
+# Format: vpce-xxxxxxxxxxxxxxxxx
+# Example: vpce-09855052bcd07c8b0
+#
+# Requirements:
+# - VPC endpoint for execute-api must exist before deployment
+# - API Gateway is VPC-private (only accessible through this endpoint)
+#
+# Finding VPC Endpoint ID:
+# AWS Console → VPC → Endpoints → Filter by "execute-api"
+
+# --- CUSTOM DOMAIN NAME ---
+# CustomDomainName: Custom domain for API Gateway
+#
+# Format: Fully qualified domain name
+# Example: myapi.example.com, api.myapp.internal
+#
+# Requirements:
+# - ACM certificate must cover this domain (SSLCertificateArn)
+# - DNS record must point to API Gateway regional domain name
+
+# --- SSL CERTIFICATE ARN ---
+# SSLCertificateArn: ACM certificate ARN for API Gateway custom domain
+#
+# Format: arn:aws:acm:{region}:{account-id}:certificate/{certificate-id}
+#
+# Requirements:
+# - Certificate must be in same region as API Gateway
+# - Certificate must cover the CustomDomainName
+#
+# Finding Certificate ARN:
+# AWS Console → ACM → Certificates → Select certificate → Copy ARN
+
+# --- SWAGGER FILE ---
+# SwaggerFile: S3 path to Swagger/OpenAPI definition file
+#
+# Format: relative path within CF templates S3 bucket
+# Example: parent-child-stacks/swagger.json
+#
+# Requirements:
+# - File must be uploaded to S3 templates bucket before deployment
+# - Must be valid OpenAPI 2.0 or 3.0 specification
+
+# --- AZURE AD CONFIGURATION ---
+# AzureAdClientId: Azure AD application (client) ID for token validation
+# AzureAdTenantId: Azure AD tenant (directory) ID
+#
+# Purpose: Lambda Authorizer validates JWT tokens against Azure AD
+#
+# Leave empty ("") if not using Azure AD authentication
+
+# --- LAMBDA AUTHORIZER ---
+# EnableLambdaAuthorizer: Whether to deploy Lambda Authorizer
+#
+# Values: "true" or "false"
+#
+# LambdaS3bucket: S3 bucket containing Lambda code packages
+# AuthorizerCodeZipFileName: S3 key for authorizer Lambda zip package
+# AuthorizerLambdaRuntime: Lambda runtime (dotnet8, nodejs20.x, python3.12)
+# AuthorizerLambdaHandler: Function handler path
+#
+# LogRetentionInDays: CloudWatch log retention
+# Valid values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+
+# --- IAM ROLE ---
+# LambdaExecutionRoleName: Name for the Lambda execution IAM role
+#
+# Format: {AppShortName}-{EnvName}-lambda-execution-role
+# Example: myapp-nprd-lambda-execution-role
+#
+# Purpose:
+# - IAM role assumed by all Lambda functions in this stack
+# - Grants permissions for VPC access, CloudWatch logging, S3, Secrets Manager
+
+# --- RESOURCES CREATED ---
+# Security Group: {SecurityGroupName} with CIDR-based egress rules
+#   - HTTPS (443) to VPC CIDRs, DB port to DB subnets, S3 prefix list
+#   - HCC VPC endpoint (443), HCC Forward Proxy (optional), ElastiCache Redis (optional)
+# IAM Role: {LambdaExecutionRoleName}
+# API Gateway: {AppShortName}-{EnvName}-api (private, VPC endpoint)
+# Lambda Authorizer: {AppShortName}-{EnvName}-lambda-authorizer (if enabled)
+# Nested Stacks:
+#   - LambdaRoleSecurityGroupStack (cf-lambda-network-iamrole.yaml)
+#   - ApiGatewayStack (cf-lambda-api-gateway.yaml)
+#   - LambdaAuthorizerStack (cf-lambda-api-authorizer.yaml)

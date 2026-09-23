@@ -1,0 +1,90 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "hxis"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd-dev"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-09528f37a12368b13"
+  },
+  {
+    "ParameterKey": "AppSubnetIds",
+    "ParameterValue": "subnet-0e3f828d570c58f11,subnet-0d1706693a418f5a3"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAZ1",
+    "ParameterValue": "10.53.144.128/26"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAZ2",
+    "ParameterValue": "10.53.144.192/26"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrAZ3",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrInternetIngressAlbAZ1",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrInternetIngressAlbAZ2",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrInternetIngressAlbAZ3",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "ALBName",
+    "ParameterValue": "hxis-nprd-dev-alb-ecs"
+  },
+  {
+    "ParameterKey": "DefaultCertificateArn",
+    "ParameterValue": "arn:aws:acm:ap-southeast-1:533267434948:certificate/8293c654-7ec9-4e43-9484-90cf6679da38"
+  },
+  {
+    "ParameterKey": "AdditionalCertificateArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "NLBSecurityGroupId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "ECSClusterName",
+    "ParameterValue": "hxis-nprd-dev-ecs"
+  },
+  {
+    "ParameterKey": "EnableADOT",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "ADOTContainerImage",
+    "ParameterValue": "533267434948.dkr.ecr.ap-southeast-1.amazonaws.com/utility-images/aws-observability/aws-otel-collector:latest"
+  },
+  {
+    "ParameterKey": "ADOTTaskCpu",
+    "ParameterValue": "256"
+  },
+  {
+    "ParameterKey": "ADOTTaskMemory",
+    "ParameterValue": "512"
+  },
+  {
+    "ParameterKey": "PrivateHostedZoneId",
+    "ParameterValue": "Z095034935AWUIQP1FGLO"
+  },
+  {
+    "ParameterKey": "ADOTCustomDomainName",
+    "ParameterValue": "adot.healthx.sg"
+  },
+  {
+    "ParameterKey": "ADOTInternalCertificateArn",
+    "ParameterValue": "arn:aws:acm:ap-southeast-1:533267434948:certificate/8293c654-7ec9-4e43-9484-90cf6679da38"
+  }
+]

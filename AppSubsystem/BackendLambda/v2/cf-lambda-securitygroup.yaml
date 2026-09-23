@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Lambda Security Group Infrastructure"
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: "Application identifier (e.g., 'myapp' or 'nhs-ent' for vendor format)"
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Network Configuration
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC ID where security groups will be created"
+
+  VpcCidr:
+    Type: String
+    Description: "VPC CIDR block for internal communication"
+    Default: "10.0.0.0/16"
+
+  DatabasePort:
+    Type: Number
+    Description: Database port for security group rules
+    Default: 3306
+
+  # HCC Proxy Configuration
+  HCCProxyPort:
+    Type: Number
+    Description: "HCC Proxy port"
+    Default: 8080
+
+  # Production HCC Proxy CIDRs
+  ProdHCCProxyCidr1:
+    Type: String
+    Description: "Production HCC Proxy Subnet 1 CIDR"
+    Default: "10.1.0.0/24"
+
+  ProdHCCProxyCidr2:
+    Type: String
+    Description: "Production HCC Proxy Subnet 2 CIDR"
+    Default: "10.1.1.0/24"
+
+  # Non-Production HCC Proxy CIDRs
+  NprdHCCProxyCidr1:
+    Type: String
+    Description: "Non-Production HCC Proxy Subnet 1 CIDR"
+    Default: "10.2.0.0/24"
+
+  NprdHCCProxyCidr2:
+    Type: String
+    Description: "Non-Production HCC Proxy Subnet 2 CIDR"
+    Default: "10.2.1.0/24"
+
+  # Additional egress configuration (optional)
+  AdditionalEgressCidrs:
+    Type: CommaDelimitedList
+    Description: "Optional: Additional CIDR blocks for Lambda HTTPS egress (leave empty if not needed)"
+    Default: ""
+
+  # Database subnet CIDRs
+  DatabaseSubnetCidrs:
+    Type: CommaDelimitedList
+    Description: "Database subnet CIDR blocks for database connectivity"
+    Default: ""
+
+  # Integration dependencies
+  DatabaseSecurityGroupId:
+    Type: String
+    Description: "Database security group ID (leave empty if no database integration needed)"
+    Default: ""
+
+  # Prefix Lists
+  DynamoDBPrefixListId:
+    Type: String
+    Description: "DynamoDB prefix list ID for service access"
+    Default: ""
+
+  S3PrefixListId:
+    Type: String
+    Description: "S3 prefix list ID for service access"
+    Default: ""
+
+  AdditionalPrefixListId:
+    Type: String
+    Description: "Additional prefix list ID for custom egress rules"
+    Default: ""
+
+Conditions:
+  # Environment conditions
+  IsProduction: !Or
+    - !Equals [!Ref EnvName, "prod"]
+    - !Equals [!Ref EnvName, "prod-a"]
+    - !Equals [!Ref EnvName, "prod-b"]
+    - !Equals [!Ref EnvName, "prod-c"]
+
+  # Integration conditions
+  HasDatabaseSecurityGroup: !Not [!Equals [!Ref DatabaseSecurityGroupId, ""]]
+  
+  # Additional egress conditions
+  HasAdditionalEgressCidrs: !Not [!Equals [!Join ["", !Ref AdditionalEgressCidrs], ""]]
+  HasDatabaseSubnetCidrs: !Not [!Equals [!Join ["", !Ref DatabaseSubnetCidrs], ""]]
+  
+  # Check if we have a second database subnet CIDR
+  HasSecondDatabaseSubnetCidr: !And
+    - !Not [!Equals [!Join ["", !Ref DatabaseSubnetCidrs], ""]]
+    - !Not [!Equals [!Select [1, !Ref DatabaseSubnetCidrs], ""]]
+  
+  # Prefix list conditions
+  HasDynamoDBPrefixList: !Not [!Equals [!Ref DynamoDBPrefixListId, ""]]
+  HasS3PrefixList: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasAdditionalPrefixList: !Not [!Equals [!Ref AdditionalPrefixListId, ""]]
+
+Resources:
+  #----------------------------------------------------------------------------
+  # Lambda Security Group
+  #----------------------------------------------------------------------------
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${AppShortName}-${EnvName}-sg-lambda"
+      GroupDescription: "Lambda functions with comprehensive network access"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        # HTTPS to VPC CIDR for internal services
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          Description: "HTTPS to VPC CIDR for internal services"
+          CidrIp: !Ref VpcCidr
+
+        # HCC Proxy connectivity for external communication
+        - IpProtocol: tcp
+          FromPort: !Ref HCCProxyPort
+          ToPort: !Ref HCCProxyPort
+          CidrIp: !If [IsProduction, !Ref ProdHCCProxyCidr1, !Ref NprdHCCProxyCidr1]
+          Description: "HCC Proxy Subnet 1"
+        
+        - IpProtocol: tcp
+          FromPort: !Ref HCCProxyPort
+          ToPort: !Ref HCCProxyPort
+          CidrIp: !If [IsProduction, !Ref ProdHCCProxyCidr2, !Ref NprdHCCProxyCidr2]
+          Description: "HCC Proxy Subnet 2"
+
+        # Conditional additional CIDR egress
+        - !If
+          - HasAdditionalEgressCidrs
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            Description: "HTTPS to additional CIDR range"
+            CidrIp: !Select [0, !Ref AdditionalEgressCidrs]
+          - !Ref "AWS::NoValue"
+
+        # Conditional database egress via security group
+        - !If
+          - HasDatabaseSecurityGroup
+          - IpProtocol: tcp
+            FromPort: !Ref DatabasePort
+            ToPort: !Ref DatabasePort
+            Description: "Database connection via security group"
+            DestinationSecurityGroupId: !Ref DatabaseSecurityGroupId
+          - !Ref "AWS::NoValue"
+
+        # Database subnet CIDR 1
+        - !If
+          - HasDatabaseSubnetCidrs
+          - IpProtocol: tcp
+            FromPort: !Ref DatabasePort
+            ToPort: !Ref DatabasePort
+            Description: "Database connection to subnet CIDR 1"
+            CidrIp: !Select [0, !Ref DatabaseSubnetCidrs]
+          - !Ref "AWS::NoValue"
+
+        # Database subnet CIDR 2 (conditional)
+        - !If
+          - HasSecondDatabaseSubnetCidr
+          - IpProtocol: tcp
+            FromPort: !Ref DatabasePort
+            ToPort: !Ref DatabasePort
+            Description: "Database connection to subnet CIDR 2"
+            CidrIp: !Select [1, !Ref DatabaseSubnetCidrs]
+          - !Ref "AWS::NoValue"
+
+        # DynamoDB prefix list egress
+        - !If
+          - HasDynamoDBPrefixList
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            Description: "HTTPS to DynamoDB via prefix list"
+            DestinationPrefixListId: !Ref DynamoDBPrefixListId
+          - !Ref "AWS::NoValue"
+
+        # S3 prefix list egress
+        - !If
+          - HasS3PrefixList
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            Description: "HTTPS to S3 via prefix list"
+            DestinationPrefixListId: !Ref S3PrefixListId
+          - !Ref "AWS::NoValue"
+
+        # Additional prefix list egress
+        - !If
+          - HasAdditionalPrefixList
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            Description: "HTTPS to additional services via prefix list"
+            DestinationPrefixListId: !Ref AdditionalPrefixListId
+          - !Ref "AWS::NoValue"
+
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-sg-lambda"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "AppSubSystem-BackendLambda-v2"
+
+Outputs:
+  # Security Group Output
+  LambdaSecurityGroupId:
+    Description: "Security group ID for Lambda functions (proxy-based external access)"
+    Value: !Ref LambdaSecurityGroup
+
+  LambdaSecurityGroupArn:
+    Description: "ARN of the Lambda security group"
+    Value: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/${LambdaSecurityGroup}"

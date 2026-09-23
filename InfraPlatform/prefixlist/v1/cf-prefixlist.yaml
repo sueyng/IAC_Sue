@@ -1,0 +1,413 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation template for up to 10 Managed Prefix Lists (empty — entries managed via AWS Console)'
+
+Parameters:
+  # Core Application Parameters
+  AppShortName:
+    Type: String
+    Description: Application short name
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # Number of Prefix Lists to create
+  NumberOfPrefixLists:
+    Type: Number
+    Description: "Number of prefix lists to create (1-10)"
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+
+  # Prefix List 01 (Required)
+  PrefixListPurpose01:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 1 (e.g., db-subnets, vpce, external-api)"
+
+  MaxEntries01:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 1 (plan for future growth)"
+    Default: 50
+
+  # Prefix List 02
+  PrefixListPurpose02:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 2"
+    Default: ""
+
+  MaxEntries02:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 2"
+    Default: 50
+
+  # Prefix List 03
+  PrefixListPurpose03:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 3"
+    Default: ""
+
+  MaxEntries03:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 3"
+    Default: 50
+
+  # Prefix List 04
+  PrefixListPurpose04:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 4"
+    Default: ""
+
+  MaxEntries04:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 4"
+    Default: 50
+
+  # Prefix List 05
+  PrefixListPurpose05:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 5"
+    Default: ""
+
+  MaxEntries05:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 5"
+    Default: 50
+
+  # Prefix List 06
+  PrefixListPurpose06:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 6"
+    Default: ""
+
+  MaxEntries06:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 6"
+    Default: 50
+
+  # Prefix List 07
+  PrefixListPurpose07:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 7"
+    Default: ""
+
+  MaxEntries07:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 7"
+    Default: 50
+
+  # Prefix List 08
+  PrefixListPurpose08:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 8"
+    Default: ""
+
+  MaxEntries08:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 8"
+    Default: 50
+
+  # Prefix List 09
+  PrefixListPurpose09:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 9"
+    Default: ""
+
+  MaxEntries09:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 9"
+    Default: 50
+
+  # Prefix List 10
+  PrefixListPurpose10:
+    Type: String
+    Description: "Purpose/name suffix for prefix list 10"
+    Default: ""
+
+  MaxEntries10:
+    Type: Number
+    Description: "Maximum number of entries for prefix list 10"
+    Default: 50
+
+Conditions:
+  # Environment conditions
+  IsProduction: !Or
+    - !Equals [!Ref EnvName, prod]
+    - !Equals [!Ref EnvName, prod-a]
+    - !Equals [!Ref EnvName, prod-b]
+    - !Equals [!Ref EnvName, prod-c]
+
+  # Cascading conditions — prefix list N is deployed if NumberOfPrefixLists >= N
+  DeployPL10: !Equals [10, !Ref NumberOfPrefixLists]
+  DeployPL09: !Or [!Equals [9, !Ref NumberOfPrefixLists], !Condition DeployPL10]
+  DeployPL08: !Or [!Equals [8, !Ref NumberOfPrefixLists], !Condition DeployPL09]
+  DeployPL07: !Or [!Equals [7, !Ref NumberOfPrefixLists], !Condition DeployPL08]
+  DeployPL06: !Or [!Equals [6, !Ref NumberOfPrefixLists], !Condition DeployPL07]
+  DeployPL05: !Or [!Equals [5, !Ref NumberOfPrefixLists], !Condition DeployPL06]
+  DeployPL04: !Or [!Equals [4, !Ref NumberOfPrefixLists], !Condition DeployPL05]
+  DeployPL03: !Or [!Equals [3, !Ref NumberOfPrefixLists], !Condition DeployPL04]
+  DeployPL02: !Or [!Equals [2, !Ref NumberOfPrefixLists], !Condition DeployPL03]
+
+Resources:
+  #============================================================================
+  # MANAGED PREFIX LIST 01 (Always created)
+  #============================================================================
+
+  ManagedPrefixList01:
+    Type: AWS::EC2::PrefixList
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose01}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries01
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose01}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 02
+  #============================================================================
+
+  ManagedPrefixList02:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL02
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose02}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries02
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose02}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 03
+  #============================================================================
+
+  ManagedPrefixList03:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL03
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose03}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries03
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose03}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 04
+  #============================================================================
+
+  ManagedPrefixList04:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL04
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose04}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries04
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose04}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 05
+  #============================================================================
+
+  ManagedPrefixList05:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL05
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose05}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries05
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose05}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 06
+  #============================================================================
+
+  ManagedPrefixList06:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL06
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose06}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries06
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose06}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 07
+  #============================================================================
+
+  ManagedPrefixList07:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL07
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose07}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries07
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose07}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 08
+  #============================================================================
+
+  ManagedPrefixList08:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL08
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose08}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries08
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose08}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 09
+  #============================================================================
+
+  ManagedPrefixList09:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL09
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose09}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries09
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose09}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+  #============================================================================
+  # MANAGED PREFIX LIST 10
+  #============================================================================
+
+  ManagedPrefixList10:
+    Type: AWS::EC2::PrefixList
+    Condition: DeployPL10
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PrefixListName: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose10}"
+      AddressFamily: IPv4
+      MaxEntries: !Ref MaxEntries10
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-pl-${PrefixListPurpose10}"
+        - Key: IaCVersion
+          Value: "InfraPlatform-PrefixList-v1"
+
+Outputs:
+  PrefixListId01:
+    Description: "Prefix List 01 ID"
+    Value: !Ref ManagedPrefixList01
+
+  PrefixListId02:
+    Condition: DeployPL02
+    Description: "Prefix List 02 ID"
+    Value: !Ref ManagedPrefixList02
+
+  PrefixListId03:
+    Condition: DeployPL03
+    Description: "Prefix List 03 ID"
+    Value: !Ref ManagedPrefixList03
+
+  PrefixListId04:
+    Condition: DeployPL04
+    Description: "Prefix List 04 ID"
+    Value: !Ref ManagedPrefixList04
+
+  PrefixListId05:
+    Condition: DeployPL05
+    Description: "Prefix List 05 ID"
+    Value: !Ref ManagedPrefixList05
+
+  PrefixListId06:
+    Condition: DeployPL06
+    Description: "Prefix List 06 ID"
+    Value: !Ref ManagedPrefixList06
+
+  PrefixListId07:
+    Condition: DeployPL07
+    Description: "Prefix List 07 ID"
+    Value: !Ref ManagedPrefixList07
+
+  PrefixListId08:
+    Condition: DeployPL08
+    Description: "Prefix List 08 ID"
+    Value: !Ref ManagedPrefixList08
+
+  PrefixListId09:
+    Condition: DeployPL09
+    Description: "Prefix List 09 ID"
+    Value: !Ref ManagedPrefixList09
+
+  PrefixListId10:
+    Condition: DeployPL10
+    Description: "Prefix List 10 ID"
+    Value: !Ref ManagedPrefixList10

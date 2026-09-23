@@ -1,0 +1,46 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    }, 
+    {
+        "ParameterKey": "ECSClusterName",
+        "ParameterValue": "fhirnexus"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-12345678"
+    },
+    {
+        "ParameterKey": "Subnets",
+        "ParameterValue": "subnet-12345678,subnet-23456789,subnet-34567890"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.0.1.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.0.2.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": "10.0.3.0/24"
+    },
+    {
+        "ParameterKey": "ADOTContainerImage",
+        "ParameterValue": "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/adot-collector:latest"
+    },
+    {
+        "ParameterKey": "ADOTTaskCpu",
+        "ParameterValue": "256"
+    },
+    {
+        "ParameterKey": "ADOTTaskMemory",
+        "ParameterValue": "512"
+    }
+]

@@ -1,0 +1,138 @@
+[
+    {
+        "ParameterKey": "AWSRegion",
+        "ParameterValue": "ap-southeast-1"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0f7c715e458acd938"
+    },
+    {
+        "ParameterKey": "VpcCidr1",
+        "ParameterValue": "10.193.0.0/16"
+    },
+    {
+        "ParameterKey": "VpcCidr2",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr3",
+        "ParameterValue": ""
+    },
+        {
+        "ParameterKey": "VpcCidr3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr4",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcCidr5",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "AppSubnetIds",
+        "ParameterValue": "subnet-0f5844ecb111f6502,subnet-0635ab15242a30bd3"
+    },
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "hsxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "CreateGrafanaEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateEKSEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateXRayEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateAMPEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateECREndpoints",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateELBEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateSecretsEndpoint",
+        "ParameterValue": "false"
+    }, 
+    {
+        "ParameterKey": "CreateElasticacheEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateBatchEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateSNSEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateDataSyncEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateGlueEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateCloudFormationEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateECSEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateS3Endpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateLambdaEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateRDSEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateSQSEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateAPIGatewayEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateSESEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateAthenaEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateCloudWatchLogsEndpoint",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "CreateACMEndpoint",
+        "ParameterValue": "false"
+    }
+]

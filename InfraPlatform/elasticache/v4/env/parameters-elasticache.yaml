@@ -1,0 +1,406 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. hsxx, myapp, cache01 (max 10 characters)
+EnvName: "<edit_here>"                  # 📝 e.g. nprd-dev, nprd-sit1, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+AppSubnetIds: "<edit_here>"             # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets, comma-separated)
+
+# SECURITY GROUP ACCESS (Application Subnet CIDRs)
+VPCSubnetCidrAppAZ1: "<edit_here>"      # 📝 e.g. 10.1.128.0/20 (AZ1 application subnet CIDR)
+VPCSubnetCidrAppAZ2: "<edit_here>"      # 📝 e.g. 10.1.144.0/20 (AZ2 application subnet CIDR)
+
+# REDIS CONFIGURATION
+RedisCacheInstanceType: "<edit_here>"   # 📝 e.g. cache.m5.large, cache.r5.large, cache.t3.medium
+RedisAuthToken: "<edit_here>"           # 📝 16-128 alphanumeric characters
+
+# ADDITIONAL NETWORK ACCESS
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.193.0.0/16 (Primary VPC CIDR)
+HCCVpceCidr: "<edit_here>"              # 📝 e.g. 10.48.42.0/24 (HCC VPC Endpoint subnet)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# ADDITIONAL APPLICATION SUBNET
+VPCSubnetCidrAppAZ3: ""                 # AZ3 application subnet CIDR (optional)
+
+# ADDITIONAL VPC CIDRs
+VpcCidr2: ""                            # Secondary VPC CIDR (optional)
+VpcCidr3: ""                            # Tertiary VPC CIDR (optional)
+VpcCidr4: ""                            # Quaternary VPC CIDR (optional)
+VpcCidr5: ""                            # Quinary VPC CIDR (optional)
+
+# S3 ACCESS
+S3PrefixListId: ""                      # AWS managed prefix list for S3 (e.g. pl-6fa54006, optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates resource names: {AppShortName}-{EnvName}-redis
+# - Replication group ID: {AppShortName}-{EnvName}-redis
+# - Subnet group name: {AppShortName}-{EnvName}-redis-subnet-group
+# - Security group name: {AppShortName}-{EnvName}-redis-sg
+# - Enables multi-application deployments in same VPC
+# - Facilitates cost allocation and resource organization
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: hsxx, myapp, cache01
+#
+# Must Match:
+# - AppShortName used in other infrastructure components
+# - Consistent naming across all resources
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Allowed Values:
+# Non-Production:
+# - nprd: Base non-production
+# - nprd-dev: Development
+# - nprd-sit1, nprd-sit2, nprd-sit3: System Integration Test (numbered)
+# - nprd-sit, nprd-sit-a, nprd-sit-b, nprd-sit-c: System Integration Test (lettered)
+# - nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c: User Acceptance Test
+# - nprd-pt: Performance Test
+# - nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c: Pre-Production
+#
+# Production:
+# - prod: Base production
+# - prod-a, prod-b, prod-c: Production (multi-region or multi-tenant)
+#
+# Impact on Resource Lifecycle:
+# Production Environments (prod, prod-a, prod-b, prod-c):
+# - DeletionPolicy: Snapshot (final snapshot created on stack deletion)
+# - SnapshotRetentionLimit: 35 days
+# - AutomaticFailoverEnabled: true
+# - Preserves data on deletion
+#
+# Non-Production Environments (nprd-*):
+# - DeletionPolicy: Delete (cluster deleted on stack deletion)
+# - SnapshotRetentionLimit: 7 days
+# - AutomaticFailoverEnabled: true
+# - Data not preserved on deletion
+
+# --- VPC ID ---
+# VpcId: Virtual Private Cloud identifier where Redis will be deployed
+#
+# Purpose:
+# - Specifies VPC for Redis cluster deployment
+# - All subnets must belong to this VPC
+# - Security group created in this VPC
+#
+# Format: vpc-{16-char-hex}
+# Example: vpc-0d99a0c727b301d67
+#
+# Finding VPC ID:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Identify VPC by name or CIDR block
+# 3. Copy VPC ID from list
+# 4. Verify VPC has DNS resolution enabled
+# 5. Verify VPC has DNS hostnames enabled
+#
+# Requirements:
+# - VPC must have DNS resolution enabled (required for Redis endpoint resolution)
+# - VPC must have DNS hostnames enabled (required for cluster endpoint)
+# - VPC must have private subnets across multiple AZs
+# - Recommended: VPC endpoints for S3 (for snapshot export)
+
+# --- APP SUBNET IDS ---
+# AppSubnetIds: Subnets for Redis cluster deployment
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones (for high availability)
+# - Maximum 3 subnets (recommended for ap-southeast-1: 1a, 1b, 1c)
+# - Must be private subnets (recommended for security)
+# - Comma-separated list (no spaces)
+# - All subnets must be in VpcId
+# - Subnets must have sufficient IP addresses
+#
+# Format: subnet-{17-char-hex},subnet-{17-char-hex}
+# Example: subnet-08170d48a795103d2,subnet-083fba964c347656f
+#
+# Finding Subnet IDs:
+# AWS Console:
+# 1. Navigate to VPC → Subnets
+# 2. Filter by VPC ID
+# 3. Identify private subnets (typically no auto-assign public IP)
+# 4. Verify subnets in different AZs (e.g., ap-southeast-1a, 1b, 1c)
+# 5. Copy subnet IDs (format: subnet-xxxxxxxxxxxxxxxxx)
+# 6. Check available IP addresses (should have sufficient capacity)
+#
+# Best Practices:
+# - Use 2-3 subnets across different AZs for high availability
+# - Ensure subnets have sufficient IP addresses (Redis uses 1 IP per node)
+# - Use same subnets as application tier for low latency
+# - Use dedicated cache subnets if isolating from application tier
+#
+# Multi-AZ Deployment:
+# - Redis primary node deployed in first subnet
+# - Replica nodes distributed across other subnets
+# - Automatic failover to replica in different AZ
+
+# --- VPC SUBNET CIDR APP AZ1/2/3 ---
+# VPCSubnetCidrAppAZ1/2/3: Application subnet CIDRs for security group ingress
+#
+# Purpose:
+# - Creates security group rules allowing application access to Redis
+# - Restricts access to only application subnets (least privilege)
+# - Port 6379 (Redis) ingress from these CIDRs
+# - Enables applications in these subnets to connect to Redis
+#
+# Requirements:
+# - VPCSubnetCidrAppAZ1 and VPCSubnetCidrAppAZ2 are required (minimum 2 AZs)
+# - VPCSubnetCidrAppAZ3 is optional (third AZ)
+# - CIDRs must match actual application subnet ranges
+# - Must be within VPC CIDR range
+#
+# Format: CIDR notation (IP/prefix)
+# Example:
+# - VPCSubnetCidrAppAZ1: "10.1.128.0/20"  # AZ1 application subnet
+# - VPCSubnetCidrAppAZ2: "10.1.144.0/20"  # AZ2 application subnet
+# - VPCSubnetCidrAppAZ3: "10.1.160.0/20"  # AZ3 application subnet (optional)
+#
+# Finding Application Subnet CIDRs:
+# AWS Console:
+# 1. Navigate to VPC → Subnets
+# 2. Filter by VPC ID
+# 3. Identify application subnets (usually tagged with "app" or "application")
+# 4. Copy CIDR block for each subnet
+# 5. Match subnets to their Availability Zones
+#
+# Security Impact:
+# - Only traffic from these CIDRs can reach Redis on port 6379
+# - Application must be in one of these subnets to connect
+# - Fine-grained network access control (defense in depth)
+# - Prevents unauthorized access from other subnets
+
+# --- REDIS CACHE INSTANCE TYPE ---
+# RedisCacheInstanceType: ElastiCache node instance type
+#
+# Purpose:
+# - Defines the compute and memory capacity for each Redis node
+# - Determines performance characteristics (CPU, memory, network bandwidth)
+#
+# Format: cache.{family}.{size}
+# Example: cache.m5.large, cache.r5.xlarge, cache.t3.medium
+#
+# Common Families:
+# - T3: Burstable performance instances
+# - M5: General purpose instances
+# - R5: Memory-optimized instances
+#
+# Cluster Configuration:
+# - Template deploys 2 nodes: 1 primary + 1 replica
+# - Multi-AZ enabled for high availability
+# - Automatic failover enabled
+
+# --- REDIS AUTH TOKEN ---
+# RedisAuthToken: Authentication password for Redis cluster
+#
+# Purpose:
+# - Required authentication for all client connections
+# - Protects cluster from unauthorized access
+# - Combined with TLS encryption for security (encryption in transit)
+# - Single shared password for all applications (consider rotation strategy)
+#
+# Requirements:
+# - Length: 16-128 characters
+# - Characters: Alphanumeric only (A-Z, a-z, 0-9) - no special characters
+# - Must be cryptographically random (do not use words or patterns)
+# - Different token per environment (dev, staging, production)
+#
+# How to Generate Secure Auth Token:
+# Using OpenSSL (recommended):
+# openssl rand -base64 96 | tr -d '\n' | head -c 128
+#
+# Security Best Practices:
+# ⚠️ CRITICAL:
+# - Do NOT commit auth token to version control (use .gitignore)
+# - Do NOT share auth token via email or messaging
+# - Do NOT use the same token across environments
+# - Do NOT reuse old auth tokens
+#
+# ✓ RECOMMENDED:
+# - Store in AWS Secrets Manager (see example below)
+# - Rotate regularly (quarterly recommended, minimum annually)
+# - Use different tokens per environment (dev, sit, uat, prod)
+# - Grant access on need-to-know basis
+# - Document token rotation schedule
+# - Use IAM policies to restrict secret access
+#
+# Storing Auth Token in Secrets Manager:
+# AWS Console:
+# 1. Navigate to Secrets Manager → Secrets
+# 2. Click "Store a new secret"
+# 3. Select "Other type of secret"
+# 4. Enter key: redis-auth-token, value: {RedisAuthToken}
+# 5. Name: {AppShortName}-{EnvName}-redis-auth-token
+# 6. Enable automatic rotation (optional, requires Lambda function)
+# 7. Click "Store"
+#
+# Retrieving Auth Token from Secrets Manager:
+# - Applications use AWS SDK to fetch secret at runtime
+# - No hard-coded credentials in application code
+# - Automatic rotation support with application restart
+#
+# Rotation Considerations:
+# - Changing auth token requires application restart
+# - Plan rotation during maintenance windows
+# - Test rotation in non-production first
+# - Update all application configurations simultaneously
+
+# --- VPC CIDR 1/2/3/4/5 ---
+# VpcCidr1/2/3/4/5: VPC CIDR blocks for security group egress rules
+#
+# Purpose:
+# - VpcCidr1 (Required): Primary VPC CIDR for security group egress
+# - VpcCidr2-5 (Optional): Additional VPC CIDRs for complex network topologies
+# - Allows outbound traffic from Redis to VPC resources
+# - Supports up to 5 VPC CIDR ranges for multi-VPC architectures
+#
+# Format: CIDR notation
+# Example: 10.193.0.0/16, 10.194.0.0/16
+#
+# Finding VPC CIDR Blocks:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Select VPC by VPC ID
+# 3. View "CIDR blocks" tab
+# 4. Primary CIDR shown in main list
+# 5. Additional CIDRs (if any) listed below
+#
+# When to Use Multiple CIDRs:
+# - VPC has multiple CIDR blocks associated (secondary CIDRs)
+# - Peered VPCs require access to Redis
+# - Transit Gateway routing scenarios
+# - VPC CIDR expansion scenarios
+# - Multi-VPC peering for broad security group rules
+# - Hybrid cloud connectivity with multiple on-premises networks
+# - Cross-region VPC connectivity patterns
+#
+# Leave Empty If:
+# - VPC has only one CIDR block (VpcCidr2-5)
+# - No peered VPCs or Transit Gateway
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: Hybrid Cloud Connectivity VPC Endpoint subnet CIDR
+#
+# Purpose:
+# - Allows access from HCC VPC endpoint subnet
+# - Enables hybrid cloud connectivity scenarios
+# - On-premises to AWS Redis access via VPC endpoints
+# - Supports Direct Connect and VPN connectivity
+#
+# Format: CIDR notation
+# Example: 10.48.42.0/24
+#
+# Use Cases:
+# - On-premises applications accessing AWS Redis
+# - Direct Connect private virtual interface connectivity
+# - VPN-connected environments
+# - Hybrid cloud session sharing
+# - Corporate network access to Redis
+#
+# Finding HCC VPC Endpoint CIDR:
+# - Contact network team for HCC endpoint subnet range
+# - Review VPC endpoint configuration
+# - Check Direct Connect virtual interface settings
+# - Verify VPN connection route tables
+#
+# Security Considerations:
+# - Creates security group ingress rule on port 6379
+# - Ensure HCC subnet is properly secured
+# - Monitor access logs for unauthorized attempts
+# - Consider using VPN or Direct Connect encryption
+
+# --- S3 PREFIX LIST ID (OPTIONAL) ---
+# S3PrefixListId: AWS-managed prefix list for S3 service
+#
+# Purpose:
+# - Allows Redis to communicate with S3 (for snapshot export, backups)
+# - Uses AWS-managed prefix list (no manual CIDR updates needed)
+# - Required if snapshot export to S3 is enabled
+# - Enables automated backup export to S3 buckets
+#
+# Format: pl-{8-char-hex}
+# Example: pl-6fa54006
+#
+# Finding S3 Prefix List ID:
+# AWS Console:
+# 1. Navigate to VPC → Managed Prefix Lists
+# 2. Filter by name: com.amazonaws.{region}.s3
+# 3. For ap-southeast-1: com.amazonaws.ap-southeast-1.s3
+# 4. Copy Prefix List ID (format: pl-xxxxxxxx)
+#
+# When to Use:
+# - Exporting snapshots to S3 buckets
+# - Automated backup export workflows
+# - Cross-region snapshot copy (requires S3)
+# - Compliance requirements for backup storage
+#
+# Leave Empty If:
+# - No S3 snapshot export needed
+# - Using default snapshot storage (within ElastiCache service)
+# - No S3 integration required
+# - Snapshots stored only in ElastiCache (automatic backups)
+
+# --- REDIS CLUSTER CONFIGURATION ---
+# Template creates Redis cluster with the following configuration:
+#
+# Replication Group:
+# - Replication Group ID: {AppShortName}-{EnvName}-redis
+# - Description: Redis cluster for {AppShortName} {EnvName}
+# - Engine: redis
+# - Engine Version: 7.0 (latest stable version)
+# - Port: 6379 (default Redis port)
+# - Node Type: Specified by RedisCacheInstanceType parameter
+# - Number of Cache Clusters: 2 (1 primary + 1 replica)
+#
+# High Availability:
+# - Multi-AZ: Enabled (automatic failover)
+# - Automatic Failover: Enabled
+# - Primary node in one AZ, replica in another AZ
+# - Failover time: Typically 30-60 seconds
+#
+# Security:
+# - Encryption at Rest: Enabled (AWS managed KMS key)
+# - Encryption in Transit: Enabled (TLS)
+# - Auth Token: Required for all connections
+# - Security Group: Restricts access to application subnets only
+#
+# Backups:
+# - Automatic Backup: Enabled
+# - Backup Retention Period:
+#   - Production: 35 days
+#   - Non-Production: 7 days
+# - Backup Window: 03:00-05:00 (UTC)
+# - Final Snapshot: Created on stack deletion (production only)
+#
+# Maintenance:
+# - Maintenance Window: sun:05:00-sun:06:00 (UTC)
+# - Auto Minor Version Upgrade: Enabled
+# - Notification SNS Topic: None (can be added manually)
+#
+# Performance:
+# - Snapshot Performance Impact: Medium (snapshots taken from replica)
+# - Eviction Policy: allkeys-lru (least recently used)
+# - Max Memory Policy: Evict keys when memory limit reached

@@ -1,0 +1,344 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. xxx, webapp, myapp
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-sit1, prod
+BucketName: "<edit_here>"                        # 📝 e.g. mybucket, uploads, static-assets
+DomainBucketName: "<edit_here>"                  # 📝 e.g. mybucket.synapxe.sg (for static website hosting)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+EnableCorsConfiguration: "false"                  # true or false (default is false)
+AllowedOrigins: "*"                               # e.g. * or https://example.com (default is *)
+EnableEventBridgeForS3Bucket: "false"             # true or false (default is false)
+EnableLifecycle: "false"                          # true or false (default is false)
+LifecycleExpirationDays: "90"                     # e.g. 90 (default is 90)
+LifecyclePrefix: "temp/"                          # e.g. temp/ (default is temp/)
+EnableVersioning: "false"                         # true or false (default is false)
+EnableNoncurrentVersionExpiration: "false"        # true or false (default is false)
+NoncurrentVersionExpirationDays: "30"             # e.g. 30 (default is 30)
+NoncurrentVersionTransitionDays: "7"              # e.g. 7 (default is 7)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates bucket name: {AppShortName}-{EnvName}-s3-{BucketName}
+# - Part of globally unique bucket naming
+#
+# Format: Lowercase alphanumeric, no special characters
+# Example: xxx, webapp, myapp
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Ensure it creates globally unique bucket names when combined with EnvName
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in bucket naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-stg, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit-a,
+#   nprd-sit-b, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-pt, nprd-pp,
+#   nprd-pp-a, nprd-pp-b
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (bucket preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (bucket deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- BUCKET NAME ---
+# BucketName: Bucket suffix for standard naming pattern
+#
+# Purpose:
+# - Creates bucket with standard naming: {AppShortName}-{EnvName}-s3-{BucketName}
+# - Used for general application storage
+#
+# Format: Lowercase alphanumeric with hyphens allowed
+# Example: "mybucket", "uploads", "static-assets", "data-lake"
+#
+# Resulting Bucket Name:
+# {AppShortName}-{EnvName}-s3-{BucketName}
+# Example: webapp-nprd-sit1-s3-uploads
+#
+# Global Uniqueness:
+# - S3 bucket names must be globally unique across ALL AWS accounts
+# - If name already exists, deployment will fail
+#
+# Finding Your Value (AWS Console):
+# 1. Determine the purpose of this bucket
+# 2. Create a descriptive suffix (e.g., uploads, assets, backups)
+# 3. Verify full bucket name will be globally unique
+
+# --- DOMAIN BUCKET NAME ---
+# DomainBucketName: Exact bucket name for static website hosting
+#
+# Purpose:
+# - Creates bucket with exact domain match for static website hosting
+# - Bucket name must match the domain for CloudFront or Route 53 integration
+#
+# Format: Fully qualified domain name
+# Example: "mybucket.synapxe.sg", "www.example.com", "assets.myapp.com"
+#
+# Resulting Bucket Name: Exactly as specified (no prefix/suffix added)
+#
+# Requirements:
+# - DNS record (CNAME or ALIAS) must point to bucket endpoint
+# - Domain must be globally unique
+# - Typically used with CloudFront for static website hosting
+#
+# Use Cases:
+# - Static website hosting with custom domain
+# - CloudFront origin for SPA (Single Page Application)
+# - Asset hosting with branded domain
+#
+# Finding Your Value:
+# 1. Determine the domain for your static website
+# 2. Use the exact domain name as bucket name
+# 3. Ensure domain is registered and you have DNS control
+
+# --- ENABLE CORS CONFIGURATION ---
+# EnableCorsConfiguration: Enable Cross-Origin Resource Sharing
+#
+# Purpose:
+# - Allows web applications to access bucket from different origins
+# - Required for browser-based file uploads to S3
+#
+# Available Options:
+# - true: Enable CORS configuration
+# - false: Disable CORS (default)
+#
+# Use Cases:
+# - Web application uploads files directly to S3 from browser
+# - Frontend application downloads files from S3
+# - Cross-domain API requests
+#
+# CORS Configuration Created (when enabled):
+# - AllowedOrigins: As specified in AllowedOrigins parameter
+# - AllowedMethods: GET, PUT, POST, DELETE, HEAD
+# - AllowedHeaders: * (all headers)
+# - MaxAgeSeconds: 3000 (browser caches preflight response for 50 minutes)
+#
+# Leave empty ("") to use default: false
+
+# --- ALLOWED ORIGINS ---
+# AllowedOrigins: Origins allowed to access bucket via CORS
+#
+# Purpose:
+# - Specifies which domains can make cross-origin requests to bucket
+# - Only applies when EnableCorsConfiguration=true
+#
+# Format: URL pattern or wildcard
+# Examples:
+# - "*" (any origin - development/testing only)
+# - "https://example.com" (specific domain)
+# - "https://*.example.com" (wildcard subdomain)
+#
+# Security Considerations:
+# - Production: Use specific domains (not "*")
+# - Development/Testing: "*" acceptable for convenience
+# - Multiple origins: CloudFormation supports single origin per parameter
+#
+# Finding Your Value:
+# 1. Identify the domain where your web application is hosted
+# 2. For production: Use specific domain (e.g., https://example.com)
+# 3. For development: Can use "*" for testing
+#
+# Leave empty ("") to use default: *
+
+# --- ENABLE EVENTBRIDGE FOR S3 BUCKET ---
+# EnableEventBridgeForS3Bucket: Enable EventBridge notifications for S3 events
+#
+# Purpose:
+# - Sends S3 events to EventBridge for event-driven workflows
+# - Enables integration with Lambda, Step Functions, SNS, SQS
+#
+# Available Options:
+# - true: Send all S3 events to EventBridge
+# - false: Disable EventBridge integration (default)
+#
+# Events Available:
+# - Object Created (Put, Post, Copy, CompleteMultipartUpload)
+# - Object Deleted (Delete, DeleteMarkerCreated)
+# - Object Restore (from Glacier)
+# - Object Tagging (Put, Delete)
+# - Object ACL (Put)
+#
+# Use Cases:
+# - Trigger Lambda function on file upload
+# - Send notifications to SNS/SQS when object is created
+# - Start Step Functions workflow for file processing
+# - Log events to CloudWatch for audit trail
+#
+# Leave empty ("") to use default: false
+
+# --- ENABLE LIFECYCLE ---
+# EnableLifecycle: Enable lifecycle policy for automatic object expiration
+#
+# Purpose:
+# - Automatically deletes objects after specified number of days
+# - Reduces storage costs by removing old or temporary data
+#
+# Available Options:
+# - true: Enable lifecycle policy
+# - false: Disable lifecycle policy (default)
+#
+# Leave empty ("") to use default: false
+
+# --- LIFECYCLE EXPIRATION DAYS ---
+# LifecycleExpirationDays: Number of days until object expiration
+#
+# Purpose:
+# - Defines how long objects remain in bucket before automatic deletion
+# - Only applies when EnableLifecycle=true
+#
+# Format: Integer (days)
+# Range: 1-36500 days
+# Example: 90 (objects deleted after 90 days)
+#
+# Common Values:
+# - 7: Temporary processing files
+# - 30: Short-term logs
+# - 90: Medium-term storage (default)
+# - 365: Long-term archive
+#
+# Finding Your Value:
+# 1. Determine data retention requirements
+# 2. Consider compliance or regulatory requirements
+# 3. Balance storage costs vs. data availability needs
+#
+# Leave empty ("") to use default: 90
+
+# --- LIFECYCLE PREFIX ---
+# LifecyclePrefix: Prefix filter for lifecycle rule
+#
+# Purpose:
+# - Applies lifecycle policy only to objects with this prefix
+# - Allows selective expiration by folder path
+#
+# Format: Folder path (include trailing slash for folders)
+# Examples:
+# - "temp/" (temp folder)
+# - "logs/" (logs folder)
+# - "uploads/processed/" (nested folder)
+# - "" (all objects in bucket)
+#
+# Use Cases:
+# - Delete only temporary files: "temp/"
+# - Expire old logs: "logs/"
+# - Clean up processed uploads: "uploads/processed/"
+#
+# Leave empty ("") to use default: temp/
+
+# --- ENABLE VERSIONING ---
+# EnableVersioning: Enable S3 bucket versioning
+#
+# Purpose:
+# - Preserves all versions of objects
+# - Protects against accidental deletion or overwrite
+#
+# Available Options:
+# - true: Enable versioning
+# - false: Disable versioning (default)
+#
+# Benefits:
+# - Recover from accidental deletion
+# - Retrieve previous versions of objects
+# - Compliance requirements (audit trail)
+# - Rollback capability for configuration files
+#
+# Leave empty ("") to use default: false
+
+# --- ENABLE NONCURRENT VERSION EXPIRATION ---
+# EnableNoncurrentVersionExpiration: Automatically delete old object versions
+#
+# Purpose:
+# - Reduces storage costs by removing old versions
+# - Only applies when EnableVersioning=true
+#
+# Available Options:
+# - true: Enable automatic deletion of old versions
+# - false: Keep all versions indefinitely (default)
+#
+# Use Cases:
+# - Cost optimization (delete old versions after X days)
+# - Compliance (retain versions for specific period)
+# - Storage management (prevent unlimited version accumulation)
+#
+# Leave empty ("") to use default: false
+
+# --- NONCURRENT VERSION EXPIRATION DAYS ---
+# NoncurrentVersionExpirationDays: Days to keep old versions before deletion
+#
+# Purpose:
+# - Defines retention period for noncurrent object versions
+# - Only applies when EnableNoncurrentVersionExpiration=true
+#
+# Format: Integer (days)
+# Range: 1-36500 days
+# Example: 30 (old versions deleted after 30 days)
+#
+# Common Values:
+# - 7: Short-term rollback capability
+# - 30: Medium-term recovery window (default)
+# - 90: Long-term compliance retention
+#
+# Finding Your Value:
+# 1. Determine how long you need to retain old versions
+# 2. Consider rollback requirements
+# 3. Balance storage costs vs. recovery needs
+#
+# Leave empty ("") to use default: 30
+
+# --- NONCURRENT VERSION TRANSITION DAYS ---
+# NoncurrentVersionTransitionDays: Days before transitioning old versions to Glacier
+#
+# Purpose:
+# - Reduces costs by moving old versions to cheaper storage class
+# - Only applies when EnableNoncurrentVersionExpiration=true
+#
+# Format: Integer (days)
+# Range: 1-36500 days
+# Example: 7 (old versions moved to Glacier after 7 days)
+#
+# Storage Class Transition Flow:
+# - Day 0: Object version becomes noncurrent (new version uploaded)
+# - Day {NoncurrentVersionTransitionDays}: Moved to Glacier
+# - Day {NoncurrentVersionExpirationDays}: Deleted
+#
+# Common Values:
+# - 7: Move to Glacier after 1 week (default)
+# - 30: Move to Glacier after 1 month
+#
+# Cost Optimization:
+# - Glacier storage is significantly cheaper than Standard
+# - Suitable for infrequently accessed old versions
+#
+# Leave empty ("") to use default: 7

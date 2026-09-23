@@ -1,0 +1,640 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (must fill before deployment)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# NAMING & ENVIRONMENT
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev/dev1/dev2, nprd-sit/sit1/sit2/sit3/sit-a/sit-b/sit-c, nprd-uat/uat-a/uat-b/uat-c, nprd-pt, nprd-pp/pp-a/pp-b/pp-c, prod/prod-a/prod-b/prod-c
+ALBName: "<edit_here>"                  # 📝 e.g. apt-nprd-public-alb-portal, myapp-prod-alb-vpce
+
+# NETWORK CONFIGURATION
+ALBScheme: "<edit_here>"                # 📝 internet-facing or internal
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+IngressSubnetIds: "<edit_here>"         # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets, comma-separated)
+
+# VPC ENDPOINT TARGET IPs (minimum 2 required for HA)
+VPCEndpointIP1: "<edit_here>"           # 📝 e.g. 10.1.154.147 (VPC endpoint IP for AZ1)
+VPCEndpointIP2: "<edit_here>"           # 📝 e.g. 10.1.138.43 (VPC endpoint IP for AZ2)
+
+# SSL/TLS CONFIGURATION
+SSLCertificateArn: "<edit_here>"        # 📝 e.g. arn:aws:acm:ap-southeast-1:123456789012:certificate/xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ListenerSslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06"  # TLS 1.2+1.3 (default). See parameter reference for options.
+
+# ========================================================================
+# OPTIONAL PARAMETERS (leave empty if not needed)
+# ========================================================================
+
+# ADDITIONAL VPC ENDPOINT IP
+VPCEndpointIP3: ""                      # VPC endpoint IP for AZ3 (optional, for 3-AZ deployment)
+
+# SECURITY - PREFIX LISTS
+PrefixListIdIntranet: ""                # Prefix List ID for intranet access (e.g. pl-xxxxxxxxxxxxxxxxx, required for internal ALB)
+PrefixListIdInternet: ""                # Prefix List ID for internet access (e.g. pl-xxxxxxxxxxxxxxxxx, optional for public ALB)
+
+# SECURITY - HSTS (HTTP Strict Transport Security)
+StrictTransportSecurityHeaderValue: ""  # HSTS header value (e.g. max-age=31536000; includeSubDomains; preload, optional)
+
+# VPC CIDR RANGES (for security group egress rules)
+VpcCidr1: ""                            # Primary VPC CIDR (e.g. 10.193.0.0/16, optional)
+VpcCidr2: ""                            # Secondary VPC CIDR (optional)
+VpcCidr3: ""                            # Tertiary VPC CIDR (optional)
+
+# ADDITIONAL SSL CERTIFICATES (SNI support for multiple domains)
+AdditionalCertificateArn1: ""           # Additional certificate ARN 1 (optional)
+AdditionalCertificateArn2: ""           # Additional certificate ARN 2 (optional)
+AdditionalCertificateArn3: ""           # Additional certificate ARN 3 (optional)
+AdditionalCertificateArn4: ""           # Additional certificate ARN 4 (optional)
+AdditionalCertificateArn5: ""           # Additional certificate ARN 5 (optional)
+AdditionalCertificateArn6: ""           # Additional certificate ARN 6 (optional)
+AdditionalCertificateArn7: ""           # Additional certificate ARN 7 (optional)
+AdditionalCertificateArn8: ""           # Additional certificate ARN 8 (optional)
+AdditionalCertificateArn9: ""           # Additional certificate ARN 9 (optional)
+AdditionalCertificateArn10: ""          # Additional certificate ARN 10 (optional)
+AdditionalCertificateArn11: ""          # Additional certificate ARN 11 (optional)
+AdditionalCertificateArn12: ""          # Additional certificate ARN 12 (optional)
+AdditionalCertificateArn13: ""          # Additional certificate ARN 13 (optional)
+AdditionalCertificateArn14: ""          # Additional certificate ARN 14 (optional)
+AdditionalCertificateArn15: ""          # Additional certificate ARN 15 (optional)
+AdditionalCertificateArn16: ""          # Additional certificate ARN 16 (optional)
+AdditionalCertificateArn17: ""          # Additional certificate ARN 17 (optional)
+AdditionalCertificateArn18: ""          # Additional certificate ARN 18 (optional)
+AdditionalCertificateArn19: ""          # Additional certificate ARN 19 (optional)
+AdditionalCertificateArn20: ""          # Additional certificate ARN 20 (optional)
+AdditionalCertificateArn21: ""          # Additional certificate ARN 21 (optional)
+AdditionalCertificateArn22: ""          # Additional certificate ARN 22 (optional)
+AdditionalCertificateArn23: ""          # Additional certificate ARN 23 (optional)
+AdditionalCertificateArn24: ""          # Additional certificate ARN 24 (optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+#
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Determines resource lifecycle policies
+# - Used in resource naming and tagging
+# - Controls deletion behavior
+#
+# Common Values:
+# - nprd: Base non-production
+# - nprd-dev: Development
+# - nprd-sit, nprd-uat: Testing environments
+# - prod: Production
+#
+# Impact on Resources:
+# Production (prod):
+# - DeletionPolicy: Retain (resources preserved on stack deletion)
+# - Additional protection enabled
+#
+# Non-Production (nprd-*):
+# - DeletionPolicy: Delete (resources removed on stack deletion)
+# - Automatic cleanup
+
+# --- ALB NAME ---
+# ALBName: Unique identifier for the Application Load Balancer
+#
+# Purpose:
+# - Identifies the ALB resource
+# - Used in DNS, monitoring, and logging
+# - Must be unique within the region
+#
+# Requirements:
+# - Maximum 32 characters
+# - Alphanumeric and hyphens only
+# - Cannot start or end with hyphen
+# - Case-insensitive
+#
+# Format: Descriptive name indicating purpose and environment
+# Example: apt-nprd-public-alb-portal, myapp-prod-alb-vpce, api-prod-alb-internal
+#
+# Naming Conventions:
+# - Include application/service name
+# - Include environment (nprd, prod)
+# - Include purpose (public, internal, vpce)
+# - Keep concise but descriptive
+
+# --- ALB SCHEME ---
+# ALBScheme: Determines whether ALB is public or private
+#
+# Allowed Values:
+# - internet-facing
+# - internal
+#
+# Internet-Facing (Public ALB):
+# - Receives traffic from the internet
+# - Gets public IP addresses assigned to ALB nodes
+# - Requires public subnets with Internet Gateway route
+# - ALB nodes have both public and private IPs
+# - Use for: Public websites, APIs, client-facing applications
+# - Security: Use PrefixListIdInternet to restrict source IPs
+#
+# Internal (Private ALB):
+# - Only accessible from within VPC or via VPN/Direct Connect
+# - Gets private IP addresses only (no public IPs)
+# - Requires private subnets
+# - Use for: Internal services, backend APIs, microservices communication
+# - Security: MUST set PrefixListIdIntranet for access control
+# - Common use: Corporate intranet applications, internal APIs
+#
+# Important:
+# - Scheme cannot be changed after ALB creation
+# - Choose carefully based on application requirements
+# - Internal ALBs require VPN/Direct Connect for external access
+
+# --- VPC ID ---
+# VpcId: Virtual Private Cloud where ALB will be deployed
+#
+# Purpose:
+# - Defines network boundary for ALB
+# - All subnets must belong to this VPC
+# - Security groups created in this VPC
+#
+# Format: vpc-{16-char-hex}
+# Example: vpc-0d99a0c727b301d67
+#
+# Finding VPC ID:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Identify VPC by name or CIDR block
+# 3. Copy VPC ID from list
+#
+# Requirements:
+# - VPC must have DNS resolution enabled
+# - VPC must have DNS hostnames enabled
+# - VPC must have subnets in multiple AZs
+
+# --- INGRESS SUBNET IDS ---
+# IngressSubnetIds: Comma-separated list of subnet IDs for ALB deployment
+#
+# Purpose:
+# - ALB creates network interfaces (ENIs) in these subnets
+# - Determines which AZs the ALB operates in
+# - Affects ALB availability and fault tolerance
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones (required by AWS)
+# - Maximum 6 subnets (ALB supports up to 6 AZs)
+# - Each subnet must have at least /27 CIDR (32 IP addresses)
+# - Recommended: At least 8 available IPs per subnet for ALB nodes
+# - All subnets must be in the same VPC
+# - Subnets must be in different AZs
+#
+# Internet-facing ALB:
+# - Subnets must have route to Internet Gateway (0.0.0.0/0 → igw-xxx)
+# - Typically use "public" subnets
+# - ALB nodes receive public IPs
+#
+# Internal ALB:
+# - Use private subnets (no Internet Gateway route)
+# - ALB nodes receive private IPs only
+#
+# Format: subnet-{17-char-hex},subnet-{17-char-hex}
+# Example: subnet-0dea7db2634fdcb74,subnet-0c0884fe76edfe546
+#
+# Finding Subnet IDs:
+# AWS Console:
+# 1. Navigate to VPC → Subnets
+# 2. Filter by VPC ID
+# 3. Verify Availability Zone (ensure different AZs)
+# 4. For internet-facing: Check route table has IGW route
+# 5. For internal: Check route table does NOT have IGW route
+# 6. Copy subnet IDs (format: subnet-xxxxxxxxxxxxxxxxx)
+#
+# High Availability:
+# - 2 subnets: Basic HA (minimum)
+# - 3 subnets: Better HA (recommended)
+# - 4+ subnets: Maximum HA (for critical applications)
+#
+# Subnet Sizing:
+# - Each ALB node requires 1 IP address
+# - AWS reserves 5 IPs in each subnet
+# - Recommended: /27 CIDR = 32 IPs - 5 reserved = 27 usable
+# - For production: /26 CIDR or larger
+
+# --- VPC ENDPOINT TARGET IPs ---
+# VPCEndpointIP1, VPCEndpointIP2, VPCEndpointIP3: IP addresses of VPC Interface Endpoints
+#
+# Purpose:
+# - ALB forwards incoming HTTPS traffic to these IP addresses
+# - IPs are network interface IPs of VPC Interface Endpoints
+# - Enables routing traffic to AWS services or PrivateLink services
+#
+# Requirements:
+# - VPCEndpointIP1 and VPCEndpointIP2 are REQUIRED (minimum 2 for HA)
+# - VPCEndpointIP3 is optional (for 3rd AZ deployment)
+# - IPs must be from same VPC as ALB
+# - IPs should be in different AZs for high availability
+# - IPs must be reachable from ALB subnets
+# - Target port: 443 (HTTPS)
+#
+# Finding VPC Endpoint IPs:
+# AWS Console:
+# 1. Navigate to VPC → Endpoints
+# 2. Select VPC Endpoint (e.g., vpce-xxxxxxxxxxxxxxxxx)
+# 3. Go to "Network Interfaces" or "Subnets" tab
+# 4. View network interface details
+# 5. Copy private IPv4 addresses
+# 6. You should see one IP per AZ
+#
+# Example:
+# - VPCEndpointIP1: 10.1.154.147 (AZ: ap-southeast-1a)
+# - VPCEndpointIP2: 10.1.138.43 (AZ: ap-southeast-1b)
+# - VPCEndpointIP3: 10.1.162.89 (AZ: ap-southeast-1c, optional)
+#
+# Health Checks:
+# - ALB performs health checks on these IPs
+# - Protocol: HTTPS
+# - Port: 443
+# - Path: / (root)
+# - Success codes: 200, 403
+# - Unhealthy threshold: 2 consecutive failures
+# - Healthy threshold: 5 consecutive successes
+# - Interval: 30 seconds
+#
+# Common VPC Endpoint Types:
+# - AWS PrivateLink services (custom services)
+# - AWS services (S3, DynamoDB, etc.)
+# - Third-party SaaS services via PrivateLink
+#
+# Important Notes:
+# - VPC endpoints must be created before deploying ALB
+# - Endpoint IPs are static (don't change unless endpoint recreated)
+# - If endpoint is deleted, ALB health checks will fail
+# - Monitor target health in ALB console
+
+# --- SSL CERTIFICATE ARN ---
+# SSLCertificateArn: Primary SSL/TLS certificate ARN from AWS Certificate Manager (ACM)
+#
+# Purpose:
+# - Enables HTTPS encryption for ALB
+# - Terminates SSL/TLS at ALB (backend uses HTTPS to VPC endpoints)
+# - Validates client connections
+#
+# Requirements:
+# - Must be in same AWS region as ALB
+# - Must be validated (DNS or email validation)
+# - Certificate status must be "Issued"
+# - Can be wildcard certificate (*.example.com)
+# - Can be imported or ACM-issued
+# - Supports domain names in Subject Alternative Name (SAN)
+#
+# Format: arn:aws:acm:{region}:{account-id}:certificate/{certificate-id}
+# Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/5e10a9f8-f3b4-4e6b-8dd7-cfc26a0eaf08
+#
+# Finding ACM Certificate ARN:
+# AWS Console:
+# 1. Navigate to Certificate Manager (ACM)
+# 2. Ensure you're in correct region (same as ALB)
+# 3. View certificates list
+# 4. Verify certificate status is "Issued"
+# 5. Click certificate → Copy ARN from details
+#
+# Certificate Renewal:
+# - ACM auto-renews certificates (DNS-validated)
+# - No ALB configuration change needed
+# - Email-validated certificates require manual renewal
+#
+# Wildcard Certificates:
+# - *.example.com covers: www.example.com, api.example.com, etc.
+# - Does NOT cover root domain (example.com) - need separate cert or SAN entry
+# - Recommended for multi-subdomain deployments
+#
+# Important:
+# - Certificate region MUST match ALB region
+# - Cross-region certificates not supported
+# - Keep certificate private key secure (if imported)
+
+# --- LISTENER SSL POLICY ---
+# ListenerSslPolicy: TLS security policy for ALB HTTPS listener
+#
+# Purpose:
+# - Defines supported TLS protocols and cipher suites
+# - Controls security vs compatibility trade-off
+# - Affects which clients can connect
+#
+# Format: ELBSecurityPolicy-{name}
+#
+# Allowed Values (TLS 1.2+ only — no TLS 1.1 or 1.0):
+#
+# TLS 1.3 + TLS 1.2:
+# - ELBSecurityPolicy-TLS13-1-2-2021-06        (default, recommended)
+# - ELBSecurityPolicy-TLS13-1-2-Res-2021-06    (restricted ciphers)
+# - ELBSecurityPolicy-TLS13-1-2-Ext1-2021-06   (extended ciphers set 1)
+# - ELBSecurityPolicy-TLS13-1-2-Ext2-2021-06   (extended ciphers set 2)
+#
+# TLS 1.3 + TLS 1.2 + Post-Quantum:
+# - ELBSecurityPolicy-TLS13-1-2-PQ-2025-09     (post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09 (restricted + post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-Ext1-PQ-2025-09(extended set 1 + post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-Ext2-PQ-2025-09(extended set 2 + post-quantum)
+#
+# TLS 1.3 only:
+# - ELBSecurityPolicy-TLS13-1-3-2021-06        (TLS 1.3 only)
+# - ELBSecurityPolicy-TLS13-1-3-PQ-2025-09     (TLS 1.3 only + post-quantum)
+#
+# TLS 1.2 only (no TLS 1.3):
+# - ELBSecurityPolicy-TLS-1-2-Ext-2018-06      (extended ciphers)
+# - ELBSecurityPolicy-TLS-1-2-2017-01          (base ciphers)
+#
+# Recommendations:
+# - Standard workloads: Use default (ELBSecurityPolicy-TLS13-1-2-2021-06)
+# - TLS 1.3 only: Use ELBSecurityPolicy-TLS13-1-3-2021-06
+# - Post-quantum readiness: Use ELBSecurityPolicy-TLS13-1-2-PQ-2025-09
+# - Legacy clients (TLS 1.2 only): Use ELBSecurityPolicy-TLS-1-2-2017-01
+#
+# Reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/describe-ssl-policies.html
+
+# --- PREFIX LISTS (OPTIONAL) ---
+# PrefixListIdIntranet: For internal ALB access control
+# PrefixListIdInternet: For public ALB access control
+#
+# Purpose:
+# - Centrally manage allowed IP ranges for ALB access
+# - Creates security group ingress rules
+# - Easier to maintain than individual CIDR rules
+# - Changes to prefix list automatically update security group
+#
+# Format: pl-{17-char-hex} or empty string
+# Example: pl-0123456789abcdef0
+#
+# When to Use:
+# PrefixListIdIntranet (REQUIRED for internal ALB):
+# - Corporate network ranges
+# - VPN IP ranges
+# - Partner network ranges
+# - On-premises network via Direct Connect
+# - Example IPs: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+#
+# PrefixListIdInternet (optional for internet-facing ALB):
+# - Known client IP ranges
+# - CDN provider IPs
+# - Partner organization IPs
+# - Geographic restrictions
+# - If empty: ALB accepts traffic from any internet source (0.0.0.0/0)
+#
+# Creating Prefix List:
+# AWS Console:
+# 1. Navigate to VPC → Managed Prefix Lists
+# 2. Click "Create prefix list"
+# 3. Enter name: e.g., "corporate-network-ranges"
+# 4. Add CIDR entries:
+#    - Corporate HQ: 10.1.0.0/16
+#    - VPN range: 10.2.0.0/16
+#    - Partner network: 203.0.113.0/24
+# 5. Set max entries (plan for growth)
+# 6. Click "Create"
+# 7. Copy Prefix List ID (pl-xxxxx)
+#
+# Finding Prefix List ID:
+# AWS Console:
+# 1. Navigate to VPC → Managed Prefix Lists
+# 2. Locate prefix list by name
+# 3. Copy Prefix List ID
+#
+# Benefits:
+# - Single source of truth for IP ranges
+# - Update prefix list → security groups update automatically
+# - Share prefix lists across multiple ALBs/security groups
+# - Version control for IP range changes
+#
+# Security Best Practices:
+# - Always use prefix list for internal ALBs
+# - Document all CIDR entries with purpose
+# - Regular audit of allowed ranges
+# - Remove unused ranges promptly
+#
+# Leave Empty If:
+# - Internet-facing ALB with no IP restrictions
+# - Using alternative access control (WAF, etc.)
+
+# --- HSTS HEADER (OPTIONAL) ---
+# StrictTransportSecurityHeaderValue: HTTP Strict Transport Security header
+#
+# Purpose:
+# - Forces browsers to use HTTPS only
+# - Prevents SSL stripping attacks
+# - Prevents downgrade attacks
+# - Enhances security for web applications
+#
+# Format: max-age=<seconds>[; includeSubDomains][; preload]
+#
+# Common Values:
+# - "max-age=31536000" (1 year, basic HSTS)
+# - "max-age=31536000; includeSubDomains" (with subdomains)
+# - "max-age=31536000; includeSubDomains; preload" (most secure)
+#
+# Directive Explanation:
+# max-age=<seconds>:
+# - How long browser remembers to use HTTPS
+# - 31536000 = 1 year (recommended)
+# - 63072000 = 2 years (maximum for preload)
+#
+# includeSubDomains:
+# - Applies HSTS to all subdomains
+# - Example: example.com, www.example.com, api.example.com
+# - Use with caution if any subdomain uses HTTP
+#
+# preload:
+# - Submit domain to HSTS preload list
+# - Browsers hardcode your domain as HTTPS-only
+# - Difficult to reverse (requires removal request)
+# - Only use if committed to HTTPS permanently
+#
+# Testing Strategy:
+# 1. Start with short max-age for testing:
+#    - "max-age=300" (5 minutes)
+# 2. Test thoroughly:
+#    - All pages accessible via HTTPS
+#    - No mixed content warnings
+#    - All redirects work correctly
+# 3. Gradually increase:
+#    - "max-age=86400" (1 day)
+#    - "max-age=604800" (1 week)
+#    - "max-age=2592000" (1 month)
+# 4. Final production value:
+#    - "max-age=31536000" (1 year)
+#
+# ⚠️ Important Warnings:
+# - Do NOT use preload unless certain
+# - Ensure ALL content served via HTTPS
+# - Check for mixed content (HTTP resources on HTTPS pages)
+# - Test with short max-age first
+# - Cannot easily revert once deployed
+#
+# Verifying HSTS:
+# Test header presence:
+# curl -I https://{alb-dns-name} | grep -i strict-transport-security
+#
+# Checking browser behavior:
+# - Chrome: chrome://net-internals/#hsts
+# - Firefox: Developer Tools → Network → Response Headers
+#
+# Leave Empty If:
+# - Application not ready for HTTPS-only
+# - Testing HTTPS migration
+# - Some clients require HTTP access
+
+# --- VPC CIDR RANGES ---
+# VpcCidr1, VpcCidr2, VpcCidr3: VPC CIDR blocks for security group egress rules
+#
+# Purpose:
+# - Allows ALB to communicate with VPC Endpoint IPs
+# - Creates security group egress rules
+# - Enables outbound HTTPS (port 443) traffic from ALB to endpoints
+#
+# Requirements:
+# - VpcCidr1: Primary VPC CIDR (optional, can leave empty for default any egress)
+# - VpcCidr2, VpcCidr3: Additional CIDR blocks (for multi-CIDR VPCs)
+#
+# Format: CIDR notation (x.x.x.x/x)
+# Example: 10.193.0.0/16
+#
+# Finding VPC CIDR Blocks:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Select VPC by VPC ID
+# 3. View "CIDR blocks" section
+# 4. Primary CIDR shown first
+# 5. Additional CIDRs listed below (if any)
+#
+# When to Use Multiple CIDRs:
+# - VPC has multiple CIDR blocks associated (secondary CIDRs)
+# - VPC CIDR expansion scenarios
+# - VPC peering with non-overlapping CIDRs
+#
+# Egress Rules Created:
+# - Destination: VPC CIDR blocks
+# - Port: 443 (HTTPS)
+# - Protocol: TCP
+# - Purpose: ALB → VPC Endpoint communication
+#
+# Leave Empty If:
+# - Using default egress (0.0.0.0/0) - less secure but simpler
+# - All VPC endpoint IPs within primary VPC CIDR
+
+# --- ADDITIONAL SSL CERTIFICATES (OPTIONAL) ---
+# AdditionalCertificateArn1 through AdditionalCertificateArn24
+#
+# Purpose:
+# - Support multiple domains/subdomains on same ALB using SNI
+# - Consolidate multiple applications behind single ALB
+# - Reduce infrastructure complexity
+#
+# Server Name Indication (SNI):
+# - TLS extension that indicates hostname during handshake
+# - ALB inspects SNI hostname in client TLS ClientHello
+# - Selects matching certificate automatically
+# - Client sends hostname, ALB responds with appropriate certificate
+#
+# Use Cases:
+# - Multiple domains: www.example.com, api.example.com, admin.example.com
+# - Brand consolidation: newbrand.com, oldbrand.com on same ALB
+# - Multi-tenant applications: customer1.saas.com, customer2.saas.com
+# - Development environments: dev.example.com, staging.example.com, prod.example.com
+#
+# Requirements:
+# - Each certificate must be in same region as ALB
+# - All certificates must be validated (status: "Issued")
+# - Maximum 25 total certificates (1 primary + 24 additional)
+# - Leave unused certificate ARN slots as empty strings
+# - Cannot use duplicate certificates
+#
+# Finding Certificate ARN:
+# AWS Console:
+# 1. Navigate to Certificate Manager (ACM)
+# 2. Ensure correct region (same as ALB)
+# 3. Verify certificate status is "Issued"
+# 4. Copy ARN for each certificate
+#
+# Certificate Selection Logic:
+# 1. ALB receives TLS ClientHello with SNI hostname
+# 2. ALB searches primary certificate for matching domain
+# 3. If no match, searches additional certificates
+# 4. If still no match, uses primary certificate (may cause cert warning)
+# 5. ALB completes TLS handshake with selected certificate
+#
+# Example Configuration:
+# - SSLCertificateArn: *.example.com (primary wildcard)
+# - AdditionalCertificateArn1: example.com (root domain)
+# - AdditionalCertificateArn2: *.api.example.com (API wildcard)
+# - AdditionalCertificateArn3: legacy.com (old brand)
+#
+# Testing SNI:
+# Test specific hostname:
+# openssl s_client -connect {alb-dns-name}:443 -servername www.example.com
+#
+# Verify certificate matches:
+# curl -vI https://www.example.com 2>&1 | grep "subject:"
+#
+# Best Practices:
+# - Use wildcard certificates where appropriate (*.example.com)
+# - Keep primary certificate for most common domain
+# - Document purpose of each additional certificate
+# - Remove unused certificates promptly
+# - Monitor certificate expiration dates
+#
+# Limitations:
+# - Maximum 25 certificates per ALB
+# - SNI not supported by very old clients (pre-2010)
+# - All certificates must be in ACM (no inline certificates)
+
+# --- ALB DEPLOYMENT ---
+# Template creates the following resources:
+#
+# Application Load Balancer:
+# - Name: {ALBName}
+# - Scheme: {ALBScheme} (internet-facing or internal)
+# - Subnets: Deployed in {IngressSubnetIds}
+# - IP address type: IPv4
+# - Deletion protection: Enabled for production
+#
+# Target Group:
+# - Name: {ALBName}-tg
+# - Target type: IP
+# - Protocol: HTTPS
+# - Port: 443
+# - VPC: {VpcId}
+# - Health check protocol: HTTPS
+# - Health check path: /
+# - Health check interval: 30 seconds
+# - Health check timeout: 5 seconds
+# - Healthy threshold: 5 consecutive successes
+# - Unhealthy threshold: 2 consecutive failures
+# - Success codes: 200, 403
+# - Targets: VPCEndpointIP1, VPCEndpointIP2, VPCEndpointIP3 (if specified)
+#
+# HTTPS Listener:
+# - Protocol: HTTPS
+# - Port: 443
+# - Default action: Forward to target group
+# - SSL certificate: {SSLCertificateArn}
+# - SSL policy: {ListenerSslPolicy}
+# - Additional certificates: AdditionalCertificateArn1-24 (if specified)
+# - HSTS header: {StrictTransportSecurityHeaderValue} (if specified)
+#
+# Security Group:
+# - Name: {ALBName}-sg
+# - VPC: {VpcId}
+# - Ingress rules:
+#   - If PrefixListIdIntranet: TCP 443 from prefix list
+#   - If PrefixListIdInternet: TCP 443 from prefix list
+#   - If neither: TCP 443 from 0.0.0.0/0
+# - Egress rules:
+#   - If VpcCidr1/2/3 specified: TCP 443 to VPC CIDRs
+#   - If not specified: All traffic to 0.0.0.0/0
+#
+# CloudFormation Stack Outputs:
+# - ALBDNS: ALB DNS name
+# - ALBArn: ALB ARN
+# - TargetGroupArn: Target group ARN
+# - SecurityGroupId: Security group ID

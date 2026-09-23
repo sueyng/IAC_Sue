@@ -1,0 +1,683 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA FUNCTION CONFIGURATION
+LambdaFunctionName: "<edit_here>"       # 📝 e.g. hello-world, data-processor, api-handler
+LambdaS3BucketName: "<edit_here>"       # 📝 e.g. myapp-nprd-deployment-bucket, myapp-nprd-app-artifact
+LambdaS3KeyPath: "<edit_here>"          # 📝 e.g. lambda/hello-world-v1.0.0.zip, functions/processor.zip
+LambdaHandler: "<edit_here>"            # 📝 e.g. lambda_function.lambda_handler (Python), index.handler (Node.js)
+LambdaRuntime: "<edit_here>"            # 📝 e.g. python3.12, python3.11, nodejs20.x, dotnet8, java21
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# COMPUTE CONFIGURATION
+LambdaMemorySize: "512"                   # MB - 128-10240 (increments of 64 MB above 128)
+LambdaTimeout: "30"                       # Seconds - 1-900 (15 minutes max)
+LambdaDescription: ""                     # e.g. Sample Hello World Lambda Function
+ReservedConcurrency: "0"                  # 0 = unreserved, 1+ = reserved instances
+LogRetentionInDays: "14"                  # 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+
+# VPC CONFIGURATION
+EnableVpcConfiguration: "false"         # Enable VPC (true) or public Lambda (false)
+SubnetIds: ""                           # e.g. subnet-abc123,subnet-def456 (private subnets, comma-separated, no spaces)
+LambdaSecurityGroupId: ""               # e.g. sg-0lambda123abc456def (from lambda-securitygroup stack)
+
+# LAMBDA LAYERS
+LambdaLayerArns: ""                     # Comma-separated layer ARNs (from lambda-layers stack)
+# Format: arn:aws:lambda:region:account:layer:layer-name:version,arn:aws:lambda:...
+
+# SERVICE ACCESS (enable only required services for least-privilege)
+EnableS3Access: "false"                   # Enable S3 read/write/delete/presigned URL
+EnableDynamoDBAccess: "false"             # Enable DynamoDB read/write operations
+EnableSecretsManagerAccess: "false"       # Enable Secrets Manager read access
+EnableSQSAccess: "false"                  # Enable SQS send/receive/delete messages
+EnableSSMAccess: "false"                  # Enable SSM Parameter Store read/write
+EnableSESAccess: "false"                  # Enable SES send emails
+EnableSNSAccess: "false"                  # Enable SNS publish to topics
+EnableEventBridgeAccess: "false"          # Enable EventBridge put events
+EnableLambdaInvokeAccess: "false"         # Enable Lambda invoke other functions
+
+# S3 ACCESS CONFIGURATION (if EnableS3Access=true)
+S3SpecificBucketNames: ""               # e.g. bucket1,bucket2,bucket3 (leave empty for pattern-based - {AppShortName}-*)
+
+# EVENT SOURCE
+EventSourceType: "none"                 # none, sqs, eventbridge, apigateway
+
+# SQS Event Source Configuration (if EventSourceType=sqs)
+SqsQueueArn: ""                         # e.g. arn:aws:sqs:region:account:queue-name
+SqsBatchSize: "10"                        # 1-10000
+SqsMaxBatchingWindow: "0"                 # Seconds - 0-300
+SqsMaxConcurrency: "10"                   # 2-1000
+
+# EventBridge Schedule Configuration (if EventSourceType=eventbridge)
+ScheduleExpression: ""                  # e.g. cron(0 1 * * ? *) or rate(5 minutes)
+
+# API Gateway Configuration (if EventSourceType=apigateway)
+ApiGatewayId: ""                        # e.g. abc123xyz
+
+# Dead Letter Queue
+DeadLetterQueueArn: ""                  # e.g. arn:aws:sqs:region:account:dlq-name
+
+# X-RAY TRACING
+EnableXRayTracing: "true"                 # Enable X-Ray tracing (Active or PassThrough mode)
+
+# ENVIRONMENT VARIABLES
+
+# LOGGING
+LogLevel: "INFO"                        # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# DATABASE CONFIGURATION
+DbSecretArn: ""                         # e.g. arn:aws:secretsmanager:region:account:secret:db-creds
+DbHost: ""                              # e.g. db.cluster-xyz.rds.amazonaws.com
+DbPort: "3306"                          # MySQL - 3306, PostgreSQL - 5432
+DbName: ""                              # Database name
+
+# DYNAMODB CONFIGURATION
+DedupDynamoDbTableName: ""              # e.g. myapp-nprd-dedup-table
+
+# SQS CONFIGURATION
+SqsQueueUrl: ""                         # e.g. https://sqs.region.amazonaws.com/account/queue-name
+
+# FORMSG CONFIGURATION (Singapore Government Forms)
+FormSgSecretArn: ""                     # e.g. arn:aws:secretsmanager:region:account:secret:formsg-webhook
+FormId: ""                              # FormSG form ID
+EnableFormSg: "false"
+ForSgSecretArn: ""                      # Alternative parameter name (typo in original template)
+
+# TWILIO CONFIGURATION (SMS/WhatsApp)
+TwilioSecretArn: ""                     # e.g. arn:aws:secretsmanager:region:account:secret:twilio-creds
+TwilioAccountSid: ""                    # e.g. AC1234567890abcdef1234567890abcdef
+TwilioWhatsappNumber: ""                # e.g. whatsapp:+6591234567
+TwilioTemplateSidMap: ""                # JSON mapping of template names to SIDs
+
+# PROXY CONFIGURATION
+ProxyUrl: ""                            # e.g. http://proxy.internal.gov.sg:8080
+
+# CLOUDWATCH ALARMS
+EnableAlarms: "false"                     # Enable CloudWatch alarms
+AdminAlertsTopicArn: ""                   # REQUIRED if EnableAlarms=true (SNS topic ARN)
+ErrorRateThreshold: "5"                   # Percentage - 0-100
+ThrottlesThreshold: "1"                   # Count per minute
+DurationThresholdMs: "30000"              # Milliseconds
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates Lambda function name: {AppShortName}-{EnvName}-{LambdaFunctionName}
+# - Creates IAM role: {AppShortName}-{EnvName}-role-{LambdaFunctionName}
+# - Scopes IAM permissions to resources matching: {AppShortName}-{EnvName}-*
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in resource naming
+# - Determines log retention (14 days for nprd, 30 days for prod by default)
+#
+# Production environments (prod, prod-a, prod-b, prod-c):
+# - Higher log retention recommended
+#
+# Non-Production environments (nprd, nprd-dev, nprd-stg, nprd-sit, nprd-uat):
+# - Standard log retention
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- LAMBDA FUNCTION NAME ---
+# LambdaFunctionName: Individual Lambda function identifier
+#
+# Purpose: Identifies this specific Lambda function
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: hello-world, data-processor, api-handler, event-consumer
+#
+# Requirements:
+# - Must be unique within the application (AppShortName + EnvName)
+# - Keep it short and descriptive
+# - Final function name: {AppShortName}-{EnvName}-{LambdaFunctionName}
+
+# --- LAMBDA S3 BUCKET NAME ---
+# LambdaS3BucketName: S3 bucket containing Lambda deployment package
+#
+# Purpose: Location of Lambda function ZIP file
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-nprd-deployment-bucket, myapp-nprd-app-artifact
+#
+# Requirements:
+# - Bucket must exist in same region as Lambda
+# - Lambda execution role must have s3:GetObject permission
+# - ZIP file must be uploaded before deployment
+#
+# Finding Bucket Name:
+# AWS Console → S3 → Buckets
+# - Locate your Lambda deployment bucket
+# - Copy bucket name
+
+# --- LAMBDA S3 KEY PATH ---
+# LambdaS3KeyPath: S3 object key for Lambda deployment package
+#
+# Purpose: Path to ZIP file within S3 bucket
+#
+# Format: path/to/file.zip
+# Example: lambda/hello-world-v1.0.0.zip, functions/processor.zip
+#
+# Requirements:
+# - File must exist in LambdaS3BucketName
+# - Must be valid Lambda deployment package
+# - Must contain handler code and dependencies (except layers)
+#
+# Uploading Package:
+# AWS Console → S3 → Buckets → Select bucket
+# - Navigate to folder or create new folder
+# - Click "Upload"
+# - Add your ZIP file
+# - Copy the full S3 key path
+
+# --- LAMBDA HANDLER ---
+# LambdaHandler: Entry point for Lambda function execution
+#
+# Purpose: Specifies which function Lambda should invoke
+#
+# Format by Runtime:
+#
+# Python:
+# {module}.{function}
+# Example: lambda_function.lambda_handler, app.main, handler.process_event
+#
+# Node.js:
+# {file}.{export}
+# Example: index.handler, app.main, processor.handle
+#
+# Java:
+# {package}.{class}::{method} or {package}.{class}
+# Example: com.example.Handler::handleRequest
+#
+# .NET:
+# {Assembly}::{Namespace}.{Class}::{Method}
+# Example: MyApp::MyApp.Function::Handler
+#
+# Requirements:
+# - Handler must exist in deployment package
+# - Must match runtime signature
+# - Case-sensitive
+
+# --- LAMBDA RUNTIME ---
+# LambdaRuntime: Lambda runtime environment
+#
+# Purpose: Specifies programming language and version
+#
+# Supported Runtimes (as of 2024):
+# - python3.12: Python 3.12
+# - python3.11: Python 3.11
+# - python3.10: Python 3.10
+# - nodejs20.x: Node.js 20
+# - nodejs18.x: Node.js 18
+# - dotnet8: .NET 8
+# - dotnet6: .NET 6
+# - java21: Java 21
+# - java17: Java 17
+# - java11: Java 11
+# - go1.x: Go
+# - ruby3.2: Ruby 3.2
+#
+# Requirements:
+# - Must match language used in deployment package
+# - Handler format varies by runtime
+# - Runtime must be supported by AWS Lambda
+
+# --- LAMBDA MEMORY SIZE ---
+# LambdaMemorySize: Memory allocation for Lambda function
+#
+# Purpose: Defines memory and proportional CPU allocation
+#
+# Range: 128 MB to 10,240 MB (10 GB)
+# Increments: 1 MB above 128 MB (e.g., 129, 130, ... 10240)
+#
+# CPU Allocation:
+# - Memory scales CPU proportionally
+# - 1,769 MB ≈ 1 vCPU
+# - 10,240 MB ≈ 6 vCPUs
+#
+# Recommendations:
+# - Small workloads (simple logic): 128-256 MB
+# - Medium workloads (API handlers): 512-1024 MB
+# - Large workloads (data processing): 1024-3008 MB
+# - Memory-intensive: 3008-10240 MB
+#
+# Cost Impact:
+# - Higher memory = higher cost per millisecond
+# - But faster execution may reduce total cost
+# - Monitor CloudWatch metrics to optimize
+
+# --- LAMBDA TIMEOUT ---
+# LambdaTimeout: Maximum execution time for Lambda function
+#
+# Purpose: Prevents runaway functions from consuming resources
+#
+# Range: 1-900 seconds (15 minutes max)
+# Default: 30 seconds
+#
+# Recommendations:
+# - Quick operations (API responses): 3-30 seconds
+# - Data processing: 60-300 seconds
+# - Long operations: 300-900 seconds
+# - For operations > 15 minutes: Use Step Functions
+#
+# Important:
+# - Function is forcefully terminated at timeout
+# - Set timeout higher than expected execution time
+# - Monitor actual duration in CloudWatch
+
+# --- LAMBDA DESCRIPTION ---
+# LambdaDescription: Human-readable description of function
+#
+# Purpose: Describes what the function does
+#
+# Format: Plain text (max 256 characters)
+# Example: "Processes SQS messages and writes to DynamoDB", "API handler for user registration"
+#
+# Best Practices:
+# - Describe the function's purpose
+# - Mention key integrations
+# - Keep it concise
+
+# --- RESERVED CONCURRENCY ---
+# ReservedConcurrency: Reserved concurrent execution instances
+#
+# Purpose: Controls concurrency limits for this function
+#
+# Values:
+# - 0: Unreserved (uses account-level concurrency pool)
+# - 1+: Reserved instances (guaranteed availability, throttles beyond limit)
+#
+# Account Limit:
+# - Default: 1000 concurrent executions per region
+# - Shared across all functions
+#
+# Use Cases for Reserved Concurrency:
+# - Critical functions: Guarantee availability (e.g., 100 reserved)
+# - Rate limiting: Protect downstream systems (e.g., 10 max)
+# - Cost control: Prevent runaway costs
+#
+# Recommendations:
+# - Development: 0 (unreserved)
+# - Production critical: 50-200 (based on expected load)
+# - Production background: 5-20 (rate limiting)
+
+# --- LOG RETENTION IN DAYS ---
+# LogRetentionInDays: CloudWatch Logs retention period
+#
+# Purpose: How long to keep Lambda execution logs
+#
+# Valid Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+#
+# Recommendations:
+# - Development: 7-14 days
+# - Staging/UAT: 14-30 days
+# - Production: 30-90 days
+# - Compliance/Audit: 365+ days
+#
+# Cost Impact:
+# - Longer retention = higher storage cost
+# - Archive to S3 for long-term retention at lower cost
+
+# --- ENABLE VPC CONFIGURATION ---
+# EnableVpcConfiguration: Whether to deploy Lambda in VPC
+#
+# Purpose: Enables private networking for Lambda function
+#
+# Values:
+# - true: Deploy Lambda in VPC (requires SubnetIds and LambdaSecurityGroupId)
+# - false: Deploy Lambda outside VPC (public internet access)
+#
+# When to use VPC (true):
+# ✅ Need to access RDS databases
+# ✅ Need to access ElastiCache
+# ✅ Need to access internal services via private networking
+# ✅ Need to route through corporate proxy for external APIs
+#
+# When NOT to use VPC (false):
+# ❌ Only accessing AWS services (DynamoDB, S3, SQS) - use VPC endpoints instead
+# ❌ Public APIs accessible from internet - adds latency and cost
+# ❌ Simple event processing with no private resources
+#
+# VPC Considerations:
+# - Cold start delay: 5-10 seconds (ENI creation)
+# - Requires NAT Gateway or VPC endpoints for internet access
+# - Requires security group from lambda-securitygroup stack
+# - Increased complexity
+
+# --- SUBNET IDS ---
+# SubnetIds: VPC subnet IDs for Lambda ENI placement
+#
+# Purpose: Specifies which subnets to deploy Lambda in (if VPC enabled)
+#
+# Format: subnet-abc123,subnet-def456,subnet-ghi789 (comma-separated, no spaces)
+# Example: subnet-0abc123def456789a,subnet-0def456abc789123b
+#
+# Requirements (if EnableVpcConfiguration=true):
+# - Must be private subnets (never public)
+# - Must be in different Availability Zones (for high availability)
+# - Minimum 2 subnets recommended
+# - Subnets must have internet access via NAT Gateway or VPC endpoints
+# - Leave empty ("") if EnableVpcConfiguration=false
+
+# --- LAMBDA SECURITY GROUP ID ---
+# LambdaSecurityGroupId: Security group for Lambda ENI
+#
+# Purpose: Controls network traffic for Lambda in VPC
+#
+# Format: sg-xxxxxxxxxxxxxxxxx
+# Example: sg-0lambda123abc456def
+#
+# Requirements (if EnableVpcConfiguration=true):
+# - Security group must be from lambda-securitygroup stack
+# - Must allow egress to required services
+# - Leave empty ("") if EnableVpcConfiguration=false
+#
+# Finding Security Group ID:
+# - Deploy lambda-securitygroup stack first
+# - Get security group ID from stack outputs
+# - Copy to this parameter
+
+# --- LAMBDA LAYER ARNS ---
+# LambdaLayerArns: Lambda layers for dependencies
+#
+# Purpose: Provides shared libraries and dependencies
+#
+# Format: Comma-separated layer ARNs
+# Example: arn:aws:lambda:ap-southeast-1:123456789012:layer:myapp-nprd-layer-requests:1,arn:aws:lambda:ap-southeast-1:123456789012:layer:myapp-nprd-layer-pymysql:1
+#
+# Requirements:
+# - Layers must be deployed via lambda-layers stack first
+# - Maximum 5 layers per function
+# - Total unzipped size (function + layers) must be < 250 MB
+# - Layers must be compatible with runtime
+#
+# Finding Layer ARNs:
+# - Deploy lambda-layers stack first
+# - Get layer ARNs from stack outputs
+# - Copy to this parameter
+
+# --- SERVICE ACCESS (ENABLE FLAGS) ---
+# Enable only required services for least-privilege security.
+#
+# All IAM policies are scoped to resources matching: {AppShortName}-{EnvName}-*
+#
+# EnableS3Access:
+# - Permissions: GetObject, PutObject, DeleteObject, ListBucket, GetObjectPresignedUrl
+# - Resource pattern: {AppShortName}-{EnvName}-*, {AppShortName}-*
+# - Or specific buckets if S3SpecificBucketNames is set
+#
+# EnableDynamoDBAccess:
+# - Permissions: GetItem, PutItem, UpdateItem, DeleteItem, Query, Scan, BatchGetItem, BatchWriteItem
+# - Resource pattern: arn:aws:dynamodb:*:*:table/{AppShortName}-{EnvName}-*
+#
+# EnableSecretsManagerAccess:
+# - Permissions: GetSecretValue, DescribeSecret
+# - Resource pattern: arn:aws:secretsmanager:*:*:secret:{AppShortName}-{EnvName}-*
+#
+# EnableSQSAccess:
+# - Permissions: SendMessage, ReceiveMessage, DeleteMessage, GetQueueAttributes, GetQueueUrl
+# - Resource pattern: arn:aws:sqs:*:*:{AppShortName}-{EnvName}-*
+#
+# EnableSSMAccess:
+# - Permissions: GetParameter, GetParameters, GetParametersByPath, PutParameter
+# - Resource pattern: arn:aws:ssm:*:*:parameter/{AppShortName}-{EnvName}-*
+#
+# EnableSESAccess:
+# - Permissions: SendEmail, SendRawEmail
+# - Resource: * (all verified identities)
+#
+# EnableSNSAccess:
+# - Permissions: Publish
+# - Resource pattern: arn:aws:sns:*:*:{AppShortName}-{EnvName}-*
+#
+# EnableEventBridgeAccess:
+# - Permissions: PutEvents
+# - Resource pattern: arn:aws:events:*:*:event-bus/{AppShortName}-{EnvName}-*
+#
+# EnableLambdaInvokeAccess:
+# - Permissions: InvokeFunction
+# - Resource pattern: arn:aws:lambda:*:*:function:{AppShortName}-{EnvName}-*
+
+# --- S3 SPECIFIC BUCKET NAMES ---
+# S3SpecificBucketNames: Specific S3 buckets for enhanced security
+#
+# Purpose: Restricts S3 access to specific buckets instead of pattern-based
+#
+# Format: bucket1,bucket2,bucket3 (comma-separated, no spaces)
+# Example: myapp-nprd-data,myapp-nprd-uploads,myapp-nprd-exports
+#
+# Use Cases:
+# - Enhanced security: Limit to exact buckets
+# - Cross-account access: Access buckets in other accounts
+# - Shared buckets: Access buckets not matching naming pattern
+#
+# Default Behavior (if empty):
+# - Grants access to buckets matching: {AppShortName}-{EnvName}-*
+# - Also grants access to: {AppShortName}-*
+
+# --- EVENT SOURCE TYPE ---
+# EventSourceType: Type of event trigger for Lambda
+#
+# Purpose: Configures how Lambda is invoked
+#
+# Options:
+# - none: Manual invocation or invoked by other AWS services
+# - sqs: SQS queue event source mapping
+# - eventbridge: EventBridge scheduled rule
+# - apigateway: API Gateway integration
+#
+# Event Source Type: none
+# - No automatic trigger
+# - Manual invocation via AWS Console, CLI, SDK
+# - Invoked by other services (S3 events, SNS, etc.)
+#
+# Event Source Type: sqs
+# - Lambda polls SQS queue and processes messages in batches
+# - Requires: SqsQueueArn
+# - Optional: SqsBatchSize, SqsMaxBatchingWindow, SqsMaxConcurrency
+# - Failed batches return to queue after visibility timeout
+#
+# Event Source Type: eventbridge
+# - Scheduled execution (cron or rate expressions)
+# - Requires: ScheduleExpression
+# - Examples:
+#   cron(0 1 * * ? *)    # Daily at 1:00 AM UTC
+#   rate(5 minutes)      # Every 5 minutes
+#
+# Event Source Type: apigateway
+# - HTTP API or REST API integration
+# - Requires: ApiGatewayId
+# - API Gateway invokes Lambda synchronously
+
+# --- SQS EVENT SOURCE CONFIGURATION ---
+# SqsQueueArn: ARN of SQS queue to poll
+# SqsBatchSize: Number of messages per batch (1-10000)
+# SqsMaxBatchingWindow: Maximum wait time to accumulate batch (0-300 seconds)
+# SqsMaxConcurrency: Maximum concurrent Lambda invocations (2-1000)
+#
+# How SQS Event Source Works:
+# 1. Lambda polls SQS queue for messages
+# 2. Accumulates messages up to SqsBatchSize or SqsMaxBatchingWindow
+# 3. Invokes Lambda with batch of messages
+# 4. If successful, deletes messages from queue
+# 5. If failed, messages return to queue after visibility timeout
+#
+# Recommendations:
+# - SqsBatchSize: 10 (standard), 100-1000 (high throughput)
+# - SqsMaxBatchingWindow: 0 (immediate), 60-300 (batch efficiency)
+# - SqsMaxConcurrency: 10 (moderate), 100+ (high throughput)
+
+# --- EVENTBRIDGE SCHEDULE EXPRESSION ---
+# ScheduleExpression: Cron or rate expression for scheduled execution
+#
+# Purpose: Defines when Lambda should run automatically
+#
+# Format:
+# cron(minute hour day-of-month month day-of-week year)
+# rate(value unit)
+#
+# Cron Examples (all times UTC):
+# - cron(0 1 * * ? *): Daily at 1:00 AM UTC
+# - cron(0 */6 * * ? *): Every 6 hours
+# - cron(0 9 * * MON-FRI *): Weekdays at 9:00 AM UTC
+# - cron(0 0 1 * ? *): First day of every month at midnight
+#
+# Rate Examples:
+# - rate(5 minutes): Every 5 minutes
+# - rate(1 hour): Every hour
+# - rate(7 days): Every 7 days
+#
+# Important:
+# - All times are in UTC
+# - For Singapore time (UTC+8), subtract 8 hours from desired time
+# - Example: 9:00 AM SGT = 1:00 AM UTC = cron(0 1 * * ? *)
+
+# --- API GATEWAY ID ---
+# ApiGatewayId: API Gateway REST API or HTTP API ID
+#
+# Purpose: Connects Lambda to API Gateway
+#
+# Format: Random alphanumeric ID
+# Example: abc123xyz, 5xy6k2l3m4
+#
+# Finding API Gateway ID:
+# AWS Console → API Gateway → APIs
+# - Select your API
+# - API ID shown in API details
+
+# --- DEAD LETTER QUEUE ARN ---
+# DeadLetterQueueArn: ARN of SQS queue for failed invocations
+#
+# Purpose: Captures failed Lambda invocations for debugging
+#
+# Format: arn:aws:sqs:region:account:queue-name
+# Example: arn:aws:sqs:ap-southeast-1:123456789012:myapp-nprd-lambda-dlq
+#
+# Use Cases:
+# - Asynchronous invocations that fail (retry 3 times then DLQ)
+# - Debugging failed events
+# - Reprocessing failed events
+#
+# Requirements:
+# - SQS queue must exist before deployment
+# - Lambda execution role has sqs:SendMessage permission (automatically added)
+
+# --- ENABLE XRAY TRACING ---
+# EnableXRayTracing: AWS X-Ray distributed tracing
+#
+# Purpose: Traces requests across AWS services
+#
+# Values:
+# - true: Active tracing mode
+# - false: PassThrough mode (tracing if upstream service has it)
+#
+# Benefits:
+# - Visualize request flow across services
+# - Identify performance bottlenecks
+# - Debug errors in distributed systems
+#
+# Recommendations:
+# - Development: true (for debugging)
+# - Production: true (for observability)
+
+# --- ENVIRONMENT VARIABLES ---
+# All environment variables below are automatically injected based on parameters.
+#
+# LogLevel:
+# - Controls logging verbosity
+# - Values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# - Injected as: LOG_LEVEL
+#
+# Database Variables (if DbSecretArn provided):
+# - DB_SECRET_ARN: {DbSecretArn}
+# - DB_HOST: {DbHost}
+# - DB_PORT: {DbPort}
+# - DB_NAME: {DbName}
+#
+# DynamoDB Variables (if DedupDynamoDbTableName provided):
+# - DEDUP_DYNAMODB_TABLE_NAME: {DedupDynamoDbTableName}
+#
+# SQS Variables (if SqsQueueUrl provided):
+# - SQS_QUEUE_URL: {SqsQueueUrl}
+#
+# FormSG Variables (Singapore Government Forms):
+# - FORMSG_SECRET_ARN: {FormSgSecretArn}
+# - FORM_ID: {FormId}
+# - ENABLE_FORMSG: {EnableFormSg}
+#
+# Twilio Variables (SMS/WhatsApp):
+# - TWILIO_SECRET_ARN: {TwilioSecretArn}
+# - TWILIO_ACCOUNT_SID: {TwilioAccountSid}
+# - TWILIO_WHATSAPP_NUMBER: {TwilioWhatsappNumber}
+# - TWILIO_TEMPLATE_SID_MAP: {TwilioTemplateSidMap}
+#
+# Proxy Variables (if ProxyUrl provided):
+# - PROXY_URL: {ProxyUrl}
+
+# --- CLOUDWATCH ALARMS ---
+# EnableAlarms: Enable CloudWatch alarms for production workloads
+#
+# Alarms Created (when enabled):
+#
+# 1. Error Rate Alarm:
+#    - Metric: (Errors / Invocations) * 100
+#    - Threshold: ErrorRateThreshold (default: 5%)
+#    - Action: SNS notification to AdminAlertsTopicArn
+#    - Investigation: Review Lambda logs for errors
+#
+# 2. Throttles Alarm:
+#    - Metric: Lambda throttles count
+#    - Threshold: ThrottlesThreshold (default: 1/minute)
+#    - Action: SNS notification
+#    - Investigation: Increase concurrency limits or reserved concurrency
+#
+# 3. Duration Alarm:
+#    - Metric: Average execution duration
+#    - Threshold: DurationThresholdMs (default: 30000ms)
+#    - Action: SNS notification
+#    - Investigation: Optimize function or increase timeout
+#
+# Requirements (if EnableAlarms=true):
+# - AdminAlertsTopicArn must be provided
+# - SNS topic must exist and have subscribers
+#
+# Alarm Naming: {AppShortName}-{EnvName}-alarm-{LambdaFunctionName}-{type}
+#

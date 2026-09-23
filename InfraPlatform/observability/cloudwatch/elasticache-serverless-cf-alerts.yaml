@@ -1,0 +1,150 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ElastiCache Serverless monitoring template version 1.0'
+
+Parameters:
+  # Application identification parameters
+  AppShortName:
+    Type: String
+    Description: 'Short name for the application (e.g., myapp)'
+    MaxLength: 10
+    MinLength: 2
+
+  EnvName:
+    Type: String
+    Description: 'Environment name (e.g., dev, test, prod)'
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # ElastiCache Serverless cache name
+  ServerlessCacheName:
+    Type: String
+    Description: 'ElastiCache Serverless cache name for monitoring'
+    MinLength: 1
+    MaxLength: 50
+
+  # SNS Topic parameters
+  Team1SNSTopicArn:
+    Type: String
+    Description: 'SNS Topic ARN for Team1 (L2 Operations)'
+
+  Team2SNSTopicArn:
+    Type: String
+    Description: 'SNS Topic ARN for Team2 (L3 Support/Development)'
+
+  Team3SNSTopicArn:
+    Type: String
+    Description: 'SNS Topic ARN for Team3 (Infrastructure/Platform)'
+
+Conditions:
+  # Environment conditions
+  IsProd: !Or [!Equals [!Ref EnvName, 'prod'], !Equals [!Ref EnvName, 'prod-a'], !Equals [!Ref EnvName, 'prod-b'], !Equals [!Ref EnvName, 'prod-c']]
+
+Resources:
+
+  ########################################################
+  # ElastiCache Serverless Cache - CRITICAL ALARMS     #
+  ########################################################
+
+  # CRITICAL: Serverless Cache - ECPU Utilization Critical
+  ServerlessCacheECPUCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AppShortName}-${EnvName}-elasticache-serverless-ecpu-critical'
+      AlarmDescription: !Sub 'CRITICAL: ElastiCache Serverless Cache ${ServerlessCacheName} ECPU utilization is critically high'
+      MetricName: ElastiCacheProcessingUnits
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServerlessCacheName
+          Value: !Ref ServerlessCacheName
+      AlarmActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+        - !Ref Team3SNSTopicArn
+      OKActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+        - !Ref Team3SNSTopicArn
+      TreatMissingData: notBreaching
+      DeletionPolicy: !If [IsProd, Retain, Delete]
+
+  # CRITICAL: Serverless Cache - Data Storage Critical
+  ServerlessCacheStorageCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AppShortName}-${EnvName}-elasticache-serverless-storage-critical'
+      AlarmDescription: !Sub 'CRITICAL: ElastiCache Serverless Cache ${ServerlessCacheName} data storage is critically high'
+      MetricName: DataStorage
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1073741824
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServerlessCacheName
+          Value: !Ref ServerlessCacheName
+      AlarmActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+        - !Ref Team3SNSTopicArn
+      OKActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+        - !Ref Team3SNSTopicArn
+      TreatMissingData: notBreaching
+      DeletionPolicy: !If [IsProd, Retain, Delete]
+
+  ########################################################
+  # ElastiCache Serverless Cache - IMPORTANT ALARMS    #
+  ########################################################
+
+  #  IMPORTANT: Serverless Cache - Throttled Requests Important
+  ServerlessCacheThrottledImportant:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AppShortName}-${EnvName}-elasticache-serverless-throttled-important'
+      AlarmDescription: !Sub 'IMPORTANT: ElastiCache Serverless Cache ${ServerlessCacheName} throttled requests detected'
+      MetricName: ThrottledRequestCount
+      Namespace: AWS/ElastiCache
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: ServerlessCacheName
+          Value: !Ref ServerlessCacheName
+      AlarmActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+      OKActions:
+        - !Ref Team1SNSTopicArn
+        - !Ref Team2SNSTopicArn
+      TreatMissingData: notBreaching
+      DeletionPolicy: !If [IsProd, Retain, Delete]

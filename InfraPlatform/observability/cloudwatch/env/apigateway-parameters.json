@@ -1,0 +1,50 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapi"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "ApiGateway1Name",
+    "ParameterValue": "myapi-prod-gateway"
+  },
+  {
+    "ParameterKey": "ApiGateway1Stage",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "ApiGateway2Name",
+    "ParameterValue": "myapi-prod-gateway-v2"
+  },
+  {
+    "ParameterKey": "ApiGateway2Stage",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "ResourcePath1",
+    "ParameterValue": "/api/v1/users"
+  },
+  {
+    "ParameterKey": "ResourcePath2",
+    "ParameterValue": "/api/v1/orders"
+  },
+  {
+    "ParameterKey": "ResourcePath3",
+    "ParameterValue": "/api/v1/products"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

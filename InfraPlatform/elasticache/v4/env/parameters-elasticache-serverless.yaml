@@ -1,0 +1,217 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. hsxx, myapp, cache01 (max 10 characters)
+EnvName: "<edit_here>"                  # 📝 e.g. nprd-dev, nprd-sit1, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+AppSubnetIds: "<edit_here>"             # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets, comma-separated)
+
+# SECURITY GROUP ACCESS (Application Subnet CIDRs)
+VPCSubnetCidrAppAZ1: "<edit_here>"      # 📝 e.g. 10.1.128.0/20 (AZ1 application subnet CIDR)
+VPCSubnetCidrAppAZ2: "<edit_here>"      # 📝 e.g. 10.1.144.0/20 (AZ2 application subnet CIDR)
+
+# ADDITIONAL NETWORK ACCESS
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.193.0.0/16 (Primary VPC CIDR)
+HCCVpceCidr: "<edit_here>"              # 📝 e.g. 10.48.42.0/24 (HCC VPC Endpoint subnet)
+
+# USER MANAGEMENT
+CreateCacheUserAndGroup: "no"           # 📝 yes or no - Create ElastiCache user and user group?
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+AWSRegion: "ap-southeast-1"                # 📝 e.g. ap-southeast-1
+
+# SERVERLESS CONFIGURATION
+MaxCacheDataStorage: "0"                # Maximum cache data storage in GB (0 = unlimited, or specify 1-5000)
+MaxCacheECPUPerSecond: "0"              # Maximum ECPU per second (0 = unlimited, or specify 1000-15000000)
+Engine: "redis"                         # Cache engine (redis)
+SnapshotRetentionLimit: "5"             # Snapshot retention in days (0-35)
+DailySnapshotTime: "14:00"              # Daily snapshot time in UTC (HH:MM format, e.g., 14:00)
+
+# ADDITIONAL APPLICATION SUBNET
+VPCSubnetCidrAppAZ3: ""                 # AZ3 application subnet CIDR (optional)
+
+# ADDITIONAL VPC CIDRs
+VpcCidr2: ""                            # Secondary VPC CIDR (optional)
+VpcCidr3: ""                            # Tertiary VPC CIDR (optional)
+VpcCidr4: ""                            # Quaternary VPC CIDR (optional)
+VpcCidr5: ""                            # Quinary VPC CIDR (optional)
+
+# S3 ACCESS
+S3PrefixListId: ""                      # AWS managed prefix list for S3 (e.g. pl-6fa54006, optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates resource names: {AppShortName}-{EnvName}-redis-serverless
+# - Enables multi-application deployments in same VPC
+# - Facilitates cost allocation and resource organization
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: hsxx, myapp, cache01
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Allowed Values:
+# Non-Production:
+# - nprd, nprd-dev, nprd-sit1/2/3, nprd-sit, nprd-sit-a/b/c
+# - nprd-uat, nprd-uat-a/b/c, nprd-pt, nprd-pp, nprd-pp-a/b/c
+#
+# Production:
+# - prod, prod-a, prod-b, prod-c
+#
+# Impact:
+# Production: DeletionPolicy=Retain, daily snapshots kept
+# Non-Production: DeletionPolicy=Delete, snapshots auto-deleted
+
+# --- VPC ID ---
+# VpcId: Virtual Private Cloud identifier where Redis will be deployed
+#
+# Format: vpc-{16-char-hex}
+# Example: vpc-0d99a0c727b301d67
+#
+# Requirements:
+# - VPC must have DNS resolution enabled
+# - VPC must have DNS hostnames enabled
+# - Subnets must belong to this VPC
+
+# --- APP SUBNET IDS ---
+# AppSubnetIds: Subnets for Redis serverless cache deployment
+#
+# Requirements:
+# - Minimum 2 subnets in different AZs (for high availability)
+# - Must be private subnets (recommended)
+# - Comma-separated list
+# - All subnets must be in VpcId
+#
+# Format: subnet-{17-char-hex},subnet-{17-char-hex}
+# Example: subnet-08170d48a795103d2,subnet-083fba964c347656f
+#
+# Best Practices:
+# - Use 2-3 subnets across different AZs
+# - Ensure subnets have sufficient IP addresses
+# - Use same subnets as application tier for low latency
+
+# --- VPC SUBNET CIDR APP AZ1/2/3 ---
+# VPCSubnetCidrAppAZ1/2/3: Application subnet CIDRs for security group ingress
+#
+# Purpose:
+# - Creates security group rules allowing application access to Redis
+# - Restricts access to only application subnets
+# - Port 6379 (Redis) ingress from these CIDRs
+#
+# Format: CIDR notation (e.g., 10.1.128.0/20)
+# Example:
+# - VPCSubnetCidrAppAZ1: "10.1.128.0/20"  # AZ1
+# - VPCSubnetCidrAppAZ2: "10.1.144.0/20"  # AZ2
+# - VPCSubnetCidrAppAZ3: ""  # Optional AZ3
+#
+# Security Impact:
+# - Only traffic from these CIDRs can reach Redis
+# - Application must be in one of these subnets
+# - Fine-grained network access control
+
+# --- VPC CIDR 1/2/3/4/5 ---
+# VpcCidr1/2/3/4/5: VPC CIDR blocks for egress rules
+#
+# Purpose:
+# - VpcCidr1 (Required): Primary VPC CIDR for security group egress
+# - VpcCidr2-5 (Optional): Additional VPC CIDRs for complex network topologies
+# - Supports up to 5 VPC CIDR ranges for multi-VPC architectures
+#
+# Format: CIDR notation
+# Example: 10.193.0.0/16
+#
+# When to Use Multiple CIDRs:
+# - VPC has multiple CIDR blocks associated
+# - Peered VPCs require access
+# - Transit Gateway routing scenarios
+# - Multi-VPC peering for broad security group rules
+# - Hybrid cloud connectivity with multiple on-premises networks
+# - Cross-region VPC connectivity patterns
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: Hybrid Cloud Connectivity VPC Endpoint subnet CIDR
+#
+# Purpose:
+# - Allows access from HCC VPC endpoint subnet
+# - Enables hybrid cloud connectivity scenarios
+# - On-premises to AWS Redis access
+#
+# Format: CIDR notation
+# Example: 10.48.42.0/24
+#
+# Use Cases:
+# - On-premises applications accessing AWS Redis
+# - Direct Connect connectivity
+# - VPN-connected environments
+
+# --- CREATE CACHE USER AND GROUP ---
+# CreateCacheUserAndGroup: Enable user-based authentication
+#
+# Allowed Values:
+# - yes: Create ElastiCache user and user group with password
+# - no: No user authentication (VPC security only)
+#
+# When to Use "yes":
+# ✓ Multi-tenant applications (isolate access per tenant)
+# ✓ Compliance requirements (audit trails, user tracking)
+# ✓ Fine-grained access control needed
+# ✓ Multiple applications sharing same cache
+# ✓ Security policy requires authentication
+#
+# When to Use "no":
+# ✓ Single application in VPC (security group sufficient)
+# ✓ Simplified operations (no password management)
+# ✓ Lower complexity
+# ✓ VPC network isolation provides enough security
+# ✓ Development/testing environments
+#
+# If "yes" selected:
+# - Creates user: {AppShortName}-{EnvName}-redis-user
+# - Generates 128-character password (stored in Secrets Manager)
+# - Creates user group with full command access
+# - Application must authenticate with username/password
+#
+# If "no" selected:
+# - No user created
+# - Access controlled by security groups only
+# - Simpler connection (no username/password needed)
+# - Still requires TLS encryption
+
+# --- S3 PREFIX LIST ID (OPTIONAL) ---
+# S3PrefixListId: AWS-managed prefix list for S3 service
+#
+# Purpose:
+# - Allows Redis to communicate with S3 (for snapshots, backups)
+# - Uses AWS-managed prefix list (no manual CIDR updates needed)
+# - Required if snapshot export to S3 is enabled
+#
+# Format: pl-{8-char-hex}
+# Example: pl-6fa54006
+#
+# Leave Empty If:
+# - No S3 snapshot export needed
+# - Using default snapshot storage (within ElastiCache)
+# - No S3 integration required
+

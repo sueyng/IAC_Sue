@@ -1,0 +1,473 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Template for SNS-SQS with Dead Letter Queue and Lambda Processing"
+
+Parameters:
+  AuditType:
+    Type: String
+    Description: "Type of audit (e.g., audit-log, security-log, api-log)"
+    Default: audit-log
+    AllowedPattern: "[a-zA-Z0-9-]+"
+    ConstraintDescription: "Can only contain letters, numbers, and hyphens"
+
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+
+  VpcId:
+    Type: String
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+    Default: vpc-09528f37a12368b13
+
+  AppSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Comma-delimited list of VPC Subnet IDs for application subnets
+    Default: subnet-0e3f828d570c58f11,subnet-0d1706693a418f5a3
+
+  SQSAuditBatchSize:
+    Type: Number
+    Description: Batch Size of Queue for SQS Lambda. Value from 10 to 10000
+    Default: 100
+    MinValue: 10
+    MaxValue: 10000
+
+  SQSAuditMaximumBatchWindowInSeconds:
+    Type: Number
+    Description: MaximumBatchingWindowInSeconds for SQS Lambda
+    Default: 30
+    MinValue: 10
+    MaxValue: 300
+
+  MainQueueRetentionPeriodInDays:
+    Type: Number
+    Description: Message retention period in days for main SQS queue (default 4 days, max 14 days)
+    Default: 4
+    MinValue: 1
+    MaxValue: 14
+
+  DLQRetentionPeriodInDays:
+    Type: Number
+    Description: Message retention period in days for Dead Letter Queue (default 14 days, max 14 days)
+    Default: 14
+    MinValue: 1
+    MaxValue: 14
+
+  LambdaArtifactBucket:
+    Type: String
+    Description: S3 bucket containing Lambda deployment package
+    Default: "hxis-fhir-cftemplate"
+
+  LambdaArtifactKey:
+    Type: String 
+    Description: S3 key for Lambda deployment package
+    Default: "package/Ihis.PopHealth.Lambda.SaveSQSAuditRecord.V.1.2.3.zip"
+
+  LambdaHandler:
+    Type: String
+    Description: Handler for Lambda function
+    Default: "Ihis.PopHealth.Lambda.SaveSQSAuditRecord::Ihis.PopHealth.Lambda.SaveSQSAuditRecord.Function::FunctionHandler"
+
+  AuditLambdaLogRetentionInDays:
+    Type: Number
+    Description: Number of days to retain Lambda logs
+    Default: 90
+
+  AuditLambdaMemorySize:
+    Type: Number
+    Description: Memory size for Lambda function (MB)
+    Default: 256
+
+  AuditLambdaRuntime:
+    Type: String
+    Description: Runtime for Lambda function
+    Default: dotnet8
+
+  SecretName:
+    Type: String
+    Description: Name of the Secret containing environment variables
+
+  AuditLogBucketName:
+    Type: String
+    Description: Base name for the S3 bucket to store logs
+
+  LogRetention:
+    Type: Number
+    Default: 365
+    Description: Number of days to retain logs
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref EnvName, "prod"], !Equals [!Ref EnvName, "prod-a"], !Equals [!Ref EnvName, "prod-b"]]
+
+Mappings:
+  DaysToSeconds:
+    Conversion:
+      "1": 86400
+      "2": 172800
+      "3": 259200
+      "4": 345600
+      "5": 432000
+      "6": 518400
+      "7": 604800
+      "8": 691200
+      "9": 777600
+      "10": 864000
+      "11": 950400
+      "12": 1036800
+      "13": 1123200
+      "14": 1209600
+
+Resources:
+  # SNS Topic
+  AuditLogTopic:
+    Type: AWS::SNS::Topic
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      TopicName: !Sub ${AppShortName}-${EnvName}-sns-${AuditType}
+      KmsMasterKeyId: alias/aws/sns
+
+  # SNS Topic Policy
+  AuditLogTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Topics:
+        - !Ref AuditLogTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowPublishFromAccount
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: sns:Publish
+            Resource: !Ref AuditLogTopic
+
+  # SNS Topic Subscription
+  SQSSubscription:
+    Type: AWS::SNS::Subscription
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Protocol: sqs
+      TopicArn: !Ref AuditLogTopic
+      Endpoint: !GetAtt AuditLogSQS.Arn
+      RawMessageDelivery: true
+
+  # S3 Bucket for Audit Logs
+  AuditLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-${AuditType}-${AuditLogBucketName}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: LogRetention
+            Status: Enabled
+            ExpirationInDays: !Ref LogRetention
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # S3 Bucket Policy
+  AuditLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref AuditLogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt SaveSQSAuditRecordLambdaRole.Arn
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub arn:aws:s3:::${AuditLogBucket}
+              - !Sub arn:aws:s3:::${AuditLogBucket}/*
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt AuditLogBucket.Arn
+              - !Sub ${AuditLogBucket.Arn}/*
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt AuditLogBucket.Arn
+              - !Sub ${AuditLogBucket.Arn}/*
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # SQS Dead Letter Queue
+  AuditLogDLQSQS:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      QueueName: !Sub ${AppShortName}-${EnvName}-sqs-${AuditType}-dlq
+      MessageRetentionPeriod: !FindInMap
+        - DaysToSeconds
+        - Conversion
+        - !Ref DLQRetentionPeriodInDays
+      MaximumMessageSize: 262144
+      VisibilityTimeout: 30
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # Main SQS Queue
+  AuditLogSQS:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DependsOn:
+      - AuditLogDLQSQS
+    Properties:
+      QueueName: !Sub ${AppShortName}-${EnvName}-sqs-${AuditType}
+      MessageRetentionPeriod: !FindInMap
+        - DaysToSeconds
+        - Conversion
+        - !Ref MainQueueRetentionPeriodInDays
+      MaximumMessageSize: 262144
+      VisibilityTimeout: 30
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuditLogDLQSQS.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # SQS Queue Policy
+  SQSAuditRecordPolicy:
+    Type: AWS::SQS::QueuePolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Queues:
+        - !Ref AuditLogDLQSQS
+        - !Ref AuditLogSQS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: sqs:*
+            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${AppShortName}-${EnvName}-sqs-${AuditType}*
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt AuditLogSQS.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AuditLogTopic
+
+  # Lambda Security Group
+  AuditLogLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: !Sub Security group for ${AuditType} Lambda function
+      GroupName: !Sub ${AppShortName}-${EnvName}-sg-sqs-${AuditType}-lambda
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${EnvName}-sg-sqs-${AuditType}-lambda
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # IAM Policies
+  AuditLogEC2NetworkIntefaceAccess:
+    Type: AWS::IAM::ManagedPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: "EC2 Network Interface Access Policy"
+      ManagedPolicyName: !Sub ${AppShortName}-${EnvName}-${AuditType}-network-interface-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeInstances
+              - ec2:AttachNetworkInterface
+            Resource: "*"
+
+  AuditLogSQSAccess:
+    Type: AWS::IAM::ManagedPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: "SQS Access Policy"
+      ManagedPolicyName: !Sub ${AppShortName}-${EnvName}-${AuditType}-sqs-access-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+              - sqs:ListQueues
+            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${AppShortName}-${EnvName}-sqs-${AuditType}*
+  
+  # Lambda Role
+  SaveSQSAuditRecordLambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref AuditLogSQSAccess
+        - !Ref AuditLogEC2NetworkIntefaceAccess
+      RoleName: !Sub ${AppShortName}-${EnvName}-save-sqs-${AuditType}-lambda-role
+      Policies:
+        - PolicyName: !Sub '${AppShortName}-${EnvName}-${AuditType}-secrets-access-policy'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - PolicyName: !Sub '${AppShortName}-${EnvName}-${AuditType}-s3-access-policy'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::${AuditLogBucket}
+                  - !Sub arn:aws:s3:::${AuditLogBucket}/*
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # Lambda Log Group
+  LambdaFunctionSaveSQSAuditRecordLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RetentionInDays: !Ref AuditLambdaLogRetentionInDays
+      LogGroupName: !Sub /aws/lambda/${AppShortName}-${EnvName}-save-sqs-${AuditType}-lambda-func
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # Lambda Function
+  LambdaSaveSQSAuditRecordFunction:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Handler: !Ref LambdaHandler
+      Runtime: !Ref AuditLambdaRuntime
+      Code:
+        S3Bucket: !Ref LambdaArtifactBucket
+        S3Key: !Ref LambdaArtifactKey
+      Environment:
+        Variables:
+          SECRETS_NAME: !Ref SecretName
+          BUCKET_NAME: !Ref AuditLogBucket
+      MemorySize: !Ref AuditLambdaMemorySize
+      Timeout: 30
+      Role: !GetAtt SaveSQSAuditRecordLambdaRole.Arn
+      FunctionName: !Sub ${AppShortName}-${EnvName}-save-sqs-${AuditType}-lambda-func
+      ReservedConcurrentExecutions: 5
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt AuditLogLambdaSecurityGroup.GroupId
+        SubnetIds: !Ref AppSubnetIds
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v1
+
+  # Lambda Event Source Mapping
+  SQSAuditRecordTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BatchSize: !Ref SQSAuditBatchSize
+      EventSourceArn: !GetAtt AuditLogSQS.Arn
+      FunctionName: !GetAtt LambdaSaveSQSAuditRecordFunction.Arn
+      MaximumBatchingWindowInSeconds: !Ref SQSAuditMaximumBatchWindowInSeconds
+      ScalingConfig: 
+        MaximumConcurrency: 2
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+

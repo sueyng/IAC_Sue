@@ -1,0 +1,305 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA PACKAGE
+LambdaS3bucket: "<edit_here>"           # 📝 e.g. myapp-lambda-artifact, myapp-nprd-deployment
+CodeZipFileName: "<edit_here>"          # 📝 e.g. s3ReverseProxy-v2.zip, lambda-proxy.zip
+
+# FRONTEND S3 BUCKET
+FrontendSPABucketName: "<edit_here>"    # 📝 e.g. myapp-nprd-frontend, portal.example.com (S3 bucket containing frontend assets)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# LAMBDA RUNTIME CONFIGURATION
+LambdaRuntime: "nodejs20.x"             # nodejs20.x, nodejs18.x, nodejs16.x
+LambdaHandler: "index.handler"          # Lambda function handler entry point (default in template)
+
+# CLOUDWATCH LOGS
+LogRetentionInDays: "14"                  # CloudWatch Logs retention in days (1, 3, 5, 7, 14, 30, 60, 90, 120, 180, 365, 400, 545, 731, 1827, 3653)
+
+# <<< PARAMETERS_END >>>
+
+# ================================================================================
+# 📖 PARAMETER REFERENCE
+# ================================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates Lambda function name: {AppShortName}-{EnvName}-lambda-s3reverseproxy
+# - Creates IAM role name: {AppShortName}-{EnvName}-lambda-s3reverseproxy-role
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose: Used in resource naming
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- LAMBDA S3 BUCKET ---
+# LambdaS3bucket: S3 bucket containing Lambda deployment package
+#
+# Purpose: Location of Lambda reverse proxy ZIP file
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-lambda-artifact, myapp-nprd-deployment
+#
+# Requirements:
+# - Bucket must exist before deployment
+# - Bucket must contain CodeZipFileName
+# - CloudFormation must have read access to bucket
+#
+# Finding Bucket Name:
+# AWS Console → S3 → Buckets
+# - Locate your Lambda deployment bucket
+# - Copy bucket name
+
+# --- CODE ZIP FILE NAME ---
+# CodeZipFileName: S3 object key for Lambda deployment package
+#
+# Purpose: Path to Lambda reverse proxy ZIP file within S3 bucket
+#
+# Format: filename.zip or path/to/filename.zip
+# Example: s3ReverseProxy-v2.zip, lambda/reverse-proxy.zip
+#
+# Requirements:
+# - File must exist in LambdaS3bucket
+# - Must be valid Lambda deployment package
+# - Must contain handler code (index.js, index.mjs, etc.)
+#
+# Lambda Package Contents:
+# - Handler file (e.g., index.js, index.mjs)
+# - Dependencies (node_modules/ for Node.js)
+# - Configuration files (if needed)
+#
+# Package Structure Example (Node.js):
+# s3ReverseProxy-v2.zip
+# ├── index.mjs (handler)
+# ├── package.json
+# └── node_modules/
+#     └── (dependencies)
+
+# --- FRONTEND SPA BUCKET NAME ---
+# FrontendSPABucketName: S3 bucket containing frontend assets
+#
+# Purpose: Source bucket for SPA files served by Lambda reverse proxy
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-nprd-frontend, portal.example.com, frontend.example.com
+#
+# Requirements:
+# - Bucket must exist before deployment
+# - Bucket must contain frontend assets (index.html, app.js, CSS, etc.)
+# - Lambda will have read-only access to this bucket via IAM role
+# - Bucket can be private (no public access required)
+#
+# Frontend Assets Structure:
+# s3://bucket/
+# ├── index.html (SPA entry point)
+# ├── app.js (or app.*.js)
+# ├── styles.css (or styles.*.css)
+# ├── assets/
+# │   ├── images/
+# │   ├── fonts/
+# │   └── icons/
+# └── static/
+#     └── (other static files)
+#
+# Finding Bucket Name:
+# AWS Console → S3 → Buckets
+# - Locate your frontend asset bucket
+# - Copy bucket name
+
+# --- LAMBDA RUNTIME ---
+# LambdaRuntime: Lambda runtime for reverse proxy function
+#
+# Purpose: Specifies programming language and version
+#
+# Supported Runtimes:
+# - nodejs20.x: Node.js 20 (recommended)
+# - nodejs18.x: Node.js 18
+# - nodejs16.x: Node.js 16 (deprecated soon)
+#
+# Default: nodejs20.x
+#
+# Recommendations:
+# - Use nodejs20.x for new deployments
+# - Update to latest runtime for security patches
+# - Match runtime with Lambda package dependencies
+
+# --- LAMBDA HANDLER ---
+# LambdaHandler: Entry point for Lambda function execution
+#
+# Purpose: Specifies which function Lambda should invoke
+#
+# Format: filename.exportName
+# Example: index.handler, app.handler, lambda.main
+#
+# Explanation:
+# - index.handler:
+#   - File: index.js or index.mjs
+#   - Export: handler
+#   - Code example: export const handler = async (event) => { ... }
+#
+# - app.handler:
+#   - File: app.js or app.mjs
+#   - Export: handler
+#
+# Default: index.handler
+#
+# Requirements:
+# - Handler file must exist in Lambda deployment package
+# - Handler function must export the specified name
+# - Handler must accept ALB event format
+
+# --- LOG RETENTION IN DAYS ---
+# LogRetentionInDays: CloudWatch Logs retention period
+#
+# Purpose: How long to keep Lambda execution logs
+#
+# Valid Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 180, 365, 400, 545, 731, 1827, 3653 (days)
+#
+# Recommendations:
+# - Development: 7-14 days
+# - Staging/UAT: 14-30 days
+# - Production: 30-90 days
+#
+# Default: 14 days
+#
+# Cost Impact:
+# - Longer retention = higher storage cost
+# - Archive to S3 for long-term retention at lower cost
+
+# --- LAMBDA REVERSE PROXY BEHAVIOR ---
+# How the Lambda function processes requests:
+#
+# Step 1: Receive Request from ALB
+# - ALB sends request event containing:
+#   - Path: /index.html, /app.js, /assets/logo.png
+#   - Headers: Host, User-Agent, Accept, etc.
+#   - Query parameters (if any)
+#   - Request method: GET, POST, etc.
+#
+# Step 2: Extract Path
+# - Lambda extracts request path from event
+# - Example: event.path = "/assets/app.js"
+#
+# Step 3: Fetch Object from S3
+# - Bucket: {FrontendSPABucketName}
+# - Key: {path} (e.g., "assets/app.js")
+# - S3 API: GetObject
+#
+# Step 4: Determine Content-Type
+# Lambda sets appropriate Content-Type header based on file extension:
+# - .html → text/html
+# - .css → text/css
+# - .js → application/javascript
+# - .json → application/json
+# - .png → image/png
+# - .jpg, .jpeg → image/jpeg
+# - .svg → image/svg+xml
+# - .woff, .woff2 → font/woff, font/woff2
+# - .ttf → font/ttf
+# - .ico → image/x-icon
+# - .pdf → application/pdf
+# - .txt → text/plain
+# - default → application/octet-stream
+#
+# Step 5: Return Response to ALB
+# - Status: 200 OK (or 404 if not found, 500 if error)
+# - Headers: Content-Type, Cache-Control, etc.
+# - Body: S3 object content (base64 encoded if binary)
+#
+# SPA Routing Behavior:
+# - Request to / → Serves /index.html
+# - Request to /about → Attempts /about, falls back to /index.html (SPA routing)
+# - Request to /assets/app.js → Serves /assets/app.js
+# - Missing files → Returns 404 Not Found
+#
+# Cache Headers:
+# - Static assets (JS, CSS, images): Cache-Control: public, max-age=31536000 (1 year)
+# - HTML files: Cache-Control: no-cache (allow revalidation)
+
+# --- IAM PERMISSIONS ---
+# Lambda execution role has the following permissions:
+#
+# S3 Access (FrontendSPABucketName):
+# - s3:GetObject → Read files from frontend bucket
+# - s3:ListBucket → List objects in bucket (for debugging)
+#
+# CloudWatch Logs:
+# - logs:CreateLogGroup → Create log group
+# - logs:CreateLogStream → Create log stream
+# - logs:PutLogEvents → Write log events
+#
+# VPC Access (if Lambda deployed in VPC):
+# - ec2:CreateNetworkInterface → Create ENI
+# - ec2:DescribeNetworkInterfaces → Describe ENI
+# - ec2:DeleteNetworkInterface → Delete ENI
+
+# --- LAMBDA FUNCTION CONFIGURATION ---
+# Template creates Lambda with:
+# - Memory: 256 MB (configurable in template, not parameter)
+# - Timeout: 30 seconds (max for ALB integration)
+# - Environment Variables:
+#   - FRONTEND_BUCKET: {FrontendSPABucketName}
+# - Reserved Concurrent Executions: None (uses unreserved pool)
+# - Architecture: x86_64 (or arm64 if specified in template)
+
+# --- UPDATING LAMBDA CODE ---
+# To update Lambda function code:
+#
+# Step 1: Build New Package
+# - Update Lambda code locally
+# - Install dependencies: npm install
+# - Create ZIP: zip -r s3ReverseProxy-v3.zip .
+#
+# Step 2: Upload to S3
+# - Upload to same bucket: aws s3 cp s3ReverseProxy-v3.zip s3://{LambdaS3bucket}/
+#
+# Step 3: Update CloudFormation
+# Option A: Update Stack with New Filename
+# - Update CodeZipFileName: "s3ReverseProxy-v3.zip"
+# - Update CloudFormation stack
+#
+# Option B: Overwrite Existing File
+# - Overwrite s3://{LambdaS3bucket}/{CodeZipFileName}
+# - Update CloudFormation stack (even without parameter changes)
+# - CloudFormation detects S3 object ETag change and updates Lambda
+#
+# Step 4: Verify Deployment
+# - AWS Console → Lambda → Functions
+# - Select function: {AppShortName}-{EnvName}-lambda-s3reverseproxy
+# - Check "Last modified" timestamp
+# - Test function with sample ALB event
+

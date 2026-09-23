@@ -1,0 +1,78 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "hh"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd-dev"
+  },
+  {
+    "ParameterKey": "DmsInstanceClass",
+    "ParameterValue": "dms.t3.medium"
+  },
+  {
+    "ParameterKey": "VpcSecurityGroupIds",
+    "ParameterValue": "sg-055d3843a727bae2f"
+  },
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "subnet-04ab76c18fb33ba24,subnet-04750c96ccc777415"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-0b32bf11d4113777b"
+  },
+  {
+    "ParameterKey": "CreateSharedResources",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "ExistingDmsInstanceId",
+    "ParameterValue": "hh-nprd-dev-dms-instance"
+  },
+  {
+    "ParameterKey": "ExistingDmsInstanceArn",
+    "ParameterValue": "arn:aws:dms:ap-southeast-1:499548211029:rep:XVHZVBSTIZCTHGPW4XDQ6YF4TY"
+  },
+  {
+    "ParameterKey": "ExistingDmsSecurityGroupId",
+    "ParameterValue": "hh-nprd-dev-dms-sg"
+  },
+  {
+    "ParameterKey": "ExistingDmsSubnetGroupId",
+    "ParameterValue": "hh-nprd-dev-dms-subnet-group"
+  },
+  {
+    "ParameterKey": "SqlServerSecurityGroup",
+    "ParameterValue": "sg-0881a23260eaeb122"
+  },
+  {
+    "ParameterKey": "PostgresSecurityGroup",
+    "ParameterValue": "sg-0727434ef364962bb"
+  },
+  {
+    "ParameterKey": "SourceServerName",
+    "ParameterValue": "hh-nprd-dev-rdssql.cvvw4ch4kevw.ap-southeast-1.rds.amazonaws.com"
+  },
+  {
+    "ParameterKey": "TargetServerName",
+    "ParameterValue": "hh-nprd-dev-rdspostg.cvvw4ch4kevw.ap-southeast-1.rds.amazonaws.com"
+  },
+  {
+    "ParameterKey": "SourceSecretArn",
+    "ParameterValue": "arn:aws:secretsmanager:ap-southeast-1:499548211029:secret:hh-nprd-dev-rdssql-dms-secrete-gtAYRc"
+  },
+  {
+    "ParameterKey": "TargetSecretArn",
+    "ParameterValue": "arn:aws:secretsmanager:ap-southeast-1:499548211029:secret:hh-nprd-dev-rdspostg-dms-secrete-3ZpT1H"
+  },
+  {
+    "ParameterKey": "SourceDatabaseName",
+    "ParameterValue": "HH_DEVB_ChatBotDB"
+  },
+  {
+    "ParameterKey": "TargetDatabaseName",
+    "ParameterValue": "hh_devb_chatbotdb"
+  }
+]

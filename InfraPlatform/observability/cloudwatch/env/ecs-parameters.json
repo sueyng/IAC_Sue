@@ -1,0 +1,62 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "ECSClusterName",
+    "ParameterValue": "myapp-prod-cluster"
+  },
+  {
+    "ParameterKey": "ECSService1Name",
+    "ParameterValue": "myapp-prod-web-service"
+  },
+  {
+    "ParameterKey": "ECSService2Name",
+    "ParameterValue": "myapp-prod-api-service"
+  },
+  {
+    "ParameterKey": "ECSService3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "CPUUtilizationCriticalThreshold",
+    "ParameterValue": "90"
+  },
+  {
+    "ParameterKey": "CPUUtilizationWarningThreshold",
+    "ParameterValue": "80"
+  },
+  {
+    "ParameterKey": "MemoryUtilizationCriticalThreshold",
+    "ParameterValue": "90"
+  },
+  {
+    "ParameterKey": "MemoryUtilizationWarningThreshold",
+    "ParameterValue": "80"
+  },
+  {
+    "ParameterKey": "DesiredCountThreshold",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "RunningTaskCountThreshold",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "Team1SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:ops-team"
+  },
+  {
+    "ParameterKey": "Team2SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:dev-team"
+  },
+  {
+    "ParameterKey": "Team3SNSTopicArn",
+    "ParameterValue": "arn:aws:sns:us-east-1:123456789012:infra-team"
+  }
+]

@@ -1,0 +1,454 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# VPC CONFIGURATION
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+VpcCidr: "<edit_here>"                  # 📝 e.g. 10.0.0.0/16 (VPC CIDR for HTTPS egress)
+
+# DATABASE CONFIGURATION
+DatabasePort: "<edit_here>"             # 📝 e.g. 3306 (MySQL/Aurora), 5432 (PostgreSQL), 1433 (SQL Server)
+
+# Production HCC Proxy CIDRs (used when EnvName = prod/prod-a/prod-b/prod-c)
+ProdHCCProxyCidr1: "<edit_here>"        # 📝 e.g. 10.1.0.0/24
+ProdHCCProxyCidr2: "<edit_here>"        # 📝 e.g. 10.1.1.0/24
+
+# Non-production HCC Proxy CIDRs (used when EnvName = nprd*)
+NprdHCCProxyCidr1: "<edit_here>"        # 📝 e.g. 10.2.0.0/24
+NprdHCCProxyCidr2: "<edit_here>"        # 📝 e.g. 10.2.1.0/24
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# HCC PROXY CONFIGURATION (environment-based selection)
+HCCProxyPort: 8080                      # HCC proxy port (default - 8080)
+
+# DATABASE ACCESS (choose one or both methods)
+# Method 1: Database Subnet CIDRs (most common, supports up to 2 CIDRs)
+DatabaseSubnetCidrs: ""                 # e.g. 10.53.70.96/28,10.53.70.112/28 (comma-separated, no spaces)
+
+# Method 2: Database Security Group Reference
+DatabaseSecurityGroupId: ""             # e.g. sg-0database123
+
+# PREFIX LISTS (get IDs from prefix list stack outputs)
+DynamoDBPrefixListId: ""                # From dynamodb prefix list stack output (e.g. pl-0dynamodb123)
+S3PrefixListId: ""                      # From s3 prefix list stack output (e.g. pl-0s3456)
+AdditionalPrefixListId: ""              # From external-api prefix list stack output (e.g. pl-0external789)
+
+# ADDITIONAL EGRESS
+AdditionalEgressCidrs: ""               # Comma-separated CIDRs for additional egress on port 443 (optional)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates security group name: {AppShortName}-{EnvName}-sg-lambda
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in security group naming
+# - Determines which HCC Proxy CIDRs to use (prod vs nprd)
+#
+# Production environments (prod, prod-a, prod-b, prod-c):
+# - Uses ProdHCCProxyCidr1 and ProdHCCProxyCidr2
+#
+# Non-Production environments (nprd, nprd-dev, nprd-stg, nprd-sit, nprd-uat):
+# - Uses NprdHCCProxyCidr1 and NprdHCCProxyCidr2
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- VPC ID ---
+# VpcId: VPC identifier where security group will be created
+#
+# Purpose: Specifies which VPC to create security group in
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-0d99a0c727b301d67
+#
+# Finding VPC ID:
+# AWS Console → VPC → Your VPCs
+# - Locate the VPC for your environment
+# - Copy VPC ID from the list
+#
+# Requirements:
+# - VPC must exist before deployment
+# - Lambda functions must be deployed in same VPC
+
+# --- VPC CIDR ---
+# VpcCidr: VPC CIDR block for HTTPS egress
+#
+# Purpose: Allow Lambda to make HTTPS calls to resources within VPC
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.0.0.0/16, 172.16.0.0/12, 192.168.0.0/16
+#
+# Use Cases:
+# - HTTPS API calls to internal services
+# - Access to private endpoints
+# - Communication with other Lambda functions via API Gateway
+#
+# Finding VPC CIDR:
+# AWS Console → VPC → Your VPCs
+# - Select VPC
+# - IPv4 CIDR shows the CIDR block
+
+# --- DATABASE PORT ---
+# DatabasePort: Port for database connectivity
+#
+# Purpose: Allow Lambda to connect to databases
+#
+# Common Ports:
+# - 3306: MySQL, MariaDB, Aurora MySQL
+# - 5432: PostgreSQL, Aurora PostgreSQL
+# - 1433: SQL Server
+# - 1521: Oracle
+# - 27017: MongoDB
+# - 6379: Redis (ElastiCache)
+# - 11211: Memcached (ElastiCache)
+#
+# Requirements:
+# - Must match database listening port
+# - Used with DatabaseSubnetCidrs or DatabaseSecurityGroupId
+
+# --- HCC PROXY PORT ---
+# HCCProxyPort: Port for HCC corporate proxy
+#
+# Purpose: Allow Lambda to route external traffic through corporate proxy
+#
+# Default: 8080
+# Common Values: 8080, 3128
+#
+# Use Cases:
+# - Corporate policy requires proxy for external APIs
+# - Centralized traffic monitoring
+# - Access to internet from VPC Lambda
+
+# --- PROD HCC PROXY CIDR ---
+# ProdHCCProxyCidr1/ProdHCCProxyCidr2: Production HCC proxy CIDRs
+#
+# Purpose: CIDRs for production HCC proxy servers
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.1.0.0/24, 10.1.1.0/24
+#
+# Used When:
+# - EnvName = prod, prod-a, prod-b, or prod-c
+# - Template automatically selects these CIDRs for production environments
+#
+# Finding HCC Proxy CIDRs:
+# - Contact network team for production proxy CIDRs
+# - Verify proxy is accessible from Lambda VPC subnets
+
+# --- NPRD HCC PROXY CIDR ---
+# NprdHCCProxyCidr1/NprdHCCProxyCidr2: Non-production HCC proxy CIDRs
+#
+# Purpose: CIDRs for non-production HCC proxy servers
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.2.0.0/24, 10.2.1.0/24
+#
+# Used When:
+# - EnvName starts with nprd (nprd, nprd-dev, nprd-stg, nprd-sit, nprd-uat)
+# - Template automatically selects these CIDRs for non-production environments
+#
+# Finding HCC Proxy CIDRs:
+# - Contact network team for non-production proxy CIDRs
+# - Verify proxy is accessible from Lambda VPC subnets
+
+# --- DATABASE SUBNET CIDRS ---
+# DatabaseSubnetCidrs: Database subnet CIDR ranges
+#
+# Purpose: Allow Lambda to connect to databases via subnet CIDRs
+#
+# Format: cidr1,cidr2 (comma-separated, no spaces, max 2 CIDRs)
+# Example: 10.53.70.96/28,10.53.70.112/28
+#
+# Use Cases (Option 1 - CIDR-Based Access):
+# - Well-defined database subnets
+# - Self-managed databases on EC2
+# - Cross-account database access
+# - Multi-AZ deployments with known subnet ranges
+#
+# Requirements:
+# - Maximum 2 database subnet CIDRs
+# - Must be valid CIDR notation
+# - Subnets should contain database instances
+#
+# Finding Database Subnet CIDRs:
+# AWS Console → VPC → Subnets
+# - Filter by "database" or "db" in subnet name
+# - Copy IPv4 CIDR for each database subnet
+
+# --- DATABASE SECURITY GROUP ID ---
+# DatabaseSecurityGroupId: Database security group ID
+#
+# Purpose: Allow Lambda to connect to databases via security group reference
+#
+# Format: sg-xxxxxxxxxxxxxxxxx
+# Example: sg-0database123
+#
+# Use Cases (Option 2 - Security Group Reference):
+# - Managed databases (RDS, Aurora) with security groups
+# - Dynamic security group management preferred
+# - Database security group rules change frequently
+#
+# Requirements:
+# - Security group must exist
+# - Security group must be in same VPC
+# - Database security group must allow inbound from Lambda SG
+#
+# Finding Database Security Group:
+# AWS Console → RDS → Databases → Select database
+# - Connectivity & security tab
+# - Security groups → Copy security group ID
+
+# --- DATABASE CONNECTIVITY OPTIONS ---
+# Choose one or both methods:
+#
+# Option 1: CIDR-Based Access (Most Common)
+# DatabaseSubnetCidrs: "10.53.70.96/28,10.53.70.112/28"
+# DatabaseSecurityGroupId: ""
+#
+# Option 2: Security Group Reference
+# DatabaseSubnetCidrs: ""
+# DatabaseSecurityGroupId: "sg-0database123"
+#
+# Option 3: Combined Approach
+# DatabaseSubnetCidrs: "10.53.70.96/28,10.53.70.112/28"
+# DatabaseSecurityGroupId: "sg-0database123"
+#
+# Recommendations:
+# - Use CIDR method for well-defined database subnets
+# - Use SG method for managed databases (RDS, Aurora)
+# - Use both for comprehensive access
+
+# --- DYNAMODB PREFIX LIST ID ---
+# DynamoDBPrefixListId: Managed prefix list ID for DynamoDB service
+#
+# Purpose: Allow Lambda to access DynamoDB via managed prefix list
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0dynamodb123
+#
+# Requirements:
+# - Deploy lambda-prefixlist stack first with PrefixListPurpose="dynamodb"
+# - Get prefix list ID from stack outputs
+# - Leave empty ("") if not using DynamoDB
+#
+# Finding Prefix List ID:
+# AWS Console → CloudFormation → Stacks
+# - Select prefix list stack (e.g., myapp-nprd-prefixlist-dynamodb)
+# - Outputs tab → Copy PrefixListId
+
+# --- S3 PREFIX LIST ID ---
+# S3PrefixListId: Managed prefix list ID for S3 service
+#
+# Purpose: Allow Lambda to access S3 via managed prefix list
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0s3456
+#
+# Requirements:
+# - Deploy lambda-prefixlist stack first with PrefixListPurpose="s3"
+# - Get prefix list ID from stack outputs
+# - Leave empty ("") if not using S3
+#
+# Note:
+# - S3 access from Lambda typically uses VPC endpoint instead
+# - Use this only if VPC endpoint is not available
+#
+# Finding Prefix List ID:
+# AWS Console → CloudFormation → Stacks
+# - Select prefix list stack (e.g., myapp-nprd-prefixlist-s3)
+# - Outputs tab → Copy PrefixListId
+
+# --- ADDITIONAL PREFIX LIST ID ---
+# AdditionalPrefixListId: Managed prefix list ID for external APIs
+#
+# Purpose: Allow Lambda to access external APIs via managed prefix list
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0external789
+#
+# Use Cases:
+# - Twilio API endpoints
+# - FormSG API endpoints
+# - Other external APIs
+#
+# Requirements:
+# - Deploy lambda-prefixlist stack first with appropriate PrefixListPurpose
+# - Get prefix list ID from stack outputs
+# - Leave empty ("") if not using external APIs
+#
+# Finding Prefix List ID:
+# AWS Console → CloudFormation → Stacks
+# - Select prefix list stack (e.g., myapp-nprd-prefixlist-external-api-twilio)
+# - Outputs tab → Copy PrefixListId
+
+# --- ADDITIONAL EGRESS CIDRS ---
+# AdditionalEgressCidrs: Additional CIDR ranges for HTTPS egress
+#
+# Purpose: Allow Lambda to access additional resources on port 443
+#
+# Format: cidr1,cidr2,cidr3 (comma-separated, no spaces)
+# Example: 10.100.0.0/24,10.200.0.0/24
+#
+# Use Cases:
+# - Partner network CIDRs
+# - Cross-VPC connectivity
+# - Additional internal services
+#
+# Leave empty ("") if not needed
+
+# --- SECURITY GROUP EGRESS RULES CREATED ---
+# This template creates the following egress rules:
+#
+# 1. HTTPS to VPC CIDR:
+#    - Port: 443
+#    - Protocol: TCP
+#    - Destination: {VpcCidr}
+#    - Purpose: Internal HTTPS calls within VPC
+#
+# 2. HCC Proxy Access:
+#    - Port: {HCCProxyPort} (default 8080)
+#    - Protocol: TCP
+#    - Destination: {ProdHCCProxyCidr1/2} or {NprdHCCProxyCidr1/2} (based on EnvName)
+#    - Purpose: Route external traffic through corporate proxy
+#
+# 3. Database Access (if DatabaseSubnetCidrs provided):
+#    - Port: {DatabasePort}
+#    - Protocol: TCP
+#    - Destination: {DatabaseSubnetCidrs}
+#    - Purpose: Database connectivity via subnet CIDRs
+#
+# 4. Database Access (if DatabaseSecurityGroupId provided):
+#    - Port: {DatabasePort}
+#    - Protocol: TCP
+#    - Destination: {DatabaseSecurityGroupId}
+#    - Purpose: Database connectivity via security group reference
+#
+# 5. DynamoDB Access (if DynamoDBPrefixListId provided):
+#    - Port: 443
+#    - Protocol: TCP
+#    - Destination: {DynamoDBPrefixListId}
+#    - Purpose: DynamoDB service access
+#
+# 6. S3 Access (if S3PrefixListId provided):
+#    - Port: 443
+#    - Protocol: TCP
+#    - Destination: {S3PrefixListId}
+#    - Purpose: S3 service access
+#
+# 7. External API Access (if AdditionalPrefixListId provided):
+#    - Port: 443
+#    - Protocol: TCP
+#    - Destination: {AdditionalPrefixListId}
+#    - Purpose: External API access
+#
+# 8. Additional HTTPS Access (if AdditionalEgressCidrs provided):
+#    - Port: 443
+#    - Protocol: TCP
+#    - Destination: {AdditionalEgressCidrs}
+#    - Purpose: Additional resource access
+
+# --- VPC ENDPOINTS VS PREFIX LISTS ---
+# For AWS services (S3, DynamoDB), prefer VPC endpoints over prefix lists:
+#
+# VPC Endpoints (Recommended):
+# - More secure (traffic stays within AWS network)
+# - No data transfer charges
+# - No internet gateway or NAT gateway required
+# - Better performance
+#
+# Prefix Lists (Alternative):
+# - Use when VPC endpoints are not available
+# - Use for specific service IP ranges
+# - Requires NAT gateway for internet access
+#
+# Recommendation:
+# - Use VPC endpoints for S3, DynamoDB, ECR, CloudWatch, Secrets Manager, SSM
+# - Use prefix lists for external APIs (Twilio, FormSG, etc.)
+
+# --- RESOURCES CREATED ---
+
+# Security Group:
+#   - Name: {AppShortName}-{EnvName}-sg-lambda
+#   - Description: Security group for Lambda functions in VPC
+#   - VPC: {VpcId}
+
+# Egress Rules Created:
+#   1. HTTPS to VPC CIDR:
+#      - Port: 443, Protocol: TCP
+#      - Destination: {VpcCidr}
+#      - Purpose: Internal HTTPS calls within VPC
+#
+#   2. HCC Proxy Access:
+#      - Port: {HCCProxyPort} (default 8080), Protocol: TCP
+#      - Destination: Production ({ProdHCCProxyCidr1/2}) or Non-prod ({NprdHCCProxyCidr1/2})
+#      - Purpose: Route external traffic through corporate proxy
+#
+#   3. Database Access via CIDRs (if DatabaseSubnetCidrs provided):
+#      - Port: {DatabasePort}, Protocol: TCP
+#      - Destination: {DatabaseSubnetCidrs}
+#      - Purpose: Database connectivity
+#
+#   4. Database Access via SG (if DatabaseSecurityGroupId provided):
+#      - Port: {DatabasePort}, Protocol: TCP
+#      - Destination: {DatabaseSecurityGroupId}
+#      - Purpose: Database connectivity
+#
+#   5. DynamoDB Access (if DynamoDBPrefixListId provided):
+#      - Port: 443, Protocol: TCP
+#      - Destination: {DynamoDBPrefixListId}
+#      - Purpose: DynamoDB service access
+#
+#   6. S3 Access (if S3PrefixListId provided):
+#      - Port: 443, Protocol: TCP
+#      - Destination: {S3PrefixListId}
+#      - Purpose: S3 service access
+#
+#   7. External API Access (if AdditionalPrefixListId provided):
+#      - Port: 443, Protocol: TCP
+#      - Destination: {AdditionalPrefixListId}
+#      - Purpose: External API access
+#
+#   8. Additional HTTPS (if AdditionalEgressCidrs provided):
+#      - Port: 443, Protocol: TCP
+#      - Destination: {AdditionalEgressCidrs}
+#      - Purpose: Additional resource access
+
+# Stack Outputs:
+#   - LambdaSecurityGroupId: sg-xxxxxxxxxxxxxxxxx (for use in Lambda functions)

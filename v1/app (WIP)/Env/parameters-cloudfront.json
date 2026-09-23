@@ -1,0 +1,26 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    }, 
+    {
+        "ParameterKey": "S3BucketName",
+        "ParameterValue": "fhirweb"
+    },
+    {
+        "ParameterKey": "CloudFrontCertArn",
+        "ParameterValue": "arn:aws:acm:us-east-1:405894843861:certificate/68f7d18f-035d-4896-b59f-04b5b81a0c4e"
+    },
+    {
+        "ParameterKey": "DefaultPage",
+        "ParameterValue": "index.html"
+    },
+    {
+        "ParameterKey": "CustomDomainName",
+        "ParameterValue": "fhirnexus-demo.ihis-hip.sg"
+    }
+]

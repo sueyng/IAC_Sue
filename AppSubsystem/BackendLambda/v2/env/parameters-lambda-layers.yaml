@@ -1,0 +1,306 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# S3 BUCKET FOR LAYER PACKAGES
+LayerDeploymentBucketName: "<edit_here>" # 📝 e.g. myapp-nprd-lambda-deployment, myapp-nprd-app-artifact
+
+# ========================================
+# LAYER 1 CONFIGURATION (required if deploying any layer)
+# ========================================
+Layer1Name: "<edit_here>"               # 📝 e.g. requests, pymysql, pandas
+Layer1Description: "<edit_here>"        # 📝 e.g. Requests library layer for HTTP API calls
+Layer1S3Key: "<edit_here>"              # 📝 e.g. layers/requests/requests-layer.zip
+Layer1CompatibleRuntimes: "<edit_here>" # 📝 e.g. python3.12, python3.11,python3.10 (comma-separated, no spaces)
+Layer1CompatibleArchitectures: "<edit_here>" # 📝 e.g. x86_64, arm64, or x86_64,arm64 (comma-separated, no spaces)
+
+# ========================================
+# LAYER 2 CONFIGURATION (optional)
+# ========================================
+Layer2Name: ""                          # 📝 e.g. pymysql, psycopg2
+Layer2Description: ""                   # 📝 e.g. PyMySQL library layer for MySQL database connectivity
+Layer2S3Key: ""                         # 📝 e.g. layers/pymysql/pymysql-layer.zip
+Layer2CompatibleRuntimes: "python3.12"  # e.g. python3.12, python3.11,python3.10
+Layer2CompatibleArchitectures: "x86_64" # e.g. x86_64, arm64, or x86_64,arm64
+
+# ========================================
+# LAYER 3 CONFIGURATION (optional)
+# ========================================
+Layer3Name: ""                          # 📝 e.g. pandas, numpy
+Layer3Description: ""                   # 📝 Description
+Layer3S3Key: ""                         # 📝 e.g. layers/pandas/pandas-layer.zip
+Layer3CompatibleRuntimes: "python3.12"
+Layer3CompatibleArchitectures: "x86_64"
+
+# ========================================
+# LAYER 4 CONFIGURATION (optional)
+# ========================================
+Layer4Name: ""                          # 📝 Layer name
+Layer4Description: ""                   # 📝 Description
+Layer4S3Key: ""                         # 📝 S3 key
+Layer4CompatibleRuntimes: "python3.12"
+Layer4CompatibleArchitectures: "x86_64"
+
+# ========================================
+# LAYER 5 CONFIGURATION (optional)
+# ========================================
+Layer5Name: ""                          # 📝 Layer name
+Layer5Description: ""                   # 📝 Description
+Layer5S3Key: ""                         # 📝 S3 key
+Layer5CompatibleRuntimes: "python3.12"
+Layer5CompatibleArchitectures: "x86_64"
+
+# <<< PARAMETERS_END >>>
+
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates layer names: {AppShortName}-{EnvName}-layer-{LayerName}
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose: Used in layer naming
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- LAYER DEPLOYMENT BUCKET NAME ---
+# LayerDeploymentBucketName: S3 bucket containing layer ZIP files
+#
+# Purpose: Location of Lambda layer packages
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-nprd-lambda-deployment, myapp-nprd-app-artifact
+#
+# Requirements:
+# - Bucket must exist in same region as Lambda
+# - All layer ZIP files must be uploaded to this bucket
+# - CloudFormation must have read access to bucket
+#
+# Finding Bucket Name:
+# AWS Console → S3 → Buckets
+# - Locate your Lambda deployment bucket
+# - Copy bucket name
+
+# --- LAYER NAME ---
+# Layer1/2/3/4/5Name: Layer identifier
+#
+# Purpose: Identifies the layer and its contents
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: requests, pymysql, psycopg2, pandas, custom-utils
+#
+# Requirements:
+# - Descriptive of layer contents
+# - Final layer name: {AppShortName}-{EnvName}-layer-{LayerName}
+#
+# Common Layer Names:
+# - Python: requests, pymysql, psycopg2, pandas, numpy, pillow, boto3-utils
+# - Node.js: axios, lodash, moment, uuid, pg
+# - .NET: Newtonsoft.Json, EntityFramework, AutoMapper
+# - Java: aws-sdk, jackson, hibernate
+
+# --- LAYER DESCRIPTION ---
+# Layer1/2/3/4/5Description: Human-readable description
+#
+# Purpose: Describes the layer's purpose and contents
+#
+# Format: Plain text (max 256 characters)
+# Example: "Requests library layer for HTTP API calls", "PyMySQL library for MySQL connectivity"
+#
+# Best Practices:
+# - Mention library name and version (if specific)
+# - Describe purpose
+# - Keep it concise
+
+# --- LAYER S3 KEY ---
+# Layer1/2/3/4/5S3Key: S3 object key for layer ZIP file
+#
+# Purpose: Path to layer ZIP file within S3 bucket
+#
+# Format: path/to/file.zip
+# Example: layers/requests/requests-layer.zip, layers/pymysql/pymysql-v1.0.0.zip
+#
+# Requirements:
+# - File must exist in LayerDeploymentBucketName
+# - Must be valid Lambda layer ZIP file
+# - Must follow Lambda layer structure (see below)
+#
+# Lambda Layer ZIP Structure:
+# For Python:
+# layer.zip
+# └── python/
+#     └── lib/
+#         └── python3.12/
+#             └── site-packages/
+#                 └── [libraries]
+#
+# For Node.js:
+# layer.zip
+# └── nodejs/
+#     └── node_modules/
+#         └── [libraries]
+#
+# For .NET:
+# layer.zip
+# └── dotnetcore/
+#     └── [assemblies]
+#
+# For Java:
+# layer.zip
+# └── java/
+#     └── lib/
+#         └── [jar files]
+
+# --- LAYER COMPATIBLE RUNTIMES ---
+# Layer1/2/3/4/5CompatibleRuntimes: Lambda runtimes compatible with this layer
+#
+# Purpose: Specifies which Lambda runtimes can use this layer
+#
+# Format: Comma-separated runtime identifiers (no spaces)
+# Example: python3.12,python3.11,python3.10
+#
+# Supported Runtimes (as of 2024):
+# - Python: python3.12, python3.11, python3.10, python3.9
+# - Node.js: nodejs20.x, nodejs18.x, nodejs16.x
+# - .NET: dotnet8, dotnet6
+# - Java: java21, java17, java11
+# - Go: go1.x
+# - Ruby: ruby3.2
+#
+# Best Practices:
+# - List all compatible runtimes for flexibility
+# - Test layer with each runtime version listed
+# - Update when new runtime versions become available
+#
+# Single Runtime Example:
+# Layer1CompatibleRuntimes: "python3.12"
+#
+# Multiple Runtimes Example:
+# Layer1CompatibleRuntimes: "python3.12,python3.11,python3.10"
+
+# --- LAYER COMPATIBLE ARCHITECTURES ---
+# Layer1/2/3/4/5CompatibleArchitectures: CPU architectures compatible with this layer
+#
+# Purpose: Specifies which CPU architectures can use this layer
+#
+# Options:
+# - x86_64: Intel/AMD processors (standard)
+# - arm64: AWS Graviton2 processors (cost-optimized)
+# - x86_64,arm64: Both architectures (universal layer)
+#
+# Format: Comma-separated architecture identifiers (no spaces)
+# Example: x86_64,arm64
+#
+# x86_64 Only:
+# - Use when layer contains x86-specific binaries
+# - Most common for existing libraries
+# - Example: Layer1CompatibleArchitectures: "x86_64"
+#
+# arm64 Only:
+# - Use when layer is specifically built for Graviton2
+# - Cost optimization with Graviton2
+# - Example: Layer1CompatibleArchitectures: "arm64"
+#
+# Both (Universal):
+# - Use when layer is pure Python/Node.js (no compiled binaries)
+# - Or when layer contains binaries for both architectures
+# - Example: Layer1CompatibleArchitectures: "x86_64,arm64"
+#
+# Recommendations:
+# - Pure Python/Node.js code: Use x86_64,arm64 (universal)
+# - Compiled libraries (C extensions): Build separate layers per architecture
+# - Default: x86_64 (widest compatibility)
+
+# --- USING LAYERS IN LAMBDA FUNCTIONS ---
+# After deploying layers, reference them in Lambda functions:
+#
+# 1. Get layer ARNs from stack outputs:
+#    AWS Console → CloudFormation → Stacks → Select layer stack → Outputs
+#
+# 2. Copy layer ARN(s):
+#    Example: arn:aws:lambda:ap-southeast-1:123456789012:layer:myapp-nprd-layer-requests:1
+#
+# 3. Add to Lambda function parameter file:
+#    LambdaLayerArns: "arn:aws:lambda:ap-southeast-1:123456789012:layer:myapp-nprd-layer-requests:1,arn:aws:lambda:ap-southeast-1:123456789012:layer:myapp-nprd-layer-pymysql:1"
+#
+# 4. In Lambda function code (Python example):
+#    import requests  # From requests layer
+#    import pymysql   # From pymysql layer
+#
+# Maximum Layers:
+# - Lambda functions can use up to 5 layers
+# - Total unzipped size (function + layers) must be < 250 MB
+
+# --- UPDATING LAYERS ---
+# Lambda layers are immutable (versions cannot be changed).
+#
+# To update a layer:
+# 1. Create new layer ZIP with updated dependencies
+# 2. Upload to S3 (can use same S3 key or new key)
+# 3. Update CloudFormation stack
+# 4. CloudFormation creates new layer version
+# 5. Update Lambda functions to use new layer version
+#
+# Layer Versioning:
+# - Each stack update creates a new layer version
+# - Old versions remain accessible
+# - Lambda functions continue using their configured version
+# - Manually update Lambda functions to use latest version
+#
+# Version Management:
+# - CloudFormation outputs show latest version ARN
+# - Layer ARNs include version number (e.g., :1, :2, :3)
+# - Old versions can be referenced directly if needed
+
+# --- RESOURCES CREATED ---
+
+# Lambda Layers (up to 5):
+#   - Layer 1 (if Layer1Name provided): {AppShortName}-{EnvName}-layer-{Layer1Name}
+#     * Description: {Layer1Description}
+#     * Code: s3://{LayerDeploymentBucketName}/{Layer1S3Key}
+#     * Compatible Runtimes: {Layer1CompatibleRuntimes}
+#     * Compatible Architectures: {Layer1CompatibleArchitectures}
+#
+#   - Layer 2 (if Layer2Name provided): {AppShortName}-{EnvName}-layer-{Layer2Name}
+#   - Layer 3 (if Layer3Name provided): {AppShortName}-{EnvName}-layer-{Layer3Name}
+#   - Layer 4 (if Layer4Name provided): {AppShortName}-{EnvName}-layer-{Layer4Name}
+#   - Layer 5 (if Layer5Name provided): {AppShortName}-{EnvName}-layer-{Layer5Name}
+
+# Stack Outputs (Layer ARNs):
+#   - Layer1Arn (if created): arn:aws:lambda:region:account:layer:{AppShortName}-{EnvName}-layer-{Layer1Name}:version
+#   - Layer2Arn (if created): arn:aws:lambda:region:account:layer:{AppShortName}-{EnvName}-layer-{Layer2Name}:version
+#   - Layer3Arn (if created): arn:aws:lambda:region:account:layer:{AppShortName}-{EnvName}-layer-{Layer3Name}:version
+#   - Layer4Arn (if created): arn:aws:lambda:region:account:layer:{AppShortName}-{EnvName}-layer-{Layer4Name}:version
+#   - Layer5Arn (if created): arn:aws:lambda:region:account:layer:{AppShortName}-{EnvName}-layer-{Layer5Name}:version
+

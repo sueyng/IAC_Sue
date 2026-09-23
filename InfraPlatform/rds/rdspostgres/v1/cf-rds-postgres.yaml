@@ -1,0 +1,480 @@
+AWSTemplateFormatVersion: 2010-09-09
+#Description:
+Description: Setup for RDS Instance V1
+Parameters:
+
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Select the Primary Region for RDS Deployment.
+    AllowedValues:
+      - ap-southeast-1a
+      - ap-southeast-1b
+      - ap-southeast-1c
+
+# Subnet CIDR parameters
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: AZ1 App Subnet
+  
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: AZ2 App Subnet
+
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: AZ3 App Subnet
+
+  # DB Subnet ID parameters
+  DBSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of DB Subnet Ids
+  
+  DeploymentServer:
+    Type: String
+    Description: Deployment Server IP
+
+  MultiAZ:
+    Type: String
+    Description: Multi-AZ deployment (true / false)
+    AllowedValues: ['true', 'false']
+
+  RdsDBParameterGroupFamily:
+    Type: String
+    Description: Parameter group family, eg, postgres16
+
+  DBInstanceClass:
+    Type: String
+    Description: The database instance type, eg - db.m6i.xlarge
+
+  DBEngine:
+    Type: String
+    Description: Enter the SQL DB Engine Name, se is standard and ee is enterprise
+    AllowedValues:
+      - postgres
+
+  DBMajorEngineVersion:
+    Type: String
+    Description: Enter the DB Engine version, eg- 16.00
+  
+  EngineVersion:
+    Type: String
+    Description : Get the latest engine version from the AWS console, eg -16.10
+    Default: '15.10'
+
+  AllocatedStorage:
+    Type: String
+    Description: Total DB size
+
+  RDSMaxAllocatedStorage:
+    Type: String
+    Description: Maximum storage for DB instance
+
+  StorageType:
+    Type: String
+    Description: Volume Type
+
+  StorageIops:
+    Type: String
+    Description: Storage IOPS for the allocated storage
+    Default: ''
+
+  MasterUsernameDev:
+    Type: String
+    Default: dbadmin
+    NoEcho: true
+
+  MasterUserPasswordDev:
+    Type: String
+    Default: dbadmin123
+    NoEcho: true
+
+  ProdDBPort:
+    Type: String
+    Default: 53341
+    NoEcho: true
+
+  NProdDBPort:
+    Type: String
+    Default: 53331
+    NoEcho: true
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+  IsMultiAZ: !Equals [!Ref MultiAZ, 'true']
+  HasStorageIops: !Not [!Equals [!Ref StorageIops, ""]]
+
+Resources:
+# KMS Key for encrypt the RDS backups and DB related Files (new)
+  RDSEncryptionKmsKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: 'KMS key to encrypt DB related files and native backups'
+      EnableKeyRotation: false
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+          
+# Alias for the KMS key (new)
+  RDSEncryptionKmsKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-rdssqlserver-encryption'
+      TargetKeyId: !Ref RDSEncryptionKmsKey
+
+  RDSmonitoringEncryptionKmsKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: 'KMS key to encrypt DB related files and native backups'
+      EnableKeyRotation: false
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+            
+  RDSMonitoringEncryptionKmsKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-performancemonitoring-encryption'
+      TargetKeyId: !Ref RDSmonitoringEncryptionKmsKey
+
+  DBCombinedS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub '${AppShortName}-${EnvName}-rdssql-s3store'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+  S3BucketPolicy: #new updated by Tin
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref DBCombinedS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt DBCombinedS3Bucket.Arn
+              - !Join ['', [!GetAtt DBCombinedS3Bucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt DBCombinedS3Bucket.Arn
+              - !Join ['', [!GetAtt DBCombinedS3Bucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+#IAM Roles and Policies
+  DBEnhancedMonitoringRole:  #hsar-prd-rds-EnhancedMonitoring-Role
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - monitoring.rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+      RoleName: !Sub '${AppShortName}-${EnvName}-rds-EnhancedMonitoring-Role'
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+  CombinedDBPolicy:
+      Type: 'AWS::IAM::ManagedPolicy'
+      DeletionPolicy: !If [IsProduction, Retain, Delete]
+      UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource:
+                - !GetAtt RDSEncryptionKmsKey.Arn
+            - Effect: Allow
+              Action:
+                - s3:ListAllMyBuckets
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - s3:GetBucketLocation
+                - s3:GetBucketACL
+                - s3:ListBucket
+              Resource:
+                - !GetAtt DBCombinedS3Bucket.Arn
+            - Effect: Allow
+              Action:
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:PutObject
+              Resource:
+                - !Sub '${DBCombinedS3Bucket.Arn}/*'
+            - Effect: Allow
+              Action:
+                - s3:GetObjectMetaData
+                - s3:GetObject
+                - s3:PutObject
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+              Resource:
+                - !Sub '${DBCombinedS3Bucket.Arn}/*'
+        ManagedPolicyName: !Sub '${AppShortName}-${EnvName}-RDS-policy'
+
+  DBCombinedS3Role:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref CombinedDBPolicy
+      RoleName: !Sub '${AppShortName}-${EnvName}-RDS-Role'
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+# Security Group
+  RdsDBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Security Group for RDS DB PostGreSQL
+      GroupName: !Sub '${AppShortName}-${EnvName}-sg-Rds-DB-PostgreSQL'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-sg-Rds-DB-PostgreSQL'
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: Allow App AZ1 Subnet
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: Allow App AZ2 Subnet
+        - !If
+          - HasVPCSubnetCidrAppAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrAppAZ3
+            Description: Allow App Subnet AZ3
+          - !Ref "AWS::NoValue"
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref DeploymentServer
+          Description: Allow Deployment Server to Access the RDS instance 
+
+#RDS DB Subnet Group
+  RdsDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      DBSubnetGroupDescription: !Sub '${AppShortName}-${EnvName}-SubnetGroup'
+      DBSubnetGroupName: !Sub '${AppShortName}-${EnvName}-SubnetGroup'
+      SubnetIds: !Ref DBSubnetIds
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+# RDS DB Parameter Group
+  RdsDBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      Description: !Sub '${AppShortName}-${EnvName}-${DBMajorEngineVersion}-DBParameterGroup'
+      DBParameterGroupName: !Sub '${AppShortName}-${EnvName}-${DBMajorEngineVersion}-DBParameterGroup'
+      Family: !Ref RdsDBParameterGroupFamily
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      StorageEncrypted: true
+      MonitoringRoleArn: !GetAtt DBEnhancedMonitoringRole.Arn
+      PreferredBackupWindow: "16:00-17:00"
+      MonitoringInterval: 60
+      DBParameterGroupName: !Ref RdsDBParameterGroup
+      NetworkType: "IPV4"
+      CopyTagsToSnapshot: true
+      Engine: !Ref DBEngine
+      PerformanceInsightsKMSKeyId: !GetAtt RDSmonitoringEncryptionKmsKey.Arn
+      LicenseModel: "postgresql-license"
+      EngineVersion: !Ref EngineVersion
+      StorageType: !Ref StorageType
+      KmsKeyId: !GetAtt RDSEncryptionKmsKey.Arn
+      DBInstanceClass: !Ref DBInstanceClass
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, '31', '7']
+      PreferredMaintenanceWindow: "sat:18:00-sat:19:00"
+      EnablePerformanceInsights: true
+      AutoMinorVersionUpgrade: true
+      DBSubnetGroupName: !Ref RdsDBSubnetGroup
+      DeletionProtection: true
+      Iops: !If 
+        - HasStorageIops
+        - !Ref StorageIops
+        - !Ref "AWS::NoValue"
+      DBInstanceIdentifier: !Sub '${AppShortName}-${EnvName}-rdspostg'
+      AllocatedStorage: !Ref AllocatedStorage
+      CACertificateIdentifier: "rds-ca-rsa4096-g1"
+      ManageMasterUserPassword: false
+      VPCSecurityGroups:
+      - !GetAtt RdsDBSecurityGroup.GroupId
+      MasterUsername: !Ref MasterUsernameDev
+      MasterUserPassword: !Ref MasterUserPasswordDev
+      EnableIAMDatabaseAuthentication: false
+      MaxAllocatedStorage: !Ref RDSMaxAllocatedStorage
+      BackupRetentionPeriod: !If [IsProduction, '35', '7']
+      PubliclyAccessible: false
+      EnableCloudwatchLogsExports:
+      - "postgresql"
+      - "upgrade"
+      Port: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+      MultiAZ: !Ref MultiAZ
+      AvailabilityZone: !If [IsMultiAZ, !Ref "AWS::NoValue", !Ref AvailabilityZone ]
+      Tags:
+        - Key: BACKUP-DAILY
+          Value: 'YES'
+        - Key: BACKUP-WEEKLY
+          Value: 'YES'
+        - Key: BACKUP-MONTHLY
+          Value: 'YES'
+        - Key: BACKUP-YEARLY
+          Value: 'YES'
+        - Key: BACKUP-CONTINUOUS
+          Value: 'YES'
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-rdspostgres-v1"
+
+# SSM Parameter store for RDS Instance:
+  ParameterRDS:
+    Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
+    Properties:
+      Name: !Sub ${AppShortName}-${EnvName}-parameter-RDSInstanceName
+      Description: !Sub ${AppShortName}-${EnvName}-parameter-RDSInstanceName
+      Value: !Ref RDSInstance
+      Type: String
+      Tags:
+        IaCVersion: "InfraPlatform-rdspostgres-v1"

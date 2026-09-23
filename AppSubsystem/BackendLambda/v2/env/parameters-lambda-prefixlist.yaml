@@ -1,0 +1,314 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# PREFIX LIST CONFIGURATION
+PrefixListPurpose: "<edit_here>"        # 📝 e.g. dynamodb, s3, external-api (used in naming)
+PrefixListDescription: "<edit_here>"    # 📝 e.g. DynamoDB service endpoints for Lambda access
+
+# CAPACITY CONFIGURATION
+MaxEntries: 50                          # Maximum entries allowed (plan for future growth, 1-1000)
+NumberOfEntries: "<edit_here>"          # 📝 e.g. 4 (number of CIDR entries to create now, 1-20)
+
+# ========================================
+# CIDR ENTRIES (fill based on NumberOfEntries)
+# Only fill entries up to NumberOfEntries value
+# ========================================
+
+CidrEntry01: "<edit_here>"              # 📝 e.g. 52.94.0.0/16
+EntryDescription01: "<edit_here>"       # 📝 e.g. DynamoDB Global Tables
+
+CidrEntry02: ""                         # 📝 e.g. 52.119.161.0/24
+EntryDescription02: ""                  # 📝 e.g. DynamoDB Streams
+
+CidrEntry03: ""                         # 📝 e.g. 52.119.162.0/24
+EntryDescription03: ""                  # 📝 e.g. DynamoDB DAX
+
+CidrEntry04: ""                         # 📝 CIDR
+EntryDescription04: ""                  # 📝 Description
+
+# ========================================
+# OPTIONAL CIDR ENTRIES (5-20)
+# ========================================
+CidrEntry05: ""                         # 📝 CIDR
+EntryDescription05: ""                  # 📝 Description
+
+CidrEntry06: ""                         # 📝 CIDR
+EntryDescription06: ""                  # 📝 Description
+
+CidrEntry07: ""                         # 📝 CIDR
+EntryDescription07: ""                  # 📝 Description
+
+CidrEntry08: ""                         # 📝 CIDR
+EntryDescription08: ""                  # 📝 Description
+
+CidrEntry09: ""                         # 📝 CIDR
+EntryDescription09: ""                  # 📝 Description
+
+CidrEntry10: ""                         # 📝 CIDR
+EntryDescription10: ""                  # 📝 Description
+
+CidrEntry11: ""                         # 📝 CIDR
+EntryDescription11: ""                  # 📝 Description
+
+CidrEntry12: ""                         # 📝 CIDR
+EntryDescription12: ""                  # 📝 Description
+
+CidrEntry13: ""                         # 📝 CIDR
+EntryDescription13: ""                  # 📝 Description
+
+CidrEntry14: ""                         # 📝 CIDR
+EntryDescription14: ""                  # 📝 Description
+
+CidrEntry15: ""                         # 📝 CIDR
+EntryDescription15: ""                  # 📝 Description
+
+CidrEntry16: ""                         # 📝 CIDR
+EntryDescription16: ""                  # 📝 Description
+
+CidrEntry17: ""                         # 📝 CIDR
+EntryDescription17: ""                  # 📝 Description
+
+CidrEntry18: ""                         # 📝 CIDR
+EntryDescription18: ""                  # 📝 Description
+
+CidrEntry19: ""                         # 📝 CIDR
+EntryDescription19: ""                  # 📝 Description
+
+CidrEntry20: ""                         # 📝 CIDR
+EntryDescription20: ""                  # 📝 Description
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates prefix list name: {AppShortName}-{EnvName}-prefixlist-{PrefixListPurpose}
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose: Used in prefix list naming
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+
+# --- PREFIX LIST PURPOSE ---
+# PrefixListPurpose: Purpose identifier for prefix list
+#
+# Purpose: Identifies what the prefix list is used for
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: dynamodb, s3, external-api-twilio, external-api-formsg
+#
+# Common Values:
+# - dynamodb: DynamoDB service endpoints
+# - s3: S3 service endpoints
+# - external-api: External API endpoints (generic)
+# - external-api-twilio: Twilio API endpoints
+# - external-api-formsg: FormSG API endpoints
+# - cloudfront: CloudFront endpoints
+#
+# Best Practices:
+# - Use descriptive purpose names
+# - Create separate prefix lists for each service type
+# - Don't mix different service CIDRs in one prefix list
+
+# --- PREFIX LIST DESCRIPTION ---
+# PrefixListDescription: Human-readable description
+#
+# Purpose: Describes what the prefix list contains
+#
+# Format: Plain text
+# Example: "DynamoDB service endpoints for Lambda access", "Twilio API endpoints for SMS/WhatsApp"
+#
+# Best Practices:
+# - Describe the service or purpose
+# - Mention region if region-specific
+# - Keep it concise
+
+# --- MAX ENTRIES ---
+# MaxEntries: Maximum number of CIDR entries allowed in prefix list
+#
+# Purpose: Sets capacity limit for future growth
+#
+# Range: 1-1000
+# Default: 50
+#
+# Important:
+# - MaxEntries can be INCREASED but NOT DECREASED
+# - No cost difference for higher MaxEntries (unused capacity)
+# - Plan ahead: set to 50 for future growth
+#
+# Recommendations:
+# - Small lists (< 10 CIDRs): 20-30
+# - Medium lists (10-30 CIDRs): 50
+# - Large lists (> 30 CIDRs): 100+
+
+# --- NUMBER OF ENTRIES ---
+# NumberOfEntries: Current number of CIDR entries to create
+#
+# Purpose: Specifies how many CIDRs to add now
+#
+# Range: 1-20 (limited by template, not AWS)
+# Example: 4
+#
+# Requirements:
+# - Must be ≤ MaxEntries
+# - Only fill CidrEntry01 through CidrEntry{NumberOfEntries}
+# - Leave remaining entries empty ("")
+#
+# Example:
+# If NumberOfEntries: 4
+# - Fill CidrEntry01, CidrEntry02, CidrEntry03, CidrEntry04
+# - Leave CidrEntry05-20 empty
+
+# --- CIDR ENTRY ---
+# CidrEntry01-20: CIDR block for prefix list entry
+#
+# Purpose: Defines IP address range for this entry
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 52.94.0.0/16, 10.0.0.0/24, 192.168.1.0/32
+#
+# Valid CIDR Ranges:
+# - IPv4: 0.0.0.0/0 to 255.255.255.255/32
+# - Netmask: /0 to /32
+#
+# Requirements:
+# - Must be valid CIDR notation
+# - Fill only up to NumberOfEntries
+# - Leave unused entries as empty string ("")
+
+# --- ENTRY DESCRIPTION ---
+# EntryDescription01-20: Description for CIDR entry
+#
+# Purpose: Documents what this CIDR represents
+#
+# Format: Plain text
+# Example: "DynamoDB Global Tables", "Twilio Voice/SMS", "S3 Endpoints"
+#
+# Best Practices:
+# - Describe the service or endpoint
+# - Mention specific purpose if applicable
+# - Keep it concise
+# - Fill for all non-empty CIDR entries
+
+# --- COMMON PREFIX LIST CONFIGURATIONS ---
+# DynamoDB Service Endpoints (ap-southeast-1):
+# PrefixListPurpose: "dynamodb"
+# PrefixListDescription: "DynamoDB service endpoints for Lambda access"
+# NumberOfEntries: 4
+# CidrEntry01: "52.94.0.0/16"         # DynamoDB Global Tables
+# CidrEntry02: "52.119.161.0/24"      # DynamoDB Streams AZ1
+# CidrEntry03: "52.119.162.0/24"      # DynamoDB Streams AZ2
+# CidrEntry04: "52.119.163.0/24"      # DynamoDB API Endpoints
+#
+# S3 and CloudFront Endpoints (ap-southeast-1):
+# PrefixListPurpose: "s3"
+# PrefixListDescription: "S3 and CloudFront endpoints for Lambda access"
+# NumberOfEntries: 3
+# CidrEntry01: "54.231.0.0/16"        # S3 and CloudFront
+# CidrEntry02: "52.216.0.0/16"        # S3 Transfer Acceleration
+# CidrEntry03: "52.92.0.0/17"         # S3 Endpoints
+#
+# External APIs - Twilio:
+# PrefixListPurpose: "external-api-twilio"
+# PrefixListDescription: "Twilio API endpoints for SMS/WhatsApp"
+# NumberOfEntries: 3
+# CidrEntry01: "208.43.0.0/16"        # Twilio Voice/SMS
+# CidrEntry02: "54.172.60.0/23"       # Twilio SIP
+# CidrEntry03: "177.71.206.0/24"      # Twilio Global Infrastructure
+#
+# External APIs - FormSG:
+# PrefixListPurpose: "external-api-formsg"
+# PrefixListDescription: "FormSG API endpoints for form submissions"
+# NumberOfEntries: 2
+# CidrEntry01: "52.77.0.0/16"         # FormSG Singapore
+# CidrEntry02: "13.250.0.0/15"        # FormSG Asia Pacific
+
+# --- PREFIX LIST MANAGEMENT ---
+# Updating Prefix Lists:
+# 1. Update CIDR entries in parameter file
+# 2. Update NumberOfEntries if adding/removing entries
+# 3. Update stack with new parameters
+# 4. CloudFormation will update the prefix list in-place
+#
+# Adding More Entries:
+# 1. Ensure NumberOfEntries < MaxEntries
+# 2. Fill additional CidrEntry## parameters
+# 3. Increment NumberOfEntries
+# 4. Update stack
+#
+# Expanding MaxEntries:
+# - MaxEntries can be increased but NOT decreased
+# - Plan ahead: set to 50 for future growth
+# - No cost difference for higher MaxEntries (unused capacity)
+#
+# Removing Entries:
+# 1. Remove CIDR from parameter file (set to "")
+# 2. Decrement NumberOfEntries
+# 3. Update stack
+# 4. Verify prefix list in AWS Console
+
+# --- SECURITY GROUP INTEGRATION ---
+# After creating prefix list, use output in security group template:
+#
+# DynamoDBPrefixListId: "pl-0dynamodb123"  # From prefix list stack output
+# S3PrefixListId: "pl-0s3456"              # From prefix list stack output
+# AdditionalPrefixListId: "pl-0external789" # From prefix list stack output
+#
+# Security group egress rules will reference these prefix lists instead of
+# individual CIDR entries.
+#
+# Benefits:
+# - Centralized management of CIDRs
+# - Update once, applies to all security groups
+# - Cleaner security group rules
+# - Easier auditing and compliance
+
+# --- RESOURCES CREATED ---
+
+# Managed Prefix List:
+#   - Name: {AppShortName}-{EnvName}-prefixlist-{PrefixListPurpose}
+#   - Description: {PrefixListDescription}
+#   - Address Family: IPv4
+#   - Max Entries: {MaxEntries}
+#   - Current Entries: {NumberOfEntries}
+#   - CIDR Entries:
+#     * {CidrEntry01} - {EntryDescription01}
+#     * {CidrEntry02} - {EntryDescription02}
+#     * ... (up to NumberOfEntries)
+
+# Stack Outputs:
+#   - PrefixListId: pl-xxxxxxxxxxxxxxxxx (for use in security groups)
+#   - PrefixListArn: arn:aws:ec2:region:account:prefix-list/pl-xxxxxxxxxxxxxxxxx

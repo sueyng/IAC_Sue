@@ -1,0 +1,402 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. grm, myapp, monitor (max 10 characters)
+EnvName: "<edit_here>"                  # 📝 e.g. nprd-dev, nprd-sit1, prod
+
+# NETWORK CONFIGURATION
+VPCID: "<edit_here>"                    # 📝 e.g. vpc-0f5fc534c59f69a2a
+AppSubnetIDs: "<edit_here>"             # 📝 e.g. subnet-xxx,subnet-yyy (min 2 subnets, comma-separated)
+
+# AUTHENTICATION
+AuthProvider: "<edit_here>"             # 📝 AWS_SSO or SAML
+
+# SECURITY - CIDR RANGES
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.53.0.0/16 (Primary VPC CIDR)
+VpcCidr2: "<edit_here>"                 # 📝 e.g. 10.54.0.0/16 (Secondary VPC CIDR, can be same as VpcCidr1)
+VpcCidr3: ""                            # e.g. 10.55.0.0/16 (Tertiary VPC CIDR, optional)
+VpcCidr4: ""                            # e.g. 10.56.0.0/16 (Quaternary VPC CIDR, optional)
+VpcCidr5: ""                            # e.g. 10.57.0.0/16 (Quinary VPC CIDR, optional)
+HCCVpceCidr: "<edit_here>"              # 📝 e.g. 10.48.42.0/24 (VPC Endpoint CIDR for accessing Grafana)
+
+# GRAFANA VERSION
+GrafanaVersion: "<edit_here>"           # 📝 e.g. 9.4, 9.8, 10.0, 10.1, 10.2
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates Grafana workspace name: {AppShortName}-{EnvName}-grafana
+# - Used in IAM role naming: {AppShortName}-{EnvName}-grafana-role
+# - Used in security group naming: {AppShortName}-{EnvName}-sg-grafana
+# - Used in prefix list naming: {AppShortName}-{EnvName}-pl-grafana
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: grm, myapp, monitor, observability
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Determines resource lifecycle policies
+# - Used in workspace naming and tagging
+# - Controls deletion behavior
+#
+# Common Values:
+# - nprd: Base non-production
+# - nprd-dev: Development
+# - nprd-sit, nprd-uat: Testing environments
+# - prod: Production
+#
+# Impact on Resource Lifecycle:
+# Production (prod, prod-a, prod-b, prod-c):
+# - DeletionPolicy: Retain (workspace preserved on stack deletion)
+# - UpdateReplacePolicy: Retain
+# - Additional protection against accidental deletion
+#
+# Non-Production (nprd-*):
+# - DeletionPolicy: Delete (workspace deleted on stack deletion)
+# - UpdateReplacePolicy: Delete
+# - Automatic cleanup
+
+# --- VPC ID ---
+# VPCID: Virtual Private Cloud where Grafana workspace will be deployed
+#
+# Purpose:
+# - Grafana creates Elastic Network Interfaces (ENIs) in this VPC
+# - Enables private connectivity to VPC resources (RDS, EC2 metrics, private Prometheus)
+# - Security group created in this VPC
+#
+# Format: vpc-{17-char-hex}
+# Example: vpc-0f5fc534c59f69a2a
+#
+# Finding VPC ID:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Identify VPC by name tag or CIDR block
+# 3. Copy VPC ID from list
+#
+# Requirements:
+# - VPC must have DNS resolution enabled
+# - VPC must have DNS hostnames enabled
+# - VPC must have subnets in at least 2 Availability Zones
+# - VPC should have NAT Gateway or VPC endpoints for internet access
+
+# --- APP SUBNET IDs ---
+# AppSubnetIDs: Comma-separated list of subnet IDs for Grafana workspace ENIs
+#
+# Purpose:
+# - Grafana creates Elastic Network Interfaces (ENIs) in these subnets
+# - Determines which Availability Zones Grafana operates in
+# - Enables private connectivity to data sources within VPC
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones (required by AWS)
+# - Maximum 6 subnets (one per AZ)
+# - All subnets must be in the same VPC specified in VPCID
+# - Subnets must be in different AZs
+# - Recommended: Private subnets (no direct internet access)
+#
+# Internet Access Requirements:
+# Grafana workspace needs internet access for:
+# - Grafana plugin downloads
+# - AWS service API calls (CloudWatch, Prometheus, X-Ray)
+# - AWS SSO authentication
+# - License validation
+#
+# Provide internet access via:
+# - Option 1: NAT Gateway (attach NAT Gateway to private subnets)
+# - Option 2: VPC Endpoints for required AWS services:
+#   - com.amazonaws.{region}.grafana-workspace
+#   - com.amazonaws.{region}.grafana (if available in region)
+#   - com.amazonaws.{region}.monitoring (CloudWatch)
+#   - com.amazonaws.{region}.logs (CloudWatch Logs)
+#   - com.amazonaws.{region}.aps-workspaces (Prometheus)
+#
+# Format: subnet-{17-char-hex},subnet-{17-char-hex}
+# Example: subnet-07be5e2da470c6503,subnet-049a0f1e8d28fb7be
+#
+# Finding Subnet IDs:
+# AWS Console:
+# 1. Navigate to VPC → Subnets
+# 2. Filter by VPC ID
+# 3. Verify Availability Zone (ensure different AZs for each subnet)
+# 4. Verify subnet is private (check route table has NAT Gateway route, not IGW)
+# 5. Copy subnet IDs
+#
+# High Availability:
+# - 2 subnets: Basic HA (minimum required)
+# - 3 subnets: Better HA (recommended for production)
+# - 4+ subnets: Maximum HA (for critical observability)
+
+# --- AUTHENTICATION PROVIDER ---
+# AuthProvider: Authentication method for Grafana workspace access
+#
+# Allowed Values:
+# - AWS_SSO
+# - SAML
+#
+# AWS_SSO (AWS IAM Identity Center):
+# - Integrated with AWS IAM Identity Center (formerly AWS SSO)
+# - Centralized user and group management
+# - Multi-factor authentication (MFA) support
+# - Automatic user provisioning and deprovisioning
+# - Role-based access control (Admin, Editor, Viewer)
+# - No additional SAML configuration required
+# - Users authenticate via AWS SSO portal
+#
+# Prerequisites for AWS_SSO:
+# - AWS SSO must be enabled in your AWS account
+# - AWS SSO must be configured in same region as Grafana workspace
+# - Users and groups must be created in AWS SSO
+#
+# SAML:
+# - Works with external identity providers (IdPs)
+# - Supported IdPs: Okta, Azure AD, OneLogin, Auth0, ADFS
+# - Requires SAML 2.0 metadata XML configuration
+# - Single Sign-On (SSO) from corporate identity provider
+# - Custom attribute mapping support
+# - Federation trust between IdP and Grafana
+#
+# Prerequisites for SAML:
+# - SAML 2.0 provider must be configured
+# - SAML metadata XML URL or file required
+# - Assertion Consumer Service (ACS) URL configured in IdP
+# - User attributes mapped (email, name, role)
+#
+# Choosing Authentication Provider:
+# Use AWS_SSO if:
+# - Using AWS Organizations
+# - AWS SSO already configured
+# - Want simplified AWS-native authentication
+# - Small to medium teams
+#
+# Use SAML if:
+# - Existing corporate SAML IdP (Okta, Azure AD)
+# - Enterprise SSO requirements
+# - Complex attribute mapping needs
+# - Large organizations with established IdP
+
+# --- VPC CIDR RANGES ---
+# VpcCidr1, VpcCidr2, VpcCidr3, VpcCidr4, VpcCidr5, HCCVpceCidr: CIDR blocks for security group rules
+#
+# Purpose:
+# - Creates security group ingress and egress rules for Grafana workspace
+# - Controls network access to and from Grafana ENIs
+# - Enables connectivity to VPC resources and AWS services
+# - Supports multi-VPC peering, hybrid cloud, and cross-region connectivity
+#
+# VpcCidr1: Primary VPC CIDR block
+# - First CIDR associated with VPC
+# - Used in security group rules for VPC resource access
+# - Format: x.x.x.x/x
+# - Example: 10.53.0.0/16
+#
+# VpcCidr2: Secondary VPC CIDR block
+# - Second CIDR associated with VPC (if VPC has multiple CIDRs)
+# - Can be same as VpcCidr1 if VPC has only one CIDR
+# - Used when VPC expanded with additional CIDR
+# - Example: 10.54.0.0/16
+#
+# VpcCidr3: Tertiary VPC CIDR block (optional)
+# - Third CIDR for multi-CIDR VPC or peered VPC
+# - Leave empty ("") if not needed
+# - Example: 10.55.0.0/16
+#
+# VpcCidr4: Quaternary VPC CIDR block (optional)
+# - Fourth CIDR for additional peered VPC or cross-region connectivity
+# - Leave empty ("") if not needed
+# - Example: 10.56.0.0/16
+#
+# VpcCidr5: Quinary VPC CIDR block (optional)
+# - Fifth CIDR for additional peered VPC or hybrid cloud network
+# - Leave empty ("") if not needed
+# - Example: 10.57.0.0/16
+#
+# HCCVpceCidr: VPC Endpoint CIDR for Grafana access
+# - CIDR range for VPC endpoint used to access Grafana UI
+# - Typically a smaller CIDR range dedicated to VPC endpoints
+# - Example: 10.48.42.0/24
+# - Used for Grafana workspace ingress rules
+#
+# Finding VPC CIDR Blocks:
+# AWS Console:
+# 1. Navigate to VPC → Your VPCs
+# 2. Select VPC by VPC ID
+# 3. View "CIDR blocks" section
+# 4. Primary CIDR shown first (copy to VpcCidr1)
+# 5. Additional CIDRs listed below (copy first additional to VpcCidr2)
+# 6. If only one CIDR exists, use same value for VpcCidr1 and VpcCidr2
+# 7. For peered VPCs: Navigate to VPC Peering → Find peered VPC CIDRs (use for VpcCidr3/4/5)
+#
+# Security Group Rules Created:
+#
+# Ingress (inbound to Grafana workspace):
+# - Source: VpcCidr1 → Protocol: TCP → Port: 443 (HTTPS)
+# - Source: VpcCidr2 → Protocol: TCP → Port: 443 (HTTPS)
+# - Source: HCCVpceCidr → Protocol: TCP → Port: 443 (HTTPS)
+# - Source: Prefix List → Protocol: TCP → Port: 443 (HTTPS)
+#
+# Egress (outbound from Grafana workspace):
+# - Destination: VpcCidr1 → Protocol: TCP → Port: 443 (access VPC data sources)
+# - Destination: VpcCidr2 → Protocol: TCP → Port: 443 (access VPC data sources)
+# - Destination: VpcCidr3 → Protocol: TCP → Port: 443 (access VPC data sources, if configured)
+# - Destination: VpcCidr4 → Protocol: TCP → Port: 443 (access VPC data sources, if configured)
+# - Destination: VpcCidr5 → Protocol: TCP → Port: 443 (access VPC data sources, if configured)
+# - Destination: HCCVpceCidr → Protocol: TCP → Port: 443 (hybrid cloud connectivity)
+# - Destination: 0.0.0.0/0 → Protocol: TCP → Port: 443 (AWS services, plugins, updates)
+#
+# Use Cases for Egress Rules:
+# - Access private RDS databases (PostgreSQL, MySQL) on port 3306/5432
+# - Access private Prometheus endpoints on custom ports
+# - Access CloudWatch, X-Ray, AMP APIs (AWS services)
+# - Download Grafana plugins from grafana.com
+# - Fetch AWS SSO user information
+
+# --- GRAFANA VERSION ---
+# GrafanaVersion: Grafana major.minor version
+#
+# Purpose:
+# - Specifies which Grafana version to deploy
+# - Determines available features and plugins
+# - Controls dashboard compatibility
+#
+# Format: Major.Minor (e.g., 9.4, 9.8, 10.0)
+#
+# Supported Versions:
+# - 9.4
+# - 9.8
+# - 10.0
+# - 10.1
+# - 10.2
+#
+# Version Selection:
+# - Check AWS Managed Grafana documentation for latest supported versions
+# - Verify plugin compatibility with selected version
+# - Review Grafana release notes for feature differences
+#
+# Finding Supported Versions:
+# AWS Console:
+# 1. Navigate to Amazon Managed Grafana
+# 2. Click "Create workspace"
+# 3. View available versions in dropdown
+# 4. Select version and copy value
+#
+# Version Upgrade:
+# - Can be updated by changing GrafanaVersion parameter
+# - Redeploy CloudFormation stack to upgrade
+# - Grafana automatically migrates dashboards and data sources
+# - Workspace remains available during upgrade (may take 10-15 minutes)
+# - Configuration and dashboards preserved
+# - Test dashboards after upgrade
+#
+# Important Notes:
+# - Cannot downgrade Grafana version (only upgrade)
+# - Major version upgrades may have breaking changes
+# - Review Grafana migration guides before major version upgrade
+# - Test in non-production environment first
+
+# --- AMAZON MANAGED GRAFANA WORKSPACE ---
+# Template creates Amazon Managed Grafana workspace with the following configuration:
+#
+# Workspace Name: {AppShortName}-{EnvName}-grafana
+#
+# Workspace Configuration:
+# - Grafana Version: {GrafanaVersion}
+# - Authentication: {AuthProvider} (AWS_SSO or SAML)
+# - Account Access Type: CURRENT_ACCOUNT
+# - Permission Type: SERVICE_MANAGED
+# - VPC Configuration: Enabled
+#
+# Network Configuration:
+# - VPC: {VPCID}
+# - Subnets: {AppSubnetIDs}
+# - Security Groups: Custom security group (created by template)
+# - ENI Creation: Automatic in specified subnets
+# - IP Addresses: Private IPs assigned from subnets
+#
+# Data Source Permissions:
+# - Amazon CloudWatch: Enabled
+# - Amazon Managed Prometheus: Enabled
+# - AWS X-Ray: Enabled
+# - Amazon Athena: Enabled
+# - Amazon Timestream: Enabled
+#
+# Role-Based Access Control:
+# - Admin: Full workspace management, create/edit/delete dashboards
+# - Editor: Create and edit dashboards, cannot manage workspace settings
+# - Viewer: View dashboards only, no edit permissions
+#
+# Features Enabled:
+# - Plugin management
+# - Alerting and notifications
+# - Dashboard versioning
+# - Snapshot creation
+# - Organization management
+# - API key management
+#
+# Deletion Protection:
+# - Production (EnvName: prod): DeletionPolicy: Retain
+# - Non-Production (EnvName: nprd-*): DeletionPolicy: Delete
+#
+# --- MANAGED PREFIX LIST ---
+# Template creates managed prefix list with the following configuration:
+#
+# Prefix List Name: {AppShortName}-{EnvName}-pl-grafana
+# Address Family: IPv4
+# Max Entries: 10
+# Initial Entries: Empty (populate after deployment)
+#
+# Purpose:
+# - Centrally manage external IP ranges for Grafana access
+# - Office networks, VPN ranges, home IPs
+# - Referenced in security group ingress rules
+# - Changes to prefix list automatically update security group
+#
+# Use Cases:
+# - Corporate office networks: 203.0.113.0/24
+# - VPN IP ranges: 198.51.100.0/24
+# - Administrator home IPs: 198.51.100.5/32
+# - Partner organization networks: 192.0.2.0/24
+#
+# Managing Prefix List Entries:
+# AWS Console:
+# 1. Navigate to VPC → Managed Prefix Lists
+# 2. Select prefix list: {AppShortName}-{EnvName}-pl-grafana
+# 3. Click "Manage entries"
+# 4. Click "Add new entry"
+# 5. Enter CIDR: e.g., 203.0.113.0/24
+# 6. Enter Description: e.g., "Corporate HQ Network"
+# 7. Click "Save"
+# 8. Security group rules update automatically
+#
+# Finding Prefix List ID:
+# AWS Console:
+# 1. Navigate to VPC → Managed Prefix Lists
+# 2. Locate prefix list by name
+# 3. Copy Prefix List ID (pl-xxxxx)
+# 4. Available in CloudFormation stack outputs
+#
+# Important Notes:
+# - Initial deployment creates empty prefix list
+# - Add entries after stack deployment
+# - Maximum 10 entries (can be increased by modifying template)
+# - Removing all entries blocks all external access
+#
+# Deletion Policy:
+# - Production: Retain
+# - Non-Production: Delete

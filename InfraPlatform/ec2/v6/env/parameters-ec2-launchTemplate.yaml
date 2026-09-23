@@ -1,0 +1,242 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# Prerequisites:
+# - VPC with private subnets
+# - Deploy this FIRST before cf-ec2-securitygroups.yaml and cf-ec2.yaml
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"                      # 📝 e.g. xyz, myapp, demo
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+VpcId: "<edit_here>"                             # 📝 e.g. vpc-0d99a0c727b301d67
+VpcCidr1: "<edit_here>"                          # 📝 e.g. 10.193.0.0/16
+HCCVpceCidr: "<edit_here>"                       # 📝 e.g. 10.48.42.0/24
+EC2IAMRoleName: "<edit_here>"                    # 📝 e.g. xyz-nprd-ec2-role
+EC2InstanceProfileName: "<edit_here>"            # 📝 e.g. xyz-nprd-ec2-profile
+EC2KeyPairName: "<edit_here>"                    # 📝 e.g. xyz-nprd-ec2-kp
+EC2LaunchTemplateName: "<edit_here>"             # 📝 e.g. xyz-nprd-ec2-launch-template
+EC2InfraSecurityGroupName: "<edit_here>"         # 📝 e.g. xyz-nprd-sg-ec2-infra
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+VpcCidr2: ""                                     # e.g. 10.194.0.0/16
+VpcCidr3: ""                                     # e.g. 10.195.0.0/16
+S3PrefixListId: ""                               # e.g. pl-6fa54006
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates resource names: {AppShortName}-{EnvName}-ec2-*
+# - Creates SSM parameter paths: /{AppShortName}/{EnvName}/ec2/*
+#
+# Format: Lowercase alphanumeric, max 10 characters
+# Example: xyz, myapp, demo
+#
+# Finding Your Value:
+# - Use your organization's application naming convention
+# - Must be consistent across all EC2-related stacks
+
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation for resource naming and configuration
+#
+# Purpose:
+# - Used in resource naming
+# - Determines deletion policy (Retain for prod, Delete for nprd)
+#
+# Allowed Values (Non-Production):
+# - nprd, nprd-dev, nprd-stg, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit-a,
+#   nprd-sit-b, nprd-uat, nprd-uat-a, nprd-uat-b, nprd-pt, nprd-pp,
+#   nprd-pp-a, nprd-pp-b
+#
+# Allowed Values (Production):
+# - prod, prod-a, prod-b, prod-c
+#
+# Environment-Specific Behavior:
+# Production environments (prod*):
+# - DeletionPolicy: Retain (IAM role preserved on stack deletion)
+#
+# Non-Production environments (nprd*):
+# - DeletionPolicy: Delete (IAM role deleted on stack deletion)
+#
+# Finding Your Value:
+# - Coordinate with your infrastructure team
+# - Should match environment naming used in related resources
+
+# --- VPC ID ---
+# VpcId: Virtual Private Cloud identifier
+#
+# Purpose:
+# - VPC where infrastructure security group will be created
+# - All EC2 instances must be deployed in this VPC
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-0d99a0c727b301d67
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Select the VPC where EC2 instances will be deployed
+# 3. Copy VPC ID
+
+# --- VPC CIDR 1 ---
+# VpcCidr1: Primary VPC CIDR block
+#
+# Purpose:
+# - Allows HTTPS (443) egress from EC2 to internal VPC services
+# - Required for accessing VPC endpoints (ECR, S3, Secrets Manager, SSM)
+#
+# Format: CIDR notation (x.x.x.x/xx)
+# Example: 10.193.0.0/16
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Select VPC
+# 3. Copy IPv4 CIDR value from Details tab
+
+# --- HCC VPC ENDPOINT CIDR ---
+# HCCVpceCidr: Hybrid Cloud Connectivity VPC Endpoint subnet CIDR
+#
+# Purpose:
+# - Allows HTTPS (443) egress to HCC VPC endpoint subnet
+# - Enables EC2 instances to communicate with on-premises systems
+#
+# Format: CIDR notation
+# Example: 10.48.42.0/24
+#
+# Finding Your Value:
+# - Contact your network team for HCC subnet CIDR
+# - Use placeholder CIDR if HCC not used (e.g., 10.255.255.0/24)
+
+# --- EC2 IAM ROLE NAME ---
+# EC2IAMRoleName: IAM role name for EC2 instances
+#
+# Purpose:
+# - Grants EC2 instances permissions to access AWS services
+# - Attached to EC2 instances via instance profile
+#
+# Format: Alphanumeric and hyphens, max 64 characters
+# Example: xyz-nprd-ec2-role
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-role
+#
+# Finding Your Value:
+# - Use consistent naming convention
+# - Follow your organization's IAM role naming standards
+
+# --- EC2 INSTANCE PROFILE NAME ---
+# EC2InstanceProfileName: Instance profile name for EC2 instances
+#
+# Purpose:
+# - Associates IAM role with EC2 instances
+# - Required for IAM role attachment to EC2 instances
+#
+# Format: Alphanumeric and hyphens, max 128 characters
+# Example: xyz-nprd-ec2-profile
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-profile
+#
+# Finding Your Value:
+# - Use consistent naming convention matching IAM role name
+# - Follow your organization's instance profile naming standards
+
+# --- EC2 KEY PAIR NAME ---
+# EC2KeyPairName: SSH key pair name for EC2 instances
+#
+# Purpose:
+# - CloudFormation creates RSA 2048-bit key pair automatically
+# - Private key stored in SSM Parameter Store (encrypted)
+# - Used for SSH access to EC2 instances
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-kp
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-kp
+#
+# Finding Your Value:
+# - Use consistent naming convention
+# - Private key retrievable from SSM Parameter Store after creation
+
+# --- EC2 LAUNCH TEMPLATE NAME ---
+# EC2LaunchTemplateName: Launch template name
+#
+# Purpose:
+# - Defines default configuration for EC2 instances
+# - Version controlled (updates create new versions)
+# - Used by cf-ec2.yaml to launch instances
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-ec2-launch-template
+#
+# Recommended Format: {AppShortName}-{EnvName}-ec2-launch-template
+#
+# Finding Your Value:
+# - Use consistent naming convention
+# - Follow your organization's launch template naming standards
+
+# --- EC2 INFRA SECURITY GROUP NAME ---
+# EC2InfraSecurityGroupName: Infrastructure security group name
+#
+# Purpose:
+# - Base security group for EC2 egress rules
+# - Allows HTTPS (443) egress to VPC CIDRs, HCC, S3
+# - No ingress rules (ingress added in cf-ec2-securitygroups.yaml)
+#
+# Format: Alphanumeric and hyphens
+# Example: xyz-nprd-sg-ec2-infra
+#
+# Recommended Format: {AppShortName}-{EnvName}-sg-ec2-infra
+#
+# Finding Your Value:
+# - Use consistent naming convention
+# - Follow your organization's security group naming standards
+
+# --- VPC CIDR 2/3 (OPTIONAL) ---
+# VpcCidr2, VpcCidr3: Additional VPC CIDR blocks
+#
+# Purpose:
+# - Allows HTTPS (443) egress to secondary/tertiary VPC CIDR blocks
+# - Use when VPC has multiple CIDR blocks associated
+# - Leave empty ("") if VPC has only one CIDR block
+#
+# Format: CIDR notation or empty string
+# Example: 10.194.0.0/16 or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Your VPCs
+# 2. Select VPC
+# 3. Click "CIDR blocks" tab
+# 4. Copy additional CIDR blocks (if any)
+# 5. Leave empty ("") if VPC has single CIDR
+
+# --- S3 PREFIX LIST ID (OPTIONAL) ---
+# S3PrefixListId: AWS-managed prefix list for S3 service
+#
+# Purpose:
+# - Allows HTTPS (443) egress to S3 service
+# - Required for accessing S3 from private subnets without NAT Gateway
+# - Uses VPC endpoint for S3
+#
+# Format: pl-xxxxxxxx or empty string
+# Example: pl-6fa54006 or ""
+#
+# Finding Your Value (AWS Console):
+# 1. Navigate to VPC Console → Managed Prefix Lists
+# 2. Filter by name: com.amazonaws.{region}.s3
+# 3. Copy Prefix List ID
+# 4. Leave empty ("") if not using S3 VPC endpoint
+

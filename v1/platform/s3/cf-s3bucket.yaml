@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS S3 Bucket Template
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortNameBucket
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - prod
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-uat
+      - nprd-pt
+
+  BucketName:
+    Type: String
+    Description: S3 bucket name
+
+Conditions:
+  IsProduction: !Equals
+    - !Ref EnvName
+    - prod
+
+Resources:  
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-${BucketName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt S3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt S3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'

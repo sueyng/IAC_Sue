@@ -1,0 +1,3754 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 79,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 22,
+      "panels": [],
+      "title": "Main Summary",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Legend:\n> Green: \\>80%;\n> Yellow: \\>50%;\n> Red: <=50%;",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 44,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 40,
+          "refId": "A"
+        }
+      ],
+      "title": "2XX% API Requests",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "HTTP_Status_Breakdown"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "2XX_Percent",
+            "binary": {
+              "left": "HTTP_2XX",
+              "operator": "/",
+              "reducer": "sum",
+              "right": "HTTP_TOTAL"
+            },
+            "mode": "binary",
+            "reduce": {
+              "include": [
+                "API_Count"
+              ],
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Legend:\n> Green: <5%;\n> Red: \\>=5%",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 46,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 40,
+          "refId": "A"
+        }
+      ],
+      "title": "4XX% API Requests",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "HTTP_Status_Breakdown"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "4XX_Percent",
+            "binary": {
+              "left": "HTTP_4XX",
+              "operator": "/",
+              "reducer": "sum",
+              "right": "HTTP_TOTAL"
+            },
+            "mode": "binary",
+            "reduce": {
+              "include": [
+                "API_Count"
+              ],
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Legend:\n> Green: <5%;\n> Red: \\>=5%",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 48,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 40,
+          "refId": "A"
+        }
+      ],
+      "title": "5XX% API Requests",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "HTTP_Status_Breakdown"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "5XX_Percent",
+            "binary": {
+              "left": "HTTP_5XX",
+              "operator": "/",
+              "reducer": "sum",
+              "right": "HTTP_TOTAL"
+            },
+            "mode": "binary",
+            "reduce": {
+              "include": [
+                "API_Count"
+              ],
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 100,
+            "width": 100
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": []
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 40,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, HTTP_Status\n| stats count(MessageID) as API_Count by HTTP_Status \n| sort HTTP_Status asc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_HTTP_Status",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "HTTP_Status"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "FILTER @message LIKE \"HTTP Method:\"\n| PARSE @message \"(*) HTTP Method: *, Resource Path: *\"  as API_id, Method, Resource_Path\n| FILTER Method IN [\"POST\", \"GET\"]\n| STATS COUNT(API_id) AS API_Count by API_id, Method, Resource_Path\n| SORT BY API_id, Method, Resource_Path\n| DISPLAY API_id, Method, Resource_Path, API_Count",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_ID_Resource",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "API_id",
+            "Method",
+            "Resource_Path"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, HTTP_Status\n| stats COUNT(*) AS HTTP_TOTAL\n, SUM(HTTP_Status >= 200 AND HTTP_Status < 300) AS HTTP_2XX\n, SUM(HTTP_Status >= 300 AND HTTP_Status < 400) AS HTTP_3XX\n, SUM(HTTP_Status >= 400 AND HTTP_Status < 500) AS HTTP_4XX\n, SUM(HTTP_Status >= 500 AND HTTP_Status < 600) AS HTTP_5XX",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "HTTP_Status_Breakdown",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields status as HTTP_Status, apiKey as API_Key, latency as Latency\n| filter @message like \"httpMethod\" and not isblank(status)\n| sort @timestamp desc\n| stats count(HTTP_Status) as API_Count by HTTP_Status, API_Key, Latency\n| sort HTTP_Status asc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_HTTP_Status-API_Key-Latency",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "HTTP_Status",
+            "API_Key",
+            "Latency"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields path as Path, status as HTTP_Status\n| filter @message like \"httpMethod\" and not isblank(status)\n| parse path \"/v1/*/\" as Endpointpath\n| sort @timestamp desc\n| stats count(HTTP_Status) as API_Count, count(*) as TotalAPI_Count by Endpointpath, Path, HTTP_Status\n| sort HTTP_Status asc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_Endpoint-Path-HTTP_Status",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Sum",
+          "statsGroups": [
+            "Endpointpath",
+            "Path",
+            "HTTP_Status"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields path as Path, status as HTTP_Status\n| filter @message like \"httpMethod\" and not isblank(status)\n| parse path \"/v1/*/\" as Endpointpath\n| sort path asc\n| stats COUNT(*) AS HTTP_TOTAL\n, SUM(HTTP_Status >= 200 AND HTTP_Status < 300) AS HTTP_2XX\n, SUM(HTTP_Status >= 400 AND HTTP_Status < 500) AS HTTP_4XX\n, SUM(HTTP_Status >= 500 AND HTTP_Status < 600) AS HTTP_5XX \n, SUM(HTTP_Status >= 200 AND HTTP_Status < 300) / HTTP_TOTAL AS HTTP_2XX_Rate\n, SUM(HTTP_Status >= 400 AND HTTP_Status < 500) / HTTP_TOTAL AS HTTP_4XX_Rate\n, SUM(HTTP_Status >= 500 AND HTTP_Status < 600) / HTTP_TOTAL AS HTTP_5XX_Rate\nby Endpointpath, Path",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "HTTP_Status-Endpoint_Breakdown",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "Endpointpath",
+            "Path"
+          ]
+        }
+      ],
+      "title": "API Response Count",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "API_HTTP_Status"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_Status": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": []
+              }
+            }
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "HTTP_Status",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [],
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 24,
+      "panels": [],
+      "title": "API Performance",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Request"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": false,
+          "metricEditorMode": 1,
+          "metricName": "RequestCount",
+          "metricQueryType": 1,
+          "namespace": "AWS/ApplicationELB",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "property": {
+                "name": "AWS/ApplicationELB",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "select": {
+              "name": "SUM",
+              "parameters": [
+                {
+                  "name": "RequestCount",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT SUM(RequestCount) FROM \"AWS/ApplicationELB\"",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Traffic per Period",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 60000
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 14
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Received response. Status\"\n| parse @message \"(*) Received response. Status: *, Integration latency: * ms\" as MessageID, Status, ElapsedMilliseconds\n| stats avg(ElapsedMilliseconds) as Avg_IntegrationLatency by bin($period)\n| sort Avg_IntegrationLatency desc\n| limit 1",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 1,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "property": {
+                "name": "AWS/ApiGateway",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "select": {
+              "name": "AVG",
+              "parameters": [
+                {
+                  "name": "IntegrationLatency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT AVG(IntegrationLatency) FROM \"AWS/ApiGateway\"",
+          "statistic": "Average",
+          "statsGroups": [
+            "bin($period)"
+          ]
+        }
+      ],
+      "title": "Average Integration Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 20,
+        "x": 4,
+        "y": 14
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {
+            "ApiName": "*"
+          },
+          "expression": "filter @message like \"Received response. Status\"\n| parse @message \"(*) Received response. Status: *, Integration latency: * ms\" as MessageID, Status, IntegrationLatency\n| display MessageID, IntegrationLatency",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": false,
+          "metricEditorMode": 0,
+          "metricName": "IntegrationLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "property": {
+                "name": "AWS/ApiGateway",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [
+                {
+                  "property": {
+                    "name": "Route",
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "type": "and"
+            },
+            "orderBy": {
+              "name": "AVG",
+              "type": "function"
+            },
+            "select": {
+              "name": "AVG",
+              "parameters": [
+                {
+                  "name": "IntegrationLatency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT AVG(IntegrationLatency) FROM \"AWS/ApiGateway\" GROUP BY Route ORDER BY AVG() ASC",
+          "statistic": "Average",
+          "statsGroups": []
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields @timestamp\n| filter @message like \"HTTP Method\"\n| parse @message \"(*) HTTP Method: *, Resource Path: *\" as MessageID, HttpMethod, ResourcePath\n| sort @timestamp desc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "B",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        }
+      ],
+      "title": "Average Integration Latency Over time",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "A|B"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "A MessageID",
+                "A IntegrationLatency",
+                "Time",
+                "B MessageID",
+                "B ResourcePath"
+              ]
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "MessageID",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__log__grafana_internal__ B": true,
+              "__logstream__grafana_internal__ B": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "IntegrationLatency A": "Average Elapsetime"
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 60000
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 18
+      },
+      "id": 38,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Received response. Status\"\n| parse @message \"(*) Received response. Status: *, Integration latency: * ms\" as MessageID, Status, ElapsedMilliseconds\n| stats max(ElapsedMilliseconds) as Max_IntegrationLatency by bin($period)\n| sort Max_IntegrationLatency desc\n| limit 1",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 1,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "property": {
+                "name": "AWS/ApiGateway",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "select": {
+              "name": "MAX",
+              "parameters": [
+                {
+                  "name": "IntegrationLatency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT MAX(IntegrationLatency) FROM \"AWS/ApiGateway\"",
+          "statistic": "Average",
+          "statsGroups": [
+            "bin($period)"
+          ]
+        }
+      ],
+      "title": "Maximum Integration Latency",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 31,
+      "panels": [],
+      "title": "Latency by API/Endpoints",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "The time between when API Gateway receives a request from a client and when it returns a response to the client. The latency includes the integration latency and other API Gateway overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": false,
+          "metricEditorMode": 0,
+          "metricName": "Latency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "name": "SCHEMA",
+              "parameters": [
+                {
+                  "name": "AWS/ApiGateway",
+                  "type": "functionParameter"
+                },
+                {
+                  "name": "ApiName",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            },
+            "groupBy": {
+              "expressions": [
+                {
+                  "property": {
+                    "name": "ApiName",
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "type": "and"
+            },
+            "orderBy": {
+              "name": "AVG",
+              "type": "function"
+            },
+            "select": {
+              "name": "AVG",
+              "parameters": [
+                {
+                  "name": "Latency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT AVG(Latency) FROM SCHEMA(\"AWS/ApiGateway\", ApiName) GROUP BY ApiName ORDER BY AVG() ASC",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Latency by API",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "inspect": false,
+            "width": 75
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ResourcePath\\Status"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": []
+              },
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 50,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 61,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "Total API calls by Status",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "API_Key": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "HTTP_Status": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "MessageID": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Status"
+              }
+            ]
+          }
+        },
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "Status",
+            "emptyValue": "empty",
+            "rowField": "ResourcePath",
+            "valueField": "MessageID (count)"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "200": 1,
+              "401": 2,
+              "404": 3,
+              "422": 4,
+              "500": 5,
+              "502": 6,
+              "ResourcePath\\Status": 0
+            },
+            "renameByName": {
+              "Endpointpath\\HTTP_Status": "Endpoint ",
+              "ResourcePath\\Status": "Endpoint"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Endpoint"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "The time between when API Gateway receives a request from a client and when it returns a response to the client. The latency includes the integration latency and other API Gateway overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "id": 34,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {
+            "ApiName": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": false,
+          "metricEditorMode": 0,
+          "metricName": "Latency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "name": "SCHEMA",
+              "parameters": [
+                {
+                  "name": "AWS/ApiGateway",
+                  "type": "functionParameter"
+                },
+                {
+                  "name": "ApiName",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            },
+            "groupBy": {
+              "expressions": [
+                {
+                  "property": {
+                    "name": "ApiName",
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "type": "and"
+            },
+            "orderBy": {
+              "name": "AVG",
+              "type": "function"
+            },
+            "select": {
+              "name": "AVG",
+              "parameters": [
+                {
+                  "name": "Latency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT AVG(Latency) FROM SCHEMA(\"AWS/ApiGateway\", ApiName) GROUP BY ApiName ORDER BY AVG() ASC",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Average Latency by API",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "The time between when API Gateway receives a request from a client and when it returns a response to the client. The latency includes the integration latency and other API Gateway overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 35,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {
+            "ApiName": "*"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [],
+          "matchExact": false,
+          "metricEditorMode": 0,
+          "metricName": "IntegrationLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApiGateway",
+          "period": "$period",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "default",
+          "sql": {
+            "from": {
+              "name": "SCHEMA",
+              "parameters": [
+                {
+                  "name": "AWS/ApiGateway",
+                  "type": "functionParameter"
+                },
+                {
+                  "name": "ApiName",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            },
+            "groupBy": {
+              "expressions": [
+                {
+                  "property": {
+                    "name": "ApiName",
+                    "type": "string"
+                  },
+                  "type": "groupBy"
+                }
+              ],
+              "type": "and"
+            },
+            "orderBy": {
+              "name": "MAX",
+              "type": "function"
+            },
+            "select": {
+              "name": "MAX",
+              "parameters": [
+                {
+                  "name": "Latency",
+                  "type": "functionParameter"
+                }
+              ],
+              "type": "function"
+            }
+          },
+          "sqlExpression": "SELECT MAX(Latency) FROM SCHEMA(\"AWS/ApiGateway\", ApiName) GROUP BY ApiName ORDER BY MAX() ASC",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Maximum Latency by API",
+      "type": "bargauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 37,
+      "panels": [],
+      "title": "Statistical",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "width": 120
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ResourcePath"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status (count)"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 41
+      },
+      "id": 52,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 61,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "2xx by EndPoint",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "regex",
+                  "options": {
+                    "value": "^2+"
+                  }
+                },
+                "fieldName": "Status"
+              }
+            ],
+            "match": "all",
+            "type": "include"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "HTTP_Status": {
+                "aggregations": []
+              },
+              "Path": {
+                "aggregations": []
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Status (count)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "API_Count (sum)": "Total Requests",
+              "Endpointpath": "Endpoint",
+              "ResourcePath": "Endpoint",
+              "Status (count)": "Total Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "width": 120
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ResourcePath"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status (count)"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 41
+      },
+      "id": 54,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 61,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "4xx & 5xx by API",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "regex",
+                  "options": {
+                    "value": "^[45]+"
+                  }
+                },
+                "fieldName": "Status"
+              }
+            ],
+            "match": "all",
+            "type": "include"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "HTTP_Status": {
+                "aggregations": []
+              },
+              "Path": {
+                "aggregations": []
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Status (count)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "API_Count (sum)": "Total Requests",
+              "Endpointpath": "Endpoint",
+              "ResourcePath": "Endpoint",
+              "Status (count)": "Total Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "width": 120
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SuccessRate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FailureRate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 41
+      },
+      "id": 53,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 63,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "API Success and Failure rate",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "HTTP_2XX": {
+                "aggregations": []
+              },
+              "HTTP_2XX API_Status (sum)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_2XX_Rate": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_3XX API_Status (sum)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_4XX": {
+                "aggregations": []
+              },
+              "HTTP_4XX API_Status (sum)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_4XX_Rate": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_5XX": {
+                "aggregations": []
+              },
+              "HTTP_5XX API_Status (sum)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_5XX_Rate": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_TOTAL": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_TOTAL API_Status (sum)": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "ResourcePath"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "HTTP_TOTAL (sum)": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "API_Count (sum)": "Total Requests",
+              "Endpointpath": "Endpoint",
+              "HTTP_2XX API_Status (sum) (sum)": "",
+              "HTTP_TOTAL (sum)": "",
+              "HTTP_TOTAL API_Status (sum) (sum)": "HTTP_TOTAL_API",
+              "ResourcePath": "Endpoint"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "FailureTotal",
+            "binary": {
+              "left": "HTTP_TOTAL_API",
+              "operator": "/"
+            },
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [
+                "HTTP_4XX API_Status (sum) (sum)",
+                "HTTP_5XX API_Status (sum) (sum)",
+                "HTTP_3XX API_Status (sum) (sum)"
+              ],
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "FailureRate",
+            "binary": {
+              "left": "FailureTotal",
+              "operator": "/",
+              "right": "HTTP_TOTAL_API"
+            },
+            "mode": "binary",
+            "reduce": {
+              "include": [
+                "FailureTotal"
+              ],
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "SuccessRate",
+            "binary": {
+              "left": "HTTP_2XX API_Status (sum) (sum)",
+              "operator": "/",
+              "right": "HTTP_TOTAL_API"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "FailureTotal": true,
+              "HTTP_2XX": true,
+              "HTTP_2XX API_Status (sum) (sum)": true,
+              "HTTP_2XX_Rate": false,
+              "HTTP_3XX API_Status (sum) (sum)": true,
+              "HTTP_4XX": true,
+              "HTTP_4XX API_Status (sum) (sum)": true,
+              "HTTP_4XX_Rate": true,
+              "HTTP_4XX_Rate (sum)": true,
+              "HTTP_5XX": true,
+              "HTTP_5XX API_Status (sum) (sum)": true,
+              "HTTP_5XX_Rate": true,
+              "HTTP_5XX_Rate (sum)": true,
+              "HTTP_TOTAL": true,
+              "HTTP_TOTAL_API": true,
+              "Path": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Endpoint": 0,
+              "FailureRate": 8,
+              "FailureTotal": 6,
+              "HTTP_2XX API_Status (sum) (sum)": 2,
+              "HTTP_3XX API_Status (sum) (sum)": 3,
+              "HTTP_4XX API_Status (sum) (sum)": 4,
+              "HTTP_5XX API_Status (sum) (sum)": 5,
+              "HTTP_TOTAL_API": 1,
+              "SuccessRate": 7
+            },
+            "renameByName": {
+              "FailureRate": "% Failure",
+              "HTTP_2XX_Rate": "Success ",
+              "HTTP_2XX_Rate (sum)": "% Success",
+              "SuccessRate": "% Success"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 49
+      },
+      "id": 58,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, Status\n| filter ispresent(Status) and (Status >= 200 and Status < 300)\n| stats count(Status) as Requests by bin($period)",
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "bin($period)"
+          ]
+        }
+      ],
+      "title": "API Success Over time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 49
+      },
+      "id": 59,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, Status\n| filter ispresent(Status) and (Status >= 400 and Status < 500)\n| stats count(Status) as Requests by bin($period)",
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "bin($period)"
+          ]
+        }
+      ],
+      "title": "4XX Failure Over time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 49
+      },
+      "id": 60,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, Status\n| filter ispresent(Status) and (Status >= 500 and Status < 600)\n| stats count(Status) as Requests by bin($period)",
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "bin($period)"
+          ]
+        }
+      ],
+      "title": "5XX Failure Over time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 16,
+        "x": 0,
+        "y": 57
+      },
+      "id": 56,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "/^Status \\(count\\)$/",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 61,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "% Utilization by API",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "width": 120
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ResourcePath"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status (count)"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "id": 57,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 61,
+          "refId": "A",
+          "withTransforms": true
+        }
+      ],
+      "title": "Utilization by API",
+      "transformations": [
+        {
+          "disabled": true,
+          "id": "filterByRefId",
+          "options": {
+            "include": "API_Endpoint-Path-HTTP_Status"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "API_Count": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Endpointpath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "ResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Status (count)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "API_Count (sum)": "Request",
+              "Endpointpath": "Endpoint",
+              "ResourcePath": "Endpoint",
+              "Status (count)": "Total Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "id": 62,
+      "panels": [],
+      "title": "Log Queries",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "id": 61,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields @timestamp\n| filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, Status\n| sort @timestamp desc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_Status",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields @timestamp\n| filter @message like \"HTTP Method\"\n| parse @message \"(*) HTTP Method: *, Resource Path: *\" as MessageID, HttpMethod, ResourcePath\n| sort @timestamp desc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_HttpMethodResourcePath",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields @timestamp\n| filter @message like \"Received response. Status\"\n| parse @message \"(*) Received response. Status: *, Integration latency: * \" as MessageID, Status, IntegrationLatency\n| sort @timestamp desc",
+          "hide": true,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_StatusIntegrationLatency",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        }
+      ],
+      "title": "Table API Status, httpMethod, & ResourcePath",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "API_Status|API_HttpMethodResourcePath"
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "MessageID",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__log__grafana_internal__ API_HttpMethodResourcePath": true,
+              "__log__grafana_internal__ API_Status": true,
+              "__logstream__grafana_internal__ API_HttpMethodResourcePath": true,
+              "__logstream__grafana_internal__ API_Status": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "HttpMethod API_HttpMethodResourcePath": "",
+              "ResourcePath API_HttpMethodResourcePath": "",
+              "Time": "",
+              "__logstream__grafana_internal__ API_HttpMethodResourcePath": ""
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "HttpMethod API_HttpMethodResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "MessageID": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "ResourcePath API_HttpMethodResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status API_Status": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Time": {
+                "aggregations": [
+                  "last"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${ds_cloudwatch}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "id": 63,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "filter @message like \"Method completed with status\"\n| parse @message \"(*) Method completed with status: *\" as MessageID, HTTP_Status\n| stats COUNT(*) AS HTTP_TOTAL\n, SUM(HTTP_Status >= 200 AND HTTP_Status < 300) AS HTTP_2XX\n, SUM(HTTP_Status >= 300 AND HTTP_Status < 400) AS HTTP_3XX\n, SUM(HTTP_Status >= 400 AND HTTP_Status < 500) AS HTTP_4XX\n, SUM(HTTP_Status >= 500 AND HTTP_Status < 600) AS HTTP_5XX\nby MessageID, HTTP_Status",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_Status",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": [
+            "MessageID",
+            "HTTP_Status"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${ds_cloudwatch}"
+          },
+          "dimensions": {},
+          "expression": "fields @timestamp\n| filter @message like \"HTTP Method\"\n| parse @message \"(*) HTTP Method: *, Resource Path: *\" as MessageID, HttpMethod, ResourcePath\n| sort @timestamp desc",
+          "hide": false,
+          "id": "",
+          "label": "",
+          "logGroups": [
+            {
+              "arn": "$apigw_loggroups",
+              "name": "$apigw_loggroups"
+            }
+          ],
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Logs",
+          "refId": "API_HttpMethodResourcePath",
+          "region": "default",
+          "sqlExpression": "",
+          "statistic": "Average",
+          "statsGroups": []
+        }
+      ],
+      "title": "Table API Breakdown Status, & ResourcePath",
+      "transformations": [
+        {
+          "id": "filterByRefId",
+          "options": {
+            "include": "API_Status|API_HttpMethodResourcePath"
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "MessageID",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__log__grafana_internal__ API_HttpMethodResourcePath": true,
+              "__log__grafana_internal__ API_Status": true,
+              "__logstream__grafana_internal__ API_HttpMethodResourcePath": true,
+              "__logstream__grafana_internal__ API_Status": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "HttpMethod API_HttpMethodResourcePath": "",
+              "ResourcePath API_HttpMethodResourcePath": "",
+              "Time": "",
+              "__logstream__grafana_internal__ API_HttpMethodResourcePath": ""
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "HTTP_2XX API_Status": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_3XX API_Status": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_4XX API_Status": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_5XX API_Status": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP_Status API_Status": {
+                "aggregations": []
+              },
+              "HTTP_TOTAL API_Status": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "HttpMethod API_HttpMethodResourcePath": {
+                "aggregations": []
+              },
+              "MessageID": {
+                "aggregations": []
+              },
+              "ResourcePath API_HttpMethodResourcePath": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Status API_Status": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Time": {
+                "aggregations": [
+                  "last"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": false,
+  "revision": 1,
+  "schemaVersion": 39,
+  "tags": [
+    "cloudwatch",
+    "toolkit"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "CloudWatch",
+          "value": "b8sFz8dNk"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "ds_cloudwatch",
+        "options": [],
+        "query": "cloudwatch",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${ds_cloudwatch}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "API Gateway",
+        "multi": true,
+        "name": "apigateway",
+        "options": [],
+        "query": {
+          "dimensionKey": "ApiName",
+          "metricName": "Count",
+          "namespace": "AWS/ApiGateway",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${ds_cloudwatch}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Log Groups",
+        "multi": true,
+        "name": "apigw_loggroups",
+        "options": [],
+        "query": {
+          "logGroupPrefix": "API-Gateway-Execution",
+          "queryType": "logGroups",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${ds_cloudwatch}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "API Resource Path",
+        "multi": true,
+        "name": "api_resourcepath",
+        "options": [],
+        "query": {
+          "dimensionKey": "Resource",
+          "metricName": "Count",
+          "namespace": "AWS/ApiGateway",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "default"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": false,
+          "text": "5m",
+          "value": "5m"
+        },
+        "hide": 0,
+        "label": "Period",
+        "name": "period",
+        "options": [
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": true,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "3h",
+            "value": "3h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          },
+          {
+            "selected": false,
+            "text": "14d",
+            "value": "14d"
+          },
+          {
+            "selected": false,
+            "text": "30d",
+            "value": "30d"
+          }
+        ],
+        "query": "1m,5m,10m,15m,30m,1h,3h,6h,12h,1d,7d,14d,30d",
+        "queryValue": "",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "01-TOOLKIT - Application Health Check Monitoring",
+  "uid": "a_CF_YhNz",
+  "version": 8,
+  "weekStart": ""
+}

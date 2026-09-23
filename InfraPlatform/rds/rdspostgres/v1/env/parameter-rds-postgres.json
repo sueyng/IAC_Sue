@@ -1,0 +1,78 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhirtrgpg"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-02fb2e32bbb6ff24e"
+    },
+    {
+        "ParameterKey": "AvailabilityZone",
+        "ParameterValue": "ap-southeast-1b"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ1",
+        "ParameterValue": "10.0.102.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ2",
+        "ParameterValue": "10.0.103.0/24"
+    },
+    {
+        "ParameterKey": "VPCSubnetCidrAppAZ3",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "DBSubnetIds",
+        "ParameterValue": "subnet-054fa74f69bf99d68,subnet-04be9fd2348c74663"
+    },
+    {
+        "ParameterKey": "DeploymentServer",
+        "ParameterValue": "10.0.1.9/32"
+    },
+    {
+        "ParameterKey": "MultiAZ",
+        "ParameterValue": "false"
+    },
+    {
+        "ParameterKey": "RdsDBParameterGroupFamily",
+        "ParameterValue": "postgres16"
+    },
+    {
+        "ParameterKey": "DBInstanceClass",
+        "ParameterValue": "db.t3.xlarge"
+    },
+    {
+        "ParameterKey": "DBEngine",
+        "ParameterValue": "postgres"
+    },
+    {
+        "ParameterKey": "DBMajorEngineVersion",
+        "ParameterValue": "16"
+    },
+    {
+        "ParameterKey": "EngineVersion",
+        "ParameterValue": "16.6"
+    },
+    {
+    	   "ParameterKey": "AllocatedStorage",
+         "ParameterValue": "100"
+    },
+    {    
+         "ParameterKey": "RDSMaxAllocatedStorage",
+         "ParameterValue": "1000"
+     },
+     {
+         "ParameterKey": "StorageType",
+         "ParameterValue": "gp3"
+     },
+     {
+         "ParameterKey": "StorageIops",
+         "ParameterValue": ""
+     }
+]

@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS S3 and Inspector Template
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+
+Resources:  
+  ec2FileRepoS3Bucket:    # s3 bucket to transfer the installer files from office laptop to ec2 instances
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-ec2-file-repo
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ec2FileRepoS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ec2FileRepoS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt ec2FileRepoS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt ec2FileRepoS3Bucket.Arn
+                    - '/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt ec2FileRepoS3Bucket.Arn
+              - !Join
+                  - ''
+                  - - !GetAtt ec2FileRepoS3Bucket.Arn
+                    - '/*'
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+                
+  InspectorKMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "KMS Key for S3 Inspector"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "key-consolepolicy-3"
+        Statement:
+          - Sid: "Enable IAM User Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: "Allow Amazon Inspector to use the key"
+            Effect: "Allow"
+            Principal:
+              Service: "inspector2.amazonaws.com"
+            Action:
+              - "kms:Decrypt"
+              - "kms:GenerateDataKey*"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Sub ${AWS::AccountId}
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:inspector2:ap-southeast-1:${AWS::AccountId}:report/*"
+
+  InspectorKMSKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-kms-inspector'
+      TargetKeyId: !Ref InspectorKMSKey
+
+  InspectorS3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub ${AppShortName}-${EnvName}-s3-inspector
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+
+  InspectorS3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref InspectorS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !Sub "arn:aws:s3:::${InspectorS3Bucket}"
+              - !Sub "arn:aws:s3:::${InspectorS3Bucket}/*"
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: "allow-inspector"
+            Effect: "Allow"
+            Principal:
+              Service: "inspector2.amazonaws.com"
+            Action:
+              - "s3:PutObject"
+              - "s3:AbortMultipartUpload"
+            Resource: !Sub "arn:aws:s3:::${InspectorS3Bucket}/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Sub ${AWS::AccountId}
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:inspector2:ap-southeast-1:${AWS::AccountId}:report/*"
+          - Sid: "AllowSSLRequestsOnly"
+            Effect: "Deny"
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "arn:aws:s3:::${InspectorS3Bucket}"
+              - !Sub "arn:aws:s3:::${InspectorS3Bucket}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"

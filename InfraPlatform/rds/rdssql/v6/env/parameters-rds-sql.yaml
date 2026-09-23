@@ -1,0 +1,313 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, db01
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                             # 📝 e.g. vpc-02fb2e32bbb6ff24e
+AvailabilityZone: "<edit_here>"                  # 📝 e.g. ap-southeast-1a (only if MultiAZ is set to false)
+VPCSubnetCidrAppAZ1: "<edit_here>"               # 📝 e.g. 10.0.102.0/24 (app subnet CIDR)
+VPCSubnetCidrAppAZ2: "<edit_here>"               # 📝 e.g. 10.0.103.0/24 (app subnet CIDR)
+VPCSubnetCidrAppAZ3: "<edit_here>"               # 📝 e.g. 10.0.104.0/24 (app subnet CIDR)
+DBSubnetCidrAZ1: "<edit_here>"                   # 📝 e.g. 10.0.151.0/24 (DB subnet CIDR)
+DBSubnetCidrAZ2: "<edit_here>"                   # 📝 e.g. 10.0.152.0/24 (DB subnet CIDR)
+DBSubnetCidrAZ3: "<edit_here>"                   # 📝 e.g. 10.0.153.0/24 (DB subnet CIDR)
+DBSubnetIds: "<edit_here>"                       # 📝 e.g. subnet-xxx,subnet-yyy (min 2, different AZs, NO SPACES)
+DeploymentServer: "<edit_here>"                  # 📝 e.g. 10.0.1.9/32 (bastion/deployment server)
+VpcCidr1: "<edit_here>"                          # 📝 e.g. 10.0.0.0/16 (primary VPC CIDR)
+HCCVpceCidr: "<edit_here>"                       # 📝 e.g. 10.48.42.0/24 (HCC VPC endpoint CIDR)
+S3PrefixListId: "<edit_here>"                    # 📝 e.g. pl-6fa54006 (S3 prefix list for backups)
+
+# FEATURE TOGGLES (DELETE the value you don't need)
+MultiAZ: "true/false"                              # 📝 Multi-AZ high availability
+UseExistingOptionGroup: "true/false"               # 📝 Use existing option group
+UseExistingParameterGroup: "true/false"            # 📝 Use existing parameter group
+OptionGroupEnableTDE: "true/false"                 # 📝 Enable Transparent Data Encryption
+CreateEnhancedMonitoringLogGroups: "true/false"    # 📝 Create CloudWatch log groups
+CreateEventSubscriptions: "true/false"             # 📝 Create RDS event subscriptions
+
+# INSTANCE
+DBInstanceClass: "<edit_here>"                   # 📝 e.g. db.m5.large, db.r5.xlarge, db.t3.xlarge
+
+# DATABASE CONFIGURATION
+ParameterGroupMaxServerMemoryMB: "12000"         # 📝 e.g. 12000 (max server memory in MB)
+RdsEventSNSTopicArn: "<edit_here>"               # 📝 e.g. arn:aws:sns:region:account:topic (only if CreateEventSubscriptions set to true)
+RdsFreeStorageThresholdBytes: "21474836480"      # 📝 e.g. 21474836480 (20 GB in bytes)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# STORAGE
+AllocatedStorage: "100"                     # e.g. 100 (initial storage GB, 100-16384)
+RDSMaxAllocatedStorage: "1000"              # e.g. 1000 (max auto-scaling storage GB)
+StorageType: "gp3"                          # e.g. gp3, gp2, io1
+StorageIops: "3000"                         # e.g. 3000 (for gp3/io1)
+
+# PARAMETER & OPTION GROUPS (if using existing option group)
+ExistingOptionGroupName: ""           # e.g. myapp-nprd-sqlserver-se-16-optiongroup (only if UseExistingOptionGroup set to true)
+ExistingParameterGroupName: ""        # e.g. myapp-nprd-sqlserver-se-16-parametergroup (only if UseExistingParameterGroup set to true)
+
+# DATABASE ENGINE
+DBEngine: "sqlserver-se"                        # sqlserver-se or sqlserver-ee
+DBMajorEngineVersion: "16.00"                   # e.g. 16.00 (SQL 2022)
+EngineVersion: "16.00.4095.4.v1"                # e.g. 16.00.4095.4.v1
+RdsDBParameterGroupFamily: "sqlserver-se-16.0"  # e.g. sqlserver-se-16.0
+
+VpcCidr2: ""                                     # Secondary VPC CIDR
+VpcCidr3: ""                                     # Tertiary VPC CIDR
+AdditionalAppPrefixList: ""                      # e.g. pl-xxx (additional app networks)
+KMSKeyRotationPeriod: "365"                      # e.g. 365 (default is 365 days)
+MasterUsernameDev: "dbadmin"                     # e.g. dbadmin (default is dbadmin)
+MasterUserPasswordDev: "dbadmin123"              # e.g. changeme123 (default is dbadmin123)
+ProdDBPort: "53341"                              # e.g. 53341 (default is 53341)
+NProdDBPort: "53331"                             # e.g. 53331 (default is 53331)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, db01)
+#   Creates instance: {AppShortName}-{EnvName}-rdssql
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*):
+#     - DeletionPolicy: Retain
+#     - Backup retention: 35 days
+#     - DB port: 53341
+#     - Performance Insights retention: 31 days
+#     - Deletion protection: enabled
+#   Non-Prod (nprd*):
+#     - DeletionPolicy: Delete
+#     - Backup retention: 7 days
+#     - DB port: 53331
+#     - Performance Insights retention: 7 days
+#     - Deletion protection: disabled
+
+# --- NETWORK CONFIGURATION ---
+
+# VpcId
+#   Value: VPC ID (e.g. vpc-02fb2e32bbb6ff24e)
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+
+# AvailabilityZone
+#   Allowed Values: ap-southeast-1a, ap-southeast-1b, ap-southeast-1c
+#   Only used if MultiAZ: false
+#   Ignored if MultiAZ: true (AWS selects AZs automatically)
+
+# VPCSubnetCidrAppAZ1, VPCSubnetCidrAppAZ2, VPCSubnetCidrAppAZ3
+#   Value: Application subnet CIDRs (e.g. 10.0.102.0/24)
+#   Purpose: Security group allows app→DB access from these subnets
+#   Finding: VPC Console → Subnets → filter by app subnets → copy CIDR
+
+# DBSubnetCidrAZ1, DBSubnetCidrAZ2, DBSubnetCidrAZ3
+#   Value: Database subnet CIDRs (e.g. 10.0.151.0/24)
+#   Purpose: Security group ingress rules for DB-to-DB communication
+#   Finding: VPC Console → Subnets → filter by DB subnets → copy CIDR
+
+# DBSubnetIds
+#   Value: Comma-separated subnet IDs (NO SPACES)
+#   Format: subnet-xxx,subnet-yyy
+#   Requirements:
+#     - Minimum 2 subnets
+#     - Must be in different AZs
+#     - Must be private subnets
+#   Finding: VPC Console → Subnets → filter by DB subnets → copy IDs
+
+# DeploymentServer
+#   Value: CIDR of deployment/bastion server (e.g. 10.0.1.9/32)
+#   Purpose: Allows DB access for migrations and admin tasks (SSMS)
+#   Finding: EC2 Console → find bastion → copy private IP → append /32
+
+# VpcCidr1 (required), VpcCidr2, VpcCidr3 (optional)
+#   Value: VPC CIDR blocks for security group (e.g. 10.0.0.0/16)
+#   Finding: VPC Console → Your VPCs → select VPC → view CIDR blocks
+
+# HCCVpceCidr
+#   Value: HCC VPC endpoint CIDR (e.g. 10.48.42.0/24)
+#   Purpose: Allows DB access from HCC VPC endpoint
+#   Finding: From network team or infrastructure documentation
+
+# S3PrefixListId
+#   Value: S3 prefix list ID (e.g. pl-6fa54006)
+#   Purpose: Enables S3 backup/restore via option group
+#   Finding: VPC Console → Managed Prefix Lists → com.amazonaws.region.s3
+
+# AdditionalAppPrefixList (optional)
+#   Value: Prefix list ID for additional app networks (e.g. pl-xxx)
+#   Purpose: Additional security group ingress for apps outside VPC subnets
+#   Finding: VPC Console → Managed Prefix Lists
+
+# --- FEATURE TOGGLES ---
+
+# MultiAZ
+#   Values: true/false (DELETE the value you don't need)
+#   true: Synchronous standby replica in different AZ, automatic failover, 99.95% SLA
+#   false: Single AZ deployment, lower cost, suitable for dev/test
+#   Recommendation: true for production, false for dev/test
+
+# UseExistingOptionGroup
+#   Values: true/false (DELETE the value you don't need)
+#   true: Use existing option group (specify ExistingOptionGroupName)
+#   false: Create new option group with SQLSERVER_BACKUP_RESTORE and SQLSERVER_AUDIT
+#   Recommendation: false for new deployments
+
+# UseExistingParameterGroup
+#   Values: true/false (DELETE the value you don't need)
+#   true: Use existing parameter group (specify ExistingParameterGroupName)
+#   false: Create new parameter group with SQL Server optimizations
+#   Recommendation: false for new deployments
+
+# OptionGroupEnableTDE
+#   Values: true/false (DELETE the value you don't need)
+#   true: Enables Transparent Data Encryption (encrypts .mdf/.ldf files)
+#   false: No TDE (KMS volume encryption still active)
+#   Note: TDE adds encryption layer beyond KMS volume encryption
+#   Recommendation: true for compliance requirements (HIPAA, PCI-DSS)
+
+# CreateEnhancedMonitoringLogGroups
+#   Values: true/false (DELETE the value you don't need)
+#   true: Creates CloudWatch log groups for RDS OS metrics and events
+#   false: No log groups created
+#   Recommendation: true for production monitoring
+
+# CreateEventSubscriptions
+#   Values: true/false (DELETE the value you don't need)
+#   true: Creates SNS event subscriptions (requires RdsEventSNSTopicArn)
+#   false: No event subscriptions
+#   Recommendation: true for production alerting
+
+# --- DATABASE ENGINE ---
+
+# DBEngine
+#   Allowed Values: sqlserver-se, sqlserver-ee
+#   sqlserver-se: Standard Edition (core features, 128 GB RAM limit)
+#   sqlserver-ee: Enterprise Edition (advanced features, higher limits)
+#   Recommendation: sqlserver-se for most applications
+
+# DBMajorEngineVersion
+#   Value: Major version number (e.g. 16.00, 15.00)
+#   16.00: SQL Server 2022
+#   15.00: SQL Server 2019
+#   Recommendation: Use latest stable version (16.00)
+
+# EngineVersion
+#   Value: Specific version (e.g. 16.00.4095.4.v1, 15.00.4335.1.v1)
+#   Must match major version
+#   Finding: RDS Console → Create database → view available versions
+
+# RdsDBParameterGroupFamily
+#   Value: Parameter group family (e.g. sqlserver-se-16.0, sqlserver-ee-15.0)
+#   Must match DBEngine and DBMajorEngineVersion
+#   Mapping: sqlserver-se-16.0 → sqlserver-se + 16.00
+
+# --- INSTANCE & STORAGE ---
+
+# DBInstanceClass
+#   Value: Instance type (e.g. db.m5.large, db.r5.xlarge, db.t3.xlarge)
+#   Common types:
+#     - db.t3.micro/small/medium/large/xlarge: Burstable, dev/test
+#     - db.m5/m6i: General purpose, balanced compute/memory
+#     - db.r5/r6i: Memory optimized, memory-intensive workloads
+#   Note: SQL Server SE limited to 128 GB RAM
+#   Recommendation: db.m5.large for small apps, db.r5.xlarge for production
+
+# AllocatedStorage
+#   Value: Initial storage in GB (100-16384)
+#   Default: 100 (minimum)
+#   Recommendation: Set based on immediate needs, use auto-scaling for growth
+
+# RDSMaxAllocatedStorage
+#   Value: Maximum storage for auto-scaling in GB
+#   Must be greater than AllocatedStorage
+#   Auto-scales when free space < 10% or < 6 GB
+#   Recommendation: Set to 6-12 months projected growth
+
+# StorageType
+#   Allowed Values: gp3, gp2, io1
+#   gp3: Latest generation, 3000 IOPS baseline, best value
+#   gp2: Legacy, IOPS scales with storage (3 IOPS/GB)
+#   io1: Provisioned IOPS, up to 64000 IOPS, requires StorageIops
+#   Recommendation: gp3 for most cases
+
+# StorageIops
+#   Value: Provisioned IOPS
+#   gp3: 3000-16000 IOPS (default: 3000)
+#   io1: 1000-64000 IOPS (requires ratio ≤ 50:1 to storage)
+#   Recommendation: 3000 for gp3, higher only if needed
+
+# --- PARAMETER & OPTION GROUPS (if using existing) ---
+
+# ExistingOptionGroupName
+#   Value: Existing option group name (only if UseExistingOptionGroup: true)
+#   Format: {AppShortName}-{EnvName}-sqlserver-{edition}-{version}-optiongroup
+#   Example: myapp-nprd-sqlserver-se-16-optiongroup
+#   Finding: RDS Console → Option groups → copy name
+
+# ExistingParameterGroupName
+#   Value: Existing parameter group name (only if UseExistingParameterGroup: true)
+#   Format: {AppShortName}-{EnvName}-sqlserver-{edition}-{version}-parametergroup
+#   Example: myapp-nprd-sqlserver-se-16-parametergroup
+#   Finding: RDS Console → Parameter groups → copy name
+
+# --- DATABASE CONFIGURATION ---
+
+# ParameterGroupMaxServerMemoryMB
+#   Value: Maximum SQL Server memory in MB (e.g. 12000, 30720)
+#   Formula: (Instance RAM - 2 GB) * 1024
+#   Examples:
+#     - db.m5.large (8 GB): 6144 MB
+#     - db.m5.xlarge (16 GB): 14336 MB
+#     - db.r5.xlarge (32 GB): 30720 MB
+#   Recommendation: Leave 2 GB for OS and RDS agent
+
+# RdsEventSNSTopicArn
+#   Value: SNS topic ARN (only if CreateEventSubscriptions: true)
+#   Format: arn:aws:sns:region:account:topic-name
+#   Events: failover, backup, low storage, configuration changes
+#   Finding: SNS Console → Topics → copy ARN
+
+# RdsFreeStorageThresholdBytes
+#   Value: CloudWatch alarm threshold in bytes (e.g. 21474836480 = 20 GB)
+#   Common values:
+#     - 10 GB: 10737418240
+#     - 20 GB: 21474836480
+#     - 50 GB: 53687091200
+#   Recommendation: 10-20% of AllocatedStorage
+
+# --- OPTIONAL PARAMETERS (with defaults) ---
+
+# KMSKeyRotationPeriod (optional)
+#   Value: KMS key rotation period in days
+#   Range: 90-2560 days
+#   Default: 365 (1 year)
+#   Recommendation: Use 365 for annual rotation
+
+# MasterUsernameDev, MasterUserPasswordDev (optional)
+#   Defaults: dbadmin / dbadmin123
+#   Note: Change defaults for production!
+#   Credentials stored in application code for dev/test simplicity
+
+# ProdDBPort, NProdDBPort (optional)
+#   Defaults: 53341 (production), 53331 (non-production)
+#   Non-standard ports for security obscurity
+#   Recommendation: Keep defaults unless specific requirements

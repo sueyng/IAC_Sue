@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a private ALB in 2 AZs with IP and custom security group name, and store outputs in Parameter Store.
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The VPC ID where the ALB will be created.
+
+  IngressSubnetIds:
+    Type: CommaDelimitedList
+    Description: The Subnet IDs for the Ingress Subnets where the Public ALB will be deployed.
+
+  InterfaceEndpointIPs:
+    Type: CommaDelimitedList
+    Description: List of Interface Endpoint IP Addresses such as apigw
+
+  SSLCertificateArn:
+    Description: The ARN of the SSL certificate to associate with the ALB HTTPS listener.
+    Type: String
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+#  HasVPCEndpointIP3: !Not [!Equals [!Select [2, !Ref InterfaceEndpointIPs], ""]]
+
+Resources:
+  # Security Group for ALB
+  PublicALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${AppShortName}-${EnvName}-sg-public-alb"
+      GroupDescription: Security group for the Pulbic ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # Public Application Load Balancer
+  PublicALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-public-alb"
+      Subnets: !Ref IngressSubnetIds
+      SecurityGroups:
+        - !Ref PublicALBSecurityGroup
+      Scheme: internet-facing
+
+  # Target Group
+  PublicALBTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "${AppShortName}-${EnvName}-public-alb-tg"
+      VpcId: !Ref VpcId
+      Protocol: HTTPS
+      Port: 443
+      TargetType: ip
+      Targets:
+        - Id: !Select [0, !Ref InterfaceEndpointIPs]  # First IP
+        - Id: !Select [1, !Ref InterfaceEndpointIPs]  # Second IP
+#        - !If
+#          - HasVPCEndpointIP3
+#          - Id: !Select [2, !Ref InterfaceEndpointIPs]  # Third IP
+#          - !Ref "AWS::NoValue"
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: "200-399"
+
+  # Listener
+  PublicALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LoadBalancerArn: !Ref PublicALB
+      Protocol: HTTPS
+      Port: 443
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PublicALBTG

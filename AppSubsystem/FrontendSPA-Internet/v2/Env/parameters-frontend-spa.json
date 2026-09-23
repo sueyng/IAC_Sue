@@ -1,0 +1,94 @@
+[
+  {
+    "ParameterKey": "AppShortName",
+    "ParameterValue": "myapp"
+  },
+  {
+    "ParameterKey": "EnvName",
+    "ParameterValue": "nprd-dev"
+  },
+  {
+    "ParameterKey": "NumberOfBuckets",
+    "ParameterValue": "2"
+  },
+  {
+    "ParameterKey": "DefaultPage",
+    "ParameterValue": "index.html"
+  },
+  {
+    "ParameterKey": "UseCustomDomain",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "CustomDomainName",
+    "ParameterValue": "app.example.com"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:123456789012:certificate/abc123"
+  },
+  {
+    "ParameterKey": "GeoLocation",
+    "ParameterValue": "SG"
+  },
+  {
+    "ParameterKey": "Bucket1Name",
+    "ParameterValue": "myapp-nprd-dev-main-content"
+  },
+  {
+    "ParameterKey": "Bucket1FunctionEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "Bucket1FunctionName",
+    "ParameterValue": "myapp-nprd-dev-main-url-rewrite"
+  },
+  {
+    "ParameterKey": "Bucket2Name",
+    "ParameterValue": "myapp-nprd-dev-api-docs"
+  },
+  {
+    "ParameterKey": "Bucket2PathPattern",
+    "ParameterValue": "/api/*"
+  },
+  {
+    "ParameterKey": "Bucket2FunctionEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "Bucket2FunctionName",
+    "ParameterValue": "myapp-nprd-dev-api-auth"
+  },
+  {
+    "ParameterKey": "Bucket3Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Bucket3PathPattern",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Bucket3FunctionEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "Bucket3FunctionName",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Bucket4Name",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Bucket4PathPattern",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Bucket4FunctionEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "Bucket4FunctionName",
+    "ParameterValue": ""
+  }
+]

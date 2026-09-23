@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: 'AWS::LanguageExtensions'
+Description: 'S3 Bucket Template v8 - Bucket owner enforced object ownership with versioning toggle'
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortNameBucket
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  BucketNames:
+    Type: CommaDelimitedList
+    Description: S3 bucket name suffixes (comma-separated, creates one bucket per name). Each name MUST be alphanumeric only - NO hyphens, underscores, or dots (Fn::ForEach generates resource logical IDs which must be alphanumeric).
+
+  EnableS3Versioning:
+    Type: String
+    Description: Enable S3 bucket versioning for all buckets
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  S3CurrentVersionExpirationDays:
+    Type: Number
+    Description: Days before current (live) objects are deleted (0 to disable lifecycle rule, keep objects forever)
+    Default: 0
+    MinValue: 0
+    MaxValue: 3650
+
+  S3NoncurrentVersionExpirationDays:
+    Type: Number
+    Description: Days to retain noncurrent object versions before deletion (0 to disable lifecycle rule)
+    Default: 30
+    MinValue: 0
+    MaxValue: 365
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  EnableVersioning: !Equals [!Ref EnableS3Versioning, "true"]
+  HasCurrentExpiration: !Not [!Equals [!Ref S3CurrentVersionExpirationDays, 0]]
+  HasNoncurrentExpiration: !And
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref S3NoncurrentVersionExpirationDays, 0]]
+  HasAnyLifecycleRule: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
+
+Resources:
+  'Fn::ForEach::Buckets':
+    - BucketName
+    - !Ref BucketNames
+    - 'S3Bucket${BucketName}':
+        Type: 'AWS::S3::Bucket'
+        DeletionPolicy: !If [IsProduction, Retain, Delete]
+        UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+        Properties:
+          BucketName: !Sub ${AppShortName}-${EnvName}-s3-${BucketName}
+          BucketEncryption:
+            ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+          OwnershipControls:
+            Rules:
+              - ObjectOwnership: BucketOwnerEnforced
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: true
+            BlockPublicPolicy: true
+            IgnorePublicAcls: true
+            RestrictPublicBuckets: true
+          VersioningConfiguration: !If
+            - EnableVersioning
+            - Status: Enabled
+            - !Ref "AWS::NoValue"
+          LifecycleConfiguration: !If
+            - HasAnyLifecycleRule
+            - Rules:
+                - !If
+                  - HasCurrentExpiration
+                  - Id: CurrentVersionExpiration
+                    Status: Enabled
+                    ExpirationInDays: !Ref S3CurrentVersionExpirationDays
+                  - !Ref "AWS::NoValue"
+                - !If
+                  - HasNoncurrentExpiration
+                  - Id: NoncurrentVersionCleanup
+                    Status: Enabled
+                    NoncurrentVersionExpiration:
+                      NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                  - !Ref "AWS::NoValue"
+            - !Ref "AWS::NoValue"
+          Tags:
+            - Key: IaCVersion
+              Value: InfraPlatform-s3-v8
+
+  'Fn::ForEach::BucketPolicies':
+    - Bucket
+    - !Ref BucketNames
+    - 'S3BucketPolicy${Bucket}':
+        Type: AWS::S3::BucketPolicy
+        DeletionPolicy: !If [IsProduction, Retain, Delete]
+        UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+        Properties:
+          Bucket: !Sub ${AppShortName}-${EnvName}-s3-${Bucket}
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: EnforceTLSv12orHigher
+                Effect: Deny
+                Principal: '*'
+                Action: s3:*
+                Resource:
+                  - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                  - !Join
+                      - ''
+                      - - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                        - '/*'
+                Condition:
+                  NumericLessThan:
+                    s3:TlsVersion: 1.2
+              - Sid: AllowSSLRequestsOnly
+                Effect: Deny
+                Principal: '*'
+                Action: s3:*
+                Resource:
+                  - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                  - !Join
+                      - ''
+                      - - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                        - '/*'
+                Condition:
+                  Bool:
+                    aws:SecureTransport: 'false'

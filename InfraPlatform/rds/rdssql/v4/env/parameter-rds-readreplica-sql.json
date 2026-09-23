@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "grm"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-uat"
+    },
+    {
+        "ParameterKey": "ReadReplicaRdsDBParameterGroupFamily",
+        "ParameterValue": "sqlserver-ee-15.0"
+    },
+    {
+        "ParameterKey": "DBEngine",
+        "ParameterValue": "sqlserver-ee"
+    },
+    {
+        "ParameterKey": "ReadReplicaDBInstanceClass",
+        "ParameterValue": "db.m6i.xlarge"
+    }
+]

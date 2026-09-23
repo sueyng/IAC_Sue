@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create CloudFront distributions with S3 origins, no caching, and store outputs in Parameter Store.
+
+Parameters:
+  AppShortName:
+    Description: Application name
+    Type: String
+
+  EnvName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - prod
+      - prod-a
+      - prod-b
+
+  S3BucketName:
+    Type: String
+    Description: Name of the S3 bucket used as the origin.
+
+  CloudFrontCertArn:
+    Type: String
+    Description: The ARN of the ACM certificate to use with CloudFront.
+
+  DefaultPage:
+    Type: String
+    Description: Default or home page of the website, eg. index.html
+
+  CustomDomainName:
+    Type: String
+    Description: Custom domain name for Cloudfront Distribution
+
+  GeoLocation:
+    Type: String
+    Description: Comma-separated list of two-letter ISO country codes (e.g., "VN,PH,SG")
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"]]
+
+Resources:
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub "${S3BucketName}"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: "Allow"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Sub "${S3Bucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]                
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]     
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+                
+  CloudFrontOriginAccessControl:
+    Type: "AWS::CloudFront::OriginAccessControl"
+    Properties:
+      OriginAccessControlConfig:
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+        Name: !Ref S3Bucket
+
+  CloudFrontCachePolicy:
+    Type: "AWS::CloudFront::CachePolicy"
+    Properties:
+      CachePolicyConfig:
+        Comment: "Custom policy with caching disabled"
+        MinTTL: 0
+        MaxTTL: 0
+        DefaultTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: false
+          HeadersConfig:
+            HeaderBehavior: "none"
+          CookiesConfig:
+            CookieBehavior: "none"
+        Name: !Join ["-", [!Sub "${AppShortName}-${EnvName}-CacheDisabledPolicy", !Select [4, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+
+  CloudFrontDistribution:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+#        Comment: ""
+        Enabled: true
+        IPV6Enabled: true
+        HttpVersion: "http2and3"
+        DefaultRootObject: !Ref DefaultPage
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponsePagePath: !Sub '/${DefaultPage}'  # Path to your home page
+            ResponseCode: 200
+            ErrorCachingMinTTL: 10  # Time in seconds to cache the error response
+          - ErrorCode: 403
+            ResponsePagePath: !Sub '/${DefaultPage}'  # Path to your home page
+            ResponseCode: 200
+            ErrorCachingMinTTL: 10  # Time in seconds to cache the error response
+        Origins:
+          - Id: !Ref S3Bucket
+            DomainName: !Sub "${S3Bucket}.s3.${AWS::Region}.amazonaws.com"
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: !Ref S3Bucket
+          ViewerProtocolPolicy: "redirect-to-https"
+          Compress: true
+          AllowedMethods: 
+            - "HEAD"
+            - "GET"
+          CachedMethods: 
+            - "HEAD"
+            - "GET"
+          CachePolicyId: !Ref CloudFrontCachePolicy
+        ViewerCertificate:
+#          CloudFrontDefaultCertificate: false
+          AcmCertificateArn: !Ref CloudFrontCertArn
+          SslSupportMethod: "sni-only"
+          MinimumProtocolVersion: "TLSv1.2_2021"
+        Aliases:
+          - !Ref CustomDomainName
+        PriceClass: "PriceClass_200"
+        Logging:
+          IncludeCookies: true
+          Bucket: !Sub ${CloudFrontLogsBucket}.s3.${AWS::Region}.amazonaws.com
+          Prefix: "log"
+        Restrictions:
+          GeoRestriction:
+            Locations: !Split 
+              - ","
+              - !Ref GeoLocation
+            RestrictionType: "whitelist"
+
+  CloudFrontLogsBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub "${AppShortName}-${EnvName}-${S3BucketName}-logs"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  CloudFrontLogsBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref CloudFrontLogsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontDistribution
+            Effect: "Allow"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Sub "${CloudFrontLogsBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt CloudFrontLogsBucket.Arn
+              - !Join ['', [!GetAtt CloudFrontLogsBucket.Arn, '/*']]            
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt CloudFrontLogsBucket.Arn
+              - !Join ['', [!GetAtt CloudFrontLogsBucket.Arn, '/*']]    
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'

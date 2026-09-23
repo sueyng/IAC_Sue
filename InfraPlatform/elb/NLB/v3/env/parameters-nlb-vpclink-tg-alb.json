@@ -1,0 +1,38 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "NLBName",
+        "ParameterValue": "apt-nprd-nlb-vpclink"
+    },
+    {
+        "ParameterKey": "NLBsubnetIds",
+        "ParameterValue": "subnet-08170d48a795103d2,subnet-083fba964c347656f"
+    },
+    {
+        "ParameterKey": "TargetALBArn",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    },
+    {
+        "ParameterKey": "HealthCheckPath",
+        "ParameterValue": "/ALBhealth"
+    },
+    {
+        "ParameterKey": "PrefixListNLBIngress",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "APIGWVPCESecurityGroupID",
+        "ParameterValue": ""
+    }     
+]

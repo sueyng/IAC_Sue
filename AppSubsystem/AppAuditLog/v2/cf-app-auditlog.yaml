@@ -1,0 +1,470 @@
+Description: |
+  This CloudFormation template sets up an AWS Lambda function that processes messages from an SQS queue and stores the results in an S3 bucket. It includes the following components: 
+  - Parameters for application and environment names, Lambda script and layer zip file keys, and SQS batch processing settings. 
+  - IAM Managed Policy for S3 access, allowing the Lambda function to interact with specific S3 buckets.
+  Note: Current script does not include the creation of S3 bucket, SQS, Athena, Lakeformation
+  Prerequsite:
+    - S3 bucket: {AppShortName}-${AWSEnvName}-app-artifact, {AppShortName}-${AWSEnvName}-data-lake
+    - Lambda artifact to be uploaded to app-artifact folder
+    - SQS
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Short name of the application
+
+  AppEnvName:
+    Type: String
+    Description: Environment name of the application
+
+  AWSEnvName:
+    Type: String
+    Default: nprd
+    Description: AWS environment name
+    AllowedValues:
+      - nprd
+      - prod
+
+  LambdaPackageName:
+    Type: String
+    Default: lambda_function.zip
+    Description: S3 key for the Lambda package, the file is under s3::/${AppShortName}-${AWSEnvName}-app-artifact/${AppEnvName}/
+
+  LambdaLayerZipfileKey:
+    Type: String
+    Default: lambda_layer.zip
+    Description: S3 key for the Lambda layer (Pyarrow) zipfile, the file is under s3::/${AppShortName}-${AWSEnvName}-app-artifact/${AppEnvName}/
+
+  GluePackageName:
+    Type: String
+    Description: S3 key for the Lambda package, the file is under s3://${AppShortName}-${AWSEnvName}-app-runtime/${AppEnvName}/data-lake-trans/glue-script/
+    Default: audit_convert_iceberg.py
+
+  SQSBatchWindowSize:
+    Type: Number
+    Default: 1000
+    Description: The maximum number of messages to retrieve from the SQS queue in a single batch.
+
+  SQSBatchWindowInterval:
+    Type: Number
+    Default: 300
+    Description: The maximum amount of time to wait before processing a batch of messages from the SQS queue. (in seconds)
+
+  NumberOfWorkers:
+    Type: String
+    Default: 2
+
+  WorkerType:
+    Type: String
+    Default: G.1X
+
+  MaxConcurrentRuns:
+    Type: String
+    Default: 1
+
+  MaxRetries:
+    Type: String
+    Default: 0
+
+  SnapshotExpiryHours:
+    Type: String
+    Default: 168  # 7 days
+
+  MinSnapshotsToKeep:
+    Type: String
+    Default: 2
+
+  CompactionStrategy:
+    Type: String
+    Default: copy-on-write
+    
+  CronExpressionRaw:
+    Type: String
+    Default: cron(0 17 * * ? *)  # 1AM SGT
+
+Conditions:
+  IsProduction: !Equals [!Ref AppEnvName, "prod"]
+
+Resources:
+  AuditQueueDLQ:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      QueueName: !Sub "${AppShortName}-${AppEnvName}-audit-inbound-dlq"
+      MessageRetentionPeriod: 1209600 # 14 days
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  AuditQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      QueueName: !Sub "${AppShortName}-${AppEnvName}-audit-inbound-queue"
+      VisibilityTimeout: 45
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuditQueueDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  JobBucketS3Access:
+    Type: AWS::IAM::ManagedPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - S3:DeleteObject
+              - S3:GetObject
+              - S3:GetObjectAttributes
+              - S3:ListAllMyBuckets
+              - S3:ListBucket
+              - S3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::${AppShortName}-${AWSEnvName}-data-lake*"
+              - !Sub "arn:aws:s3:::${AppShortName}-${AWSEnvName}-app-artifact*"
+              - !Sub "arn:aws:s3:::${AppShortName}-${AWSEnvName}-app-runtime*"
+          - Effect: Allow
+            Action:
+              - "s3:ListStorageLensConfigurations"
+              - "s3:ListAccessPointsForObjectLambda"
+              - "s3:GetAccessPoint"
+              - "s3:GetAccountPublicAccessBlock"
+              - "s3:ListAllMyBuckets"
+              - "s3:ListAccessPoints"
+              - "s3:ListJobs"
+              - "s3:PutStorageLensConfiguration"
+              - "s3:CreateJob"
+            Resource: "*"
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+        - !Ref JobBucketS3Access
+      RoleName: !Sub ${AppShortName}-${AppEnvName}-auditlog-lambda-role
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  CrawlerRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - !Ref JobBucketS3Access
+      RoleName: !Sub ${AppShortName}-${AppEnvName}-auditlog-glue-crawler-role
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  PyarrowLambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      CompatibleArchitectures:
+        - x86_64
+      CompatibleRuntimes:
+        - python3.13
+      Content:
+        S3Bucket: !Sub ${AppShortName}-${AWSEnvName}-app-artifact
+        S3Key: !Sub ${AppEnvName}/${LambdaLayerZipfileKey}
+
+  AuditlogLambda:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Handler: >-
+        lambda_function.lambda_handler
+      Runtime: python3.13
+      Code:
+        S3Bucket: !Sub ${AppShortName}-${AWSEnvName}-app-artifact
+        S3Key: !Sub ${AppEnvName}/${LambdaPackageName}
+      MemorySize: 256
+      Timeout: 15 # SQS Queue visibility timeout should not less than Function timeout
+      Role: !GetAtt LambdaRole.Arn
+      FunctionName: !Sub ${AppShortName}-${AppEnvName}-auditlog-lambda
+      Environment:
+        Variables:
+          BUCKET_NAME: !Sub ${AppShortName}-${AWSEnvName}-data-lake
+          S3_PREFIX: !Sub ${AppEnvName}/etl-raw/auditlog
+      Layers:
+        - !Ref PyarrowLambdaLayer
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  AuditlogLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BatchSize: !Ref SQSBatchWindowSize
+      Enabled: True
+      EventSourceArn: !GetAtt AuditQueue.Arn
+      FunctionName: !Ref AuditlogLambda
+      MaximumBatchingWindowInSeconds: !Ref SQSBatchWindowInterval
+
+  AuditlogDB:
+    Type: AWS::Glue::Database
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub ${AppShortName}_${AppEnvName}_auditlog_raw_db
+
+  AuditlogTransDB:
+    Type: AWS::Glue::Database
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub ${AppShortName}_${AppEnvName}_auditlog_trans_db
+
+  AuditlogDBCrawler:
+    Type: AWS::Glue::Crawler
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      DatabaseName: !Sub ${AppShortName}_${AppEnvName}_auditlog_raw_db
+      Name: !Sub ${AppShortName}-${AppEnvName}-auditlog-raw-db-crawler
+      Role: !Ref CrawlerRole
+      Targets:
+        S3Targets:
+            - Path: !Sub s3://${AppShortName}-${AWSEnvName}-data-lake/${AppEnvName}/etl-raw/auditlog/
+      RecrawlPolicy:
+        RecrawlBehavior: "CRAWL_NEW_FOLDERS_ONLY"
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "LOG"
+      Tags:
+        IaCVersion: AppSubsystem-AppAuditLog-v2
+
+  GlueDatalakeJobsRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - !Ref JobBucketS3Access
+      RoleName: !Sub ${AppShortName}-${AppEnvName}-data-lake-trans-jobs-glue-job-role
+      MaxSessionDuration: 14400 # 4 hours
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+    Description: "Role for glue jobs that build the datalake transformation layer"
+    
+  AuditGlueJob:
+    Type: AWS::Glue::Job
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: !Sub s3://${AppShortName}-${AWSEnvName}-app-runtime/${AppEnvName}/data-lake-trans/glue-script/${GluePackageName}
+      DefaultArguments:
+        --job-bookmark-option: job-bookmark-disable
+        --enable-metrics: false
+        --enable-spark-ui: false
+        --spark-event-logs-path: !Sub s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/glue-assets/${AppEnvName}/sparkHistoryLogs/
+        --enable-auto-scaling: true
+        --enable-job-insights: false
+        --enable-glue-datacatalog: true
+        --enable-continuous-cloudwatch-log: true
+        --job-language: python
+        --datalake-formats: iceberg
+        --TempDir: !Sub s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/glue-assets/${AppEnvName}/temporary/
+        --S3_DST_BUCKET: !Sub ${AppShortName}-${AWSEnvName}-data-lake
+        --S3_DST_PREFIX: !Sub ${AppEnvName}/etl-trans
+        --RAW_DATALAKE: !Sub ${AppShortName}_${AppEnvName}_auditlog_raw_db
+        --TRANS_DATALAKE: !Sub ${AppShortName}_${AppEnvName}_auditlog_trans_db
+        --RAW_TABLE: auditlog
+        --TRANS_TABLE: auditlog
+        --CATALOG_NAME: glue_catalog
+        --SNAPSHOT_EXPIRY_HOURS: !Ref SnapshotExpiryHours
+        --COMPACTION_STRATEGY: !Ref CompactionStrategy
+        --MIN_SNAPSHOTS_TO_KEEP: !Ref MinSnapshotsToKeep
+      ExecutionProperty:
+        MaxConcurrentRuns: !Ref MaxConcurrentRuns
+      GlueVersion: 5.0
+      MaxRetries: !Ref MaxRetries
+      NumberOfWorkers: !Ref NumberOfWorkers
+      WorkerType: !Ref WorkerType
+      Timeout: 1440
+      Name: !Sub ${AppShortName}-${AppEnvName}-auditlog
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${AppShortName}-${AppEnvName}-data-lake-trans-jobs-glue-job-role
+      Tags:
+        Name: !Sub ${AppShortName}-${AppEnvName}-data-lake-trans-glue-job
+        IaCVersion: AppSubsystem-AppAuditLog-v2
+
+  StepFunctionRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - !Ref JobBucketS3Access
+        - !Ref AuditLogStepFunctionExecutionPolicy
+      RoleName: !Sub ${AppShortName}-${AppEnvName}-auditlog-step-function-role
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  AuditLogStepFunctionExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      ManagedPolicyName: !Sub ${AppShortName}-${AppEnvName}-auditlog-step-function-execution-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sns:Publish
+            Resource:
+              - !Ref DataLoadingSNSTopic
+
+  DataLoadingSNSTopic:
+    Type: AWS::SNS::Topic
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      TopicName: !Sub "${AppShortName}-${AppEnvName}-dataloading-topic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${AppEnvName}-dataloading-topic"
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  AuditLogStepFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RetentionInDays: 90
+      LogGroupName: !Sub /aws/vendedlogs/states/${AppShortName}-${AppEnvName}-auditlog-stepfunction
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  AuditLogStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      StateMachineName: !Sub ${AppShortName}-${AppEnvName}-auditlog-state-machine
+      DefinitionSubstitutions:
+        JobName: !Sub ${AppShortName}-${AppEnvName}-auditlog
+        SNSTopicArn: !Sub arn:aws:sns:ap-southeast-1:${AWS::AccountId}:${AppShortName}-${AppEnvName}-dataloading-topic
+        AuditLogCrawler: !Sub ${AppShortName}-${AppEnvName}-auditlog-raw-db-crawler
+        AppEnv: !Ref AppEnvName
+      DefinitionS3Location:
+        Bucket: !Sub ${AppShortName}-${AWSEnvName}-app-artifact
+        Key: !Sub ${AppEnvName}/data-lake-trans/sf-script/auditlog_state_machine.json
+      LoggingConfiguration:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt AuditLogStepFunctionLogGroup.Arn
+        IncludeExecutionData: false
+        Level: ALL
+      RoleArn: !GetAtt StepFunctionRole.Arn
+#      TracingConfiguration:
+#        Enabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppShortName}-${AppEnvName}-data-lake-trans-state-machine
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: start-step-function
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource:
+                  - !GetAtt AuditLogStateMachine.Arn
+      RoleName: !Sub ${AppShortName}-${AppEnvName}-auditlog-eventbridge-role
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-AppAuditLog-v2
+
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      EventBusName: default
+      ScheduleExpression: !Ref CronExpressionRaw
+      Name: !Sub ${AppShortName}-${AppEnvName}-auditlog-eventbridge
+      State: ENABLED
+      Targets:
+        - Id: EventBridgeTarget-AuditLogStateMachine
+          Arn: !GetAtt AuditLogStateMachine.Arn
+          RoleArn: !GetAtt EventBridgeRole.Arn

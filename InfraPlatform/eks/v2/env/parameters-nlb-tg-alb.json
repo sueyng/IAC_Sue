@@ -1,0 +1,31 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "hsxx"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd-dev"
+    },
+    {
+        "ParameterKey": "Function",
+        "ParameterValue": "APP"
+    },
+    {
+        "ParameterKey": "AppSubnetIds",
+        "ParameterValue": "subnet-08170d48a795103d2,subnet-083fba964c347656f"
+    },
+    {
+        "ParameterKey": "IngressALBArn",
+        "ParameterValue": "arn:aws:elasticloadbalancing:ap-southeast-1:781576980265:loadbalancer/app/hh-test-alb-s3-vpce/a174ca464c9ed626"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    },
+    {
+        "ParameterKey": "HealthCheckPath",
+        "ParameterValue": "/swagger/index.html"
+    }
+    
+]

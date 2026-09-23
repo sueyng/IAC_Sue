@@ -1,0 +1,14 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "xyz"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0d99a0c727b301d67"
+    }
+]

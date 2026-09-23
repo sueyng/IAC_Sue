@@ -1,0 +1,363 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 Reverse Proxy Lambda — supports single-bucket (FrontendSPABucketName) or multi-bucket (APIGatewayToS3BucketMapping) routing; mode inferred from which parameter is non-empty'
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  LambdaS3bucket:
+    Type: String
+    Description: The s3 bucket where Lambda code is stored
+
+  CodeZipFileName:
+    Type: String
+    Description: Zip file name for lambda function code
+
+  LambdaRuntime:
+    Type: String
+    Description: Runtime for Lambda
+    Default: 'nodejs20.x'
+
+  LambdaHandler:
+    Type: String
+    Description: Zip file name for lambda function code
+    Default: 'index.handler'
+
+  FrontendSPABucketName:
+    Type: String
+    Description: Single-bucket mode — S3 bucket the Lambda will reverse-proxy. Provide this for single-bucket usage; leave blank for multi-bucket.
+    Default: ""
+
+  APIGatewayToS3BucketMapping:
+    Type: String
+    Description: Multi-bucket mode — JSON map of API Gateway IDs to S3 bucket names. Provide this for multi-bucket usage; leave blank for single-bucket.
+    Default: ""
+
+  LogRetentionInDays:
+    Type: Number
+    Description: No of days for Log Retention
+    Default: 14
+
+  # VPC Configuration (Mandatory in v3 - TISO compliance for Lambda VpcConfig)
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the Lambda security group will be created (must match the VPC of SubnetIds)
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs where Lambda ENIs will be provisioned (mandatory, min 2 for HA). Must be in the same VPC as VpcId.
+
+  VpcCidr1:
+    Type: String
+    Description: Primary VPC CIDR range (mandatory) - used for Lambda SG egress to CloudWatch Logs/X-Ray Interface Endpoint ENIs
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+    ConstraintDescription: Must be a valid CIDR range in the format x.x.x.x/x (e.g., 10.193.0.0/16)
+
+  VpcCidr2:
+    Type: String
+    Description: Secondary VPC CIDR range (optional)
+    Default: ""
+
+  VpcCidr3:
+    Type: String
+    Description: Tertiary VPC CIDR range (optional)
+    Default: ""
+
+  VpcCidr4:
+    Type: String
+    Description: Quaternary VPC CIDR range (optional)
+    Default: ""
+
+  VpcCidr5:
+    Type: String
+    Description: Quinary VPC CIDR range (optional)
+    Default: ""
+
+  S3PrefixListId:
+    Type: String
+    Description: S3 Gateway Endpoint Prefix List ID (e.g. pl-xxxxxxxx) - allows Lambda SG egress to S3 via Gateway endpoint for FrontendSPABucket reads. Leave empty if S3 traffic egresses via Interface Endpoint reachable via VpcCidr1-5.
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasFrontendSPABucket: !Not [!Equals [!Ref FrontendSPABucketName, ""]]
+  HasMultiBucketMapping: !Not [!Equals [!Ref APIGatewayToS3BucketMapping, ""]]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, ""]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, ""]]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, ""]]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+
+Resources:
+  # Single-mode-only: managed bucket policy on FrontendSPABucketName.
+  # In multi mode, project teams manage bucket policies on each routed bucket themselves (matches v1 behavior).
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Condition: HasFrontendSPABucket
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DependsOn: LambdaExecutionRole
+    Properties:
+      Bucket: !Ref FrontendSPABucketName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaS3Access
+            Effect: "Allow"
+            Principal:
+              AWS:
+                - !GetAtt LambdaExecutionRole.Arn  # Reference to the Lambda execution role
+            Action: 
+              - "s3:GetObject"
+              - "s3:PutObject"
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref FrontendSPABucketName
+                - /*            
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref FrontendSPABucketName
+                - /*              
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref FrontendSPABucketName
+                - /*  
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AppShortName}-${EnvName}-s3ReverseProxy'
+      RetentionInDays: !Ref LogRetentionInDays  # Retain logs for xx days
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-lambda-s3reverseproxy-v3"
+
+  # Per-Lambda Security Group with least-privilege egress (HTTPS to Interface
+  # VPC Endpoints for CloudWatch Logs / X-Ray, and optional S3 Gateway endpoint
+  # for FrontendSPABucket reads).
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupName: !Sub "${AppShortName}-${EnvName}-s3ReverseProxy-sg"
+      GroupDescription: !Sub "Security group for ${AppShortName}-${EnvName}-s3ReverseProxy Lambda function"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: HTTPS to Interface VPC Endpoints (CloudWatch Logs, X-Ray) in primary VPC CIDR
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: HTTPS to Interface VPC Endpoints in VpcCidr2
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: HTTPS to Interface VPC Endpoints in VpcCidr3
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: HTTPS to Interface VPC Endpoints in VpcCidr4
+          - !Ref AWS::NoValue
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: HTTPS to Interface VPC Endpoints in VpcCidr5
+          - !Ref AWS::NoValue
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: HTTPS to S3 via Gateway endpoint prefix list (for FrontendSPABucket reads)
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-s3ReverseProxy-sg"
+        - Key: IaCVersion
+          Value: InfraPlatform-lambda-s3reverseproxy-v3
+
+# FrontEnd Lamda Function
+  LambdaS3ReverseProxy:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy
+      TracingConfig:
+        Mode: Active
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+      Code:
+        S3Bucket: !Ref LambdaS3bucket  # Replace with your S3 bucket where Lambda code is stored
+        S3Key: !Ref CodeZipFileName # Replace with the key to your zipped Lambda function code
+      Handler: !Ref LambdaHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: !Ref LambdaRuntime
+      Environment: !If
+        - HasFrontendSPABucket
+        - Variables:
+            S3_BUCKET_NAME: !Ref FrontendSPABucketName
+        - !If
+          - HasMultiBucketMapping
+          - Variables:
+              API_TO_S3_BUCKET_MAP: !Ref APIGatewayToS3BucketMapping
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: "IaCVersion"
+          Value: "InfraPlatform-lambda-s3reverseproxy-v3"
+
+  # Admin Portal FrontEnd Lamda Function Execution Role
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      RoleName: !Sub ${AppShortName}-${EnvName}-lambda-execution-s3ReverseProxy-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-cloudwatch-log-creation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppShortName}-${EnvName}-s3ReverseProxy:*"
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-BucketAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:GetObject
+              Resource: !If
+                - HasFrontendSPABucket
+                - - !Sub "arn:aws:s3:::${FrontendSPABucketName}/*"
+                  - !Sub "arn:aws:s3:::${LambdaS3bucket}/*"
+                - - !Sub "arn:aws:s3:::${LambdaS3bucket}/*"
+                  - !Sub "arn:aws:s3:::${AppShortName}-*/*"
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-VPCAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                Resource: "*"
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-XRayWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  APIGatewayInvokeLambdaPolicy:
+    Type: AWS::Lambda::Permission
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: 'LambdaS3ReverseProxy'
+      Principal: 'apigateway.amazonaws.com'
+      # SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:{{resolve:ssm:/frontendspa/intranet/${AppShortName}/${EnvName}/apigw_id}}/*/*/${AppShortName}-${EnvName}-s3ReverseProxy"
+
+  ParameterLambdaArn:
+    Type: AWS::SSM::Parameter
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Name: !Sub "/${AppShortName}/${EnvName}/Lambda-s3ReverseProxy-Arn"
+      Type: String
+      Value: !GetAtt LambdaS3ReverseProxy.Arn
+      Description: Lambda Function Arn for S3 Reverse Proxy
+      Tags:
+        IaCVersion: "InfraPlatform-lambda-s3reverseproxy-v3"

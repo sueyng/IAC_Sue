@@ -1,0 +1,198 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "<edit_here>"                     # 📝 e.g. myapp, api, docs
+EnvName: "<edit_here>"                          # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA CODE CONFIGURATION
+LambdaS3bucket: "<edit_here>"                   # 📝 e.g. myapp-nprd-cftemplates (bucket name, not ARN)
+CodeZipFileName: "<edit_here>"                  # 📝 e.g. s3reverseproxy.zip, lambda/s3proxy-v1.0.0.zip
+LambdaRuntime: "<edit_here>"                    # 📝 e.g. nodejs20.x, python3.12
+LambdaHandler: "<edit_here>"                    # 📝 e.g. index.handler, lambda_function.lambda_handler
+
+# API GATEWAY TO S3 BUCKET MAPPING
+APIGatewayToS3BucketMapping: "<edit_here>"      # 📝 e.g. abc123:myapp-nprd-bucket1, def456:myapp-nprd-bucket2 (api-gw-id:bucket, comma-separated)
+
+# NETWORK CONFIGURATION
+VpcId: "<edit_here>"                            # 📝 e.g. vpc-09528f37a12368b13
+SubnetIds: "<edit_here>"                        # 📝 e.g. subnet-xxx,subnet-yyy (min 2, NO SPACES)
+VPCSubnetCidrAZ1: "<edit_here>"                 # 📝 e.g. 10.53.144.128/26 (subnet CIDR in AZ1)
+VPCSubnetCidrAZ2: "<edit_here>"                 # 📝 e.g. 10.53.144.192/26 (subnet CIDR in AZ2)
+
+# LAMBDA BEHAVIOR
+LogRetentionInDays: "<edit_here>"               # 📝 e.g. 14, 30, 90 (days)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+VPCSubnetCidrAZ3: ""                            # e.g. 10.53.145.0/26 (subnet CIDR in AZ3, for 3-AZ deployment)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, docs)
+#   Creates function: {AppShortName}-{EnvName}-s3ReverseProxy
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*): DeletionPolicy Retain
+#   Non-Prod (nprd*): DeletionPolicy Delete
+
+# --- LAMBDA CODE CONFIGURATION ---
+
+# LambdaS3bucket
+#   Value: S3 bucket name with Lambda code (NOT ARN)
+#   Example: myapp-nprd-cftemplates
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# CodeZipFileName
+#   Value: S3 key path to Lambda zip file
+#   Example: s3reverseproxy.zip, lambda/s3proxy-v1.0.0.zip
+#   Finding: S3 Console → bucket → browse to file → copy key
+
+# LambdaRuntime
+#   Allowed Values:
+#     Node.js: nodejs18.x, nodejs20.x
+#     Python: python3.9, python3.10, python3.11, python3.12
+#   Default: nodejs20.x
+#   Recommendation: nodejs20.x (good for I/O-heavy S3 operations)
+
+# LambdaHandler
+#   Format by runtime:
+#     Node.js: file.export
+#       Example: index.handler
+#     Python: file.function
+#       Example: lambda_function.lambda_handler
+#   Default: index.handler
+#   Finding: Check Lambda code for main entry point
+
+# --- API GATEWAY TO S3 BUCKET MAPPING ---
+
+# APIGatewayToS3BucketMapping
+#   Value: Maps API Gateway IDs to S3 bucket names
+#   Format: "api-gw-id-1:bucket-1, api-gw-id-2:bucket-2"
+#   Example: "abc123:myapp-nprd-files, def456:myapp-nprd-docs"
+#   Multi-mapping: "api1:bucket1, api2:bucket2, api3:bucket3"
+#
+#   Finding API Gateway ID:
+#     API Gateway Console → APIs → select API → copy API ID (10-char alphanumeric)
+#
+#   Lambda Routing:
+#     1. Lambda receives API Gateway event
+#     2. Extract API Gateway ID from event.requestContext.apiId
+#     3. Lookup S3 bucket from mapping (stored in environment variable API_TO_S3_BUCKET_MAP)
+#     4. If found: Get object from S3 bucket
+#     5. If not found: Return 404
+#
+#   Use Cases:
+#     - Multi-application: API1 → Bucket1, API2 → Bucket2
+#     - Multi-tenant: Tenant1 API → Tenant1 Bucket, Tenant2 API → Tenant2 Bucket
+#     - Environment separation: Dev API → Dev Bucket, Prod API → Prod Bucket
+
+# --- NETWORK CONFIGURATION ---
+
+# VpcId
+#   Value: VPC ID (e.g. vpc-09528f37a12368b13)
+#   Finding: VPC Console → Your VPCs → copy VPC ID
+#   Requirements:
+#     - Must have S3 VPC Gateway Endpoint configured
+#     - Must have DNS resolution and hostnames enabled
+#
+#   S3 VPC Gateway Endpoint:
+#     Required for private S3 access without NAT Gateway
+#     Create: VPC Console → Endpoints → Create endpoint → com.amazonaws.region.s3 (Gateway)
+#     Verify: Route Tables → Routes → check pl-xxxxx (S3 prefix list) → vpce-xxxxx
+
+# SubnetIds
+#   Value: Comma-separated private subnet IDs (NO SPACES)
+#   Format: subnet-xxx,subnet-yyy
+#   Requirements:
+#     - Minimum 2 subnets in different AZs
+#     - Must be private subnets
+#     - Route table must include S3 VPC endpoint route
+#   Finding: VPC Console → Subnets → filter by VPC → copy private subnet IDs
+
+# VPCSubnetCidrAZ1, VPCSubnetCidrAZ2
+#   Value: Subnet CIDR blocks (e.g. 10.53.144.128/26, 10.53.144.192/26)
+#   Purpose: Creates security group ingress rules for HTTPS (443) access
+#   Finding: VPC Console → Subnets → select subnet → copy IPv4 CIDR
+
+# VPCSubnetCidrAZ3 (optional)
+#   Value: Third subnet CIDR for 3-AZ deployment
+#   Leave empty if using only 2 subnets
+
+# --- LAMBDA BEHAVIOR ---
+
+# LogRetentionInDays
+#   Allowed Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653
+#   Common values:
+#     - Development: 7-14 days
+#     - Staging: 30 days
+#     - Production: 90-365 days
+#   Default: 14
+#   Recommendation: 90 days for production
+
+# --- RESOURCES CREATED ---
+
+# Lambda Function
+#   Name: {AppShortName}-{EnvName}-s3ReverseProxy
+#   Runtime: {LambdaRuntime}
+#   Handler: {LambdaHandler}
+#   Timeout: 30 seconds (fixed)
+#   Memory: 512 MB (fixed)
+#   VPC: {VpcId}, subnets: {SubnetIds}
+#   Environment variable: API_TO_S3_BUCKET_MAP={APIGatewayToS3BucketMapping}
+#   X-Ray tracing: Active
+
+# IAM Execution Role
+#   Name: {AppShortName}-{EnvName}-lambda-execution-s3ReverseProxy-role
+#   Permissions:
+#     - S3 GetObject (arn:aws:s3:::{AppShortName}-{EnvName}-*/*)
+#     - S3 GetObject (Lambda code bucket)
+#     - CloudWatch Logs write
+#     - VPC ENI management
+#   Managed policies: AWSLambdaBasicExecutionRole
+
+# Security Group
+#   Name: {AppShortName}-{EnvName}-s3ReverseProxy-sg
+#   VPC: {VpcId}
+#   Ingress:
+#     - TCP 443 from VPCSubnetCidrAZ1
+#     - TCP 443 from VPCSubnetCidrAZ2
+#     - TCP 443 from VPCSubnetCidrAZ3 (if specified)
+#   Egress:
+#     - All traffic to 0.0.0.0/0 (for S3 VPC endpoint access)
+
+# CloudWatch Log Group
+#   Name: /aws/lambda/{AppShortName}-{EnvName}-s3ReverseProxy
+#   Retention: {LogRetentionInDays} days
+
+# Lambda Permission
+#   Principal: apigateway.amazonaws.com
+#   Action: lambda:InvokeFunction
+#   Allows any API Gateway to invoke Lambda
+
+# SSM Parameter
+#   Name: /{AppShortName}/{EnvName}/Lambda-s3ReverseProxy-Arn
+#   Value: Lambda function ARN
+#   Purpose: Store Lambda ARN for API Gateway integration

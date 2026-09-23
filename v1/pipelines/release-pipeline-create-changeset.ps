@@ -1,0 +1,21 @@
+$param = @{"release_zip"="$(ZIP_TAG)";"iac_deploy"=$false;"do_changeset"=$true;"stack_name"="$(STACK_NAME)"} | ConvertTo-Json
+
+$l = awx login 
+$c = awx config
+
+$jobid = (awx job_templates launch $(NPRD_JOB_TEMPLATE_ID) --extra_vars=$param | ConvertFrom-Json).id
+
+Write-Host "Running Deployment..."
+Write-Host "JOB ID: $jobid"
+
+awx jobs monitor $jobid --conf.color false
+
+$jobinst=(awx jobs get $jobid | ConvertFrom-Json -AsHashTable)
+$jobname=$jobinst.name
+
+$jobstatus = $jobinst.status.ToUpper()
+
+if($jobstatus -eq "FAILED" -or $jobstatus -eq "CANCELED") {
+  Write-Host "##vso[task.logissue type=error]$jobname - $jobstatus"
+  Write-Host "##vso[task.complete result=Failed]$jobname - $jobstatus"
+}

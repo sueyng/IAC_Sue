@@ -1,0 +1,894 @@
+AWSTemplateFormatVersion: 2010-09-09
+#Description:
+Description: Setup for RDS Instance V6
+Parameters:
+
+  AppShortName:
+    Type: String
+    Description: AppShortName
+    Default: ""
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+    Default: nprd
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+    Default: ""
+
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Select the Primary Region for RDS Deployment.
+    AllowedValues:
+      - ap-southeast-1a
+      - ap-southeast-1b
+      - ap-southeast-1c
+    Default: "ap-southeast-1b"
+
+# Subnet CIDR parameters
+  VPCSubnetCidrAppAZ1:
+    Type: String
+    Description: App Network CIDR (consolidated range supported)
+    Default: ""
+  
+  VPCSubnetCidrAppAZ2:
+    Type: String
+    Description: App Network CIDR (consolidated range supported)
+    Default: ""
+
+  VPCSubnetCidrAppAZ3:
+    Type: String
+    Description: App Network CIDR (consolidated range supported)
+    Default: ""
+
+  # DB Subnet ID parameters
+  DBSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of DB Subnet Ids
+    Default: ""
+  
+  DeploymentServer:
+    Type: String
+    Description: Deployment Server IP
+    Default: ""
+
+  MultiAZ:
+    Type: String
+    Description: Multi-AZ deployment (true / false)
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+
+  RdsDBParameterGroupFamily:
+    Type: String
+    Description: Parameter group family, eg, sqlserver-se-16.0
+    Default: sqlserver-se-16.0
+
+  DBInstanceClass:
+    Type: String
+    Description: The database instance type, eg - db.m6i.xlarge
+    Default: db.m6i.large
+
+  DBEngine:
+    Type: String
+    Description: Enter the SQL DB Engine Name, se is standard and ee is enterprise
+    AllowedValues:
+      - sqlserver-se
+      - sqlserver-ee
+    Default: sqlserver-se
+
+  DBMajorEngineVersion:
+    Type: String
+    Description: Enter the DB Engine version, eg- 16.00
+    Default: "16.00"
+  
+  EngineVersion:
+    Type: String
+    Description : Get the latest engine version from the AWS console, eg -16.00.4095.4.v1
+    Default: "16.00.4095.4.v1"
+  
+  AllocatedStorage:
+    Type: String
+    Description: Total DB size
+    Default: "100"
+
+  RDSMaxAllocatedStorage:
+    Type: String
+    Description: Maximum storage for DB instance
+    Default: "1000"
+
+  StorageType:
+    Type: String
+    Description: Volume Type
+    Default: "gp3"
+
+  StorageIops:
+    Type: String
+    Description: Storage IOPS for the allocated storage
+    Default: "3000"
+
+  MasterUsernameDev:
+    Type: String
+    Default: dbadmin
+    NoEcho: true
+
+  MasterUserPasswordDev:
+    Type: String
+    Default: dbadmin123
+    NoEcho: true
+
+  ProdDBPort:
+    Type: String
+    Default: 53341
+    NoEcho: true
+
+  NProdDBPort:
+    Type: String
+    Default: 53331
+    NoEcho: true
+
+  DBSubnetCidrAZ1:
+    Type: String
+    Description: DB Subnet CIDR for AZ1
+    Default: ""
+  
+  DBSubnetCidrAZ2:
+    Type: String
+    Description: DB Subnet CIDR for AZ2
+    Default: ""
+
+  DBSubnetCidrAZ3:
+    Type: String
+    Description: DB Subnet CIDR for AZ3 (optional)
+    Default: ""
+
+  UseExistingOptionGroup:
+    Type: String
+    Description: Whether to use an existing option group or create a new one
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+
+  ExistingOptionGroupName:
+    Type: String
+    Description: Name of existing option group (if UseExistingOptionGroup is true)
+    Default: ""
+
+  KMSKeyRotationPeriod:
+    Type: Number
+    Description: Number of days for KMS key rotation period (default 365 days)
+    Default: 365
+  
+  # Prefix List for Additional Application Networks
+  AdditionalAppPrefixList:
+    Type: String
+    Description: Optional Prefix List ID for additional application networks (optional)
+    Default: ""
+
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+  UseExistingParameterGroup:
+    Type: String
+    Description: Whether to use an existing parameter group or create a new one
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+
+  ExistingParameterGroupName:
+    Type: String
+    Description: Name of existing parameter group (if UseExistingParameterGroup is true)
+    Default: ''
+
+  CreateEnhancedMonitoringLogGroups:
+    Type: String
+    Description: Whether to create RDS Enhanced Monitoring and Events Log Groups
+    AllowedValues: ['true', 'false']
+    Default: "false"
+
+  CreateEventSubscriptions:
+    Type: String
+    Description: Whether to create RDS event subscription resources
+    AllowedValues: ['true', 'false']
+    Default: "false"
+    
+  ParameterGroupMaxServerMemoryMB:
+    Type: String
+    Description: Max server memory (in MB) for SQL Server instance
+    Default: "12000"
+
+  OptionGroupEnableTDE:
+    Type: String
+    Description: Enable Transparent Data Encryption (TDE) option
+    AllowedValues: ["true", "false"]
+    Default: "false"
+
+  RdsEventSNSTopicArn:
+    Type: String
+    Description: (Optional) ARN of the SNS topic for RDS events. Leave blank to skip event subscriptions.
+    Default: ""
+
+  RdsFreeStorageThresholdBytes:
+    Type: String
+    Description: Threshold for low storage alarm in bytes.
+    Default: 21474836480  # 20 GB
+    
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  HasVPCSubnetCidrAppAZ3: !Not [!Equals [!Ref VPCSubnetCidrAppAZ3, '']]
+  IsMultiAZ: !Equals [!Ref MultiAZ, 'true']
+  HasDBSubnetCidrAZ3: !Not [!Equals [!Ref DBSubnetCidrAZ3, '']]
+  CreateNewOptionGroup: !Equals [!Ref UseExistingOptionGroup, 'false']
+  HasAdditionalAppPrefixList: !Not [!Equals [!Ref AdditionalAppPrefixList, '']]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, '']]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, '']]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, '']]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, '']]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasMaxServerMemory: !Not [!Equals [!Ref ParameterGroupMaxServerMemoryMB, ""]]
+  EnableTDE: !Equals [!Ref OptionGroupEnableTDE, "true"]
+  CreateNewParameterGroup: !Equals [!Ref UseExistingParameterGroup, 'false']
+  HasCreateEnhancedMonitoringLogGroups: !Equals [!Ref CreateEnhancedMonitoringLogGroups, 'true']
+  HasCreateEventSubscriptions: !Equals [!Ref CreateEventSubscriptions, 'true']
+  HasRdsEventSNSTopicArn: !Not [!Equals [!Ref RdsEventSNSTopicArn, ""]]
+
+Resources:
+# KMS Key for encrypt the RDS backups and DB related Files (new)
+  RDSEncryptionKmsKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: 'KMS key to encrypt DB related files and native backups'
+      EnableKeyRotation: true
+      RotationPeriodInDays: !Ref KMSKeyRotationPeriod
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+            
+# Alias for the KMS key (new)
+  RDSEncryptionKmsKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-rdssqlserver-encryption'
+      TargetKeyId: !Ref RDSEncryptionKmsKey
+
+# KMS Key for Peformance monitoring KMS key
+  RDSmonitoringEncryptionKmsKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: 'KMS key to encrypt DB related files and native backups'
+      EnableKeyRotation: true
+      RotationPeriodInDays: !Ref KMSKeyRotationPeriod
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+            
+# Alias for the Peformance monitoring KMS key
+  RDSMonitoringEncryptionKmsKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AliasName: !Sub 'alias/${AppShortName}-${EnvName}-performancemonitoring-encryption'
+      TargetKeyId: !Ref RDSmonitoringEncryptionKmsKey
+
+## S3 bucket
+  DBCombinedS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub '${AppShortName}-${EnvName}-rdssql-s3store'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  S3BucketPolicy: #new updated by Tin
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref DBCombinedS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt DBCombinedS3Bucket.Arn
+              - !Join ['', [!GetAtt DBCombinedS3Bucket.Arn, '/*']]
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt DBCombinedS3Bucket.Arn
+              - !Join ['', [!GetAtt DBCombinedS3Bucket.Arn, '/*']]
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+#IAM Roles and Policies
+  DBEnhancedMonitoringRole:  #prd-rds-EnhancedMonitoring-Role
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - monitoring.rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+      RoleName: !Sub '${AppShortName}-${EnvName}-rds-EnhancedMonitoring-Role'
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  DBCombinedPolicy:
+      Type: 'AWS::IAM::ManagedPolicy'
+      DeletionPolicy: !If [IsProduction, Retain, Delete]
+      UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource:
+                - !GetAtt RDSEncryptionKmsKey.Arn
+            - Effect: Allow
+              Action:
+                - s3:ListAllMyBuckets
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - s3:GetBucketLocation
+                - s3:GetBucketACL
+                - s3:ListBucket
+              Resource:
+                - !GetAtt DBCombinedS3Bucket.Arn
+            - Effect: Allow
+              Action:
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:PutObject
+              Resource:
+                - !Sub '${DBCombinedS3Bucket.Arn}/*'
+            - Effect: Allow
+              Action:
+                - s3:GetObjectMetaData
+                - s3:GetObject
+                - s3:PutObject
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+              Resource:
+                - !Sub '${DBCombinedS3Bucket.Arn}/*'
+        ManagedPolicyName: !Sub '${AppShortName}-${EnvName}-RDS-policy'
+
+  DBCombinedS3Role:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - rds.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref DBCombinedPolicy
+      RoleName: !Sub '${AppShortName}-${EnvName}-RDS-Role'
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+# Security Group
+  RdsDBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Security Group for RDS DB
+      GroupName: !Sub '${AppShortName}-${EnvName}-sg-Rds-DB-Cluster'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppShortName}-${EnvName}-sg-Rds-DB-Cluster'
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ1
+          Description: Allow Application Subnet Traffic
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrAppAZ2
+          Description: Allow Application Subnet Traffic
+        - !If
+          - HasVPCSubnetCidrAppAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrAppAZ3
+            Description: Allow Application Subnet Traffic
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasAdditionalAppPrefixList
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            SourcePrefixListId: !Ref AdditionalAppPrefixList
+            Description: Allow Additional Application Networks
+          - !Ref "AWS::NoValue"
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref DeploymentServer
+          Description: Allow Deployment Server to Access the RDS instance
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref DBSubnetCidrAZ1
+          Description: Allow Database Subnet Traffic
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref DBSubnetCidrAZ2
+          Description: Allow Database Subnet Traffic
+        - !If
+          - HasDBSubnetCidrAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref DBSubnetCidrAZ3
+            Description: Allow Database Subnet Traffic
+          - !Ref "AWS::NoValue"
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr1
+          Description: VPC CIDR 1 IP Range
+        - !If 
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: VPC CIDR 4 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: VPC CIDR 5 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"      
+
+#RDS DB Subnet Group
+  RdsDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties: 
+      DBSubnetGroupDescription: !Sub '${AppShortName}-${EnvName}-SubnetGroup'
+      DBSubnetGroupName: !Sub '${AppShortName}-${EnvName}-SubnetGroup'
+      SubnetIds: !Ref DBSubnetIds
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+# RDS DB Parameter Group
+  RdsDBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Condition: CreateNewParameterGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      DBParameterGroupName: !Join
+                              - ''
+                              - - !Ref AppShortName
+                                - '-'
+                                - !Ref EnvName
+                                - '-'
+                                - !Ref DBEngine
+                                - '-'
+                                - !Select [0, !Split [".", !Ref DBMajorEngineVersion]]
+                                - '-ParameterGroup'
+      Description: !Join
+                     - ''
+                     - - !Ref AppShortName
+                       - '-'
+                       - !Ref EnvName
+                       - '-'
+                       - !Ref DBEngine
+                       - '-'
+                       - !Select [0, !Split [".", !Ref DBMajorEngineVersion]]
+                       - '-ParameterGroup'
+      Family: !Ref RdsDBParameterGroupFamily
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+      Parameters: 
+        "max server memory (mb)": !If [HasMaxServerMemory, !Ref ParameterGroupMaxServerMemoryMB, "12000"]
+        "max degree of parallelism": "1"  
+        "rds.force_ssl": "1"              
+        "optimize for ad hoc workloads": "1"
+        "fill factor (%)": "90"
+        "1204": "1"                       
+        "1222": "1"
+
+# RDS DB Option Group
+  RdsDBOptionGroup: 
+    Type: AWS::RDS::OptionGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    DependsOn: 
+      - DBCombinedS3Bucket
+      - DBCombinedS3Role
+    Condition: CreateNewOptionGroup
+    Properties:
+      EngineName: !Ref DBEngine
+      MajorEngineVersion: !Ref DBMajorEngineVersion
+      OptionGroupName: !Join
+                         - ''
+                         - - !Ref AppShortName
+                           - '-'
+                           - !Ref EnvName
+                           - '-'
+                           - !Ref DBEngine
+                           - '-'
+                           - !Select [0, !Split [".", !Ref DBMajorEngineVersion]]
+                           - '-OptionGroup'                          
+      OptionGroupDescription: !Join
+                                - ''
+                                - - !Ref AppShortName
+                                  - '-'
+                                  - !Ref EnvName
+                                  - '-'
+                                  - !Ref DBEngine
+                                  - '-'
+                                  - !Select [0, !Split [".", !Ref DBMajorEngineVersion]]
+                                  - '-OptionGroup'
+      OptionConfigurations:
+              - OptionName: SQLSERVER_BACKUP_RESTORE
+                OptionSettings:
+                  - Name: IAM_ROLE_ARN
+                    Value: !GetAtt DBCombinedS3Role.Arn
+              - OptionName: SQLSERVER_AUDIT
+                OptionSettings:
+                  - Name: IAM_ROLE_ARN
+                    Value: !GetAtt DBCombinedS3Role.Arn
+                  - Name: S3_BUCKET_ARN
+                    Value: !Sub arn:aws:s3:::${AppShortName}-${EnvName}-rdssql-s3store/dbaudit
+                  - Name: RETENTION_TIME
+                    Value: "840"
+                  - Name: ENABLE_COMPRESSION
+                    Value: "true"
+              - !If
+                - EnableTDE
+                - OptionName: TDE
+                  OptionSettings:
+                    - Name: ENABLED
+                      Value: "true"
+                - !Ref "AWS::NoValue"
+
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  RdsEnhancedMonitoringLogGroup:
+    Condition: HasCreateEnhancedMonitoringLogGroups
+    DependsOn: RDSInstance
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/rds/${RDSInstance}/RDSOSMetrics"
+      RetentionInDays: 30
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  RdsEventsLogGroup:
+    Condition: HasCreateEnhancedMonitoringLogGroups
+    DependsOn: RDSInstance
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/rds/instance/${RDSInstance}/rds-events"
+      RetentionInDays: 30
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  # Event subscription for RDS instance events
+  RdsInstanceEventSubscription:
+    Condition: HasCreateEventSubscriptions
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      SnsTopicArn: !Ref RdsEventSNSTopicArn
+      SourceType: db-instance
+      Enabled: true
+      EventCategories:
+        - configuration change
+        - failover
+        - failure
+        - low storage
+        - recovery
+        - restoration
+      SourceIds:
+        - !Ref RDSInstance
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  # Event subscription for snapshot restoration
+  RdsSnapshotEventSubscription:
+    Condition: HasCreateEventSubscriptions
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      SnsTopicArn: !Ref RdsEventSNSTopicArn
+      SourceType: db-snapshot
+      Enabled: true
+      EventCategories:
+        - restoration
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  # Event subscription for parameter group configuration changes
+  RdsParameterGroupSubscription:
+    Condition: HasCreateEventSubscriptions
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      SnsTopicArn: !Ref RdsEventSNSTopicArn
+      SourceType: db-parameter-group
+      Enabled: true
+      EventCategories:
+        - configuration change
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+  # Event subscription for security group configuration changes
+  RdsSecurityGroupSubscription:
+    Condition: HasCreateEventSubscriptions
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      SnsTopicArn: !Ref RdsEventSNSTopicArn
+      SourceType: db-security-group
+      Enabled: true
+      EventCategories:
+        - configuration change
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+          
+  # RDS Instance
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      StorageEncrypted: true
+      Timezone: "Singapore Standard Time"
+      CharacterSetName: "SQL_Latin1_General_CP1_CI_AS"
+      MonitoringRoleArn: !GetAtt DBEnhancedMonitoringRole.Arn
+      PreferredBackupWindow: "16:00-17:00"
+      MonitoringInterval: 60
+      DBParameterGroupName: !If 
+        - CreateNewParameterGroup
+        - !Ref RdsDBParameterGroup
+        - !Ref ExistingParameterGroupName
+      NetworkType: "IPV4"
+      CopyTagsToSnapshot: true
+      Engine: !Ref DBEngine
+      PerformanceInsightsKMSKeyId: !GetAtt RDSmonitoringEncryptionKmsKey.Arn
+      LicenseModel: "license-included"
+      EngineVersion: !Ref EngineVersion
+      StorageType: !Ref StorageType
+      KmsKeyId: !GetAtt RDSEncryptionKmsKey.Arn
+      DBInstanceClass: !Ref DBInstanceClass
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, '31', '7']
+      OptionGroupName: !If 
+        - CreateNewOptionGroup
+        - !Ref RdsDBOptionGroup
+        - !Ref ExistingOptionGroupName
+      PreferredMaintenanceWindow: "sat:18:00-sat:19:00"
+      EnablePerformanceInsights: true
+      AutoMinorVersionUpgrade: true
+      DBSubnetGroupName: !Ref RdsDBSubnetGroup
+      DeletionProtection: !If [IsProduction, true, false]
+      Iops: !Ref StorageIops
+      DBInstanceIdentifier: !Sub '${AppShortName}-${EnvName}-rdssql'
+      AllocatedStorage: !Ref AllocatedStorage
+      CACertificateIdentifier: "rds-ca-rsa4096-g1"
+      ManageMasterUserPassword: false
+      VPCSecurityGroups:
+      - !GetAtt RdsDBSecurityGroup.GroupId
+      MasterUsername: !Ref MasterUsernameDev
+      MasterUserPassword: !Ref MasterUserPasswordDev
+      EnableIAMDatabaseAuthentication: false
+      MaxAllocatedStorage: !Ref RDSMaxAllocatedStorage
+      BackupRetentionPeriod: !If [IsProduction, '35', '7']
+      PubliclyAccessible: false
+      EnableCloudwatchLogsExports:
+      - "agent"
+      - "error"
+      Port: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+      MultiAZ: !Ref MultiAZ
+      AvailabilityZone: !If [IsMultiAZ, !Ref "AWS::NoValue", !Ref AvailabilityZone ]
+      Tags:
+        - Key: BACKUP-DAILY
+          Value: 'YES'
+        - Key: BACKUP-WEEKLY
+          Value: 'YES'
+        - Key: BACKUP-MONTHLY
+          Value: 'YES'
+        - Key: BACKUP-YEARLY
+          Value: 'YES'
+        - Key: BACKUP-CONTINUOUS
+          Value: 'YES'
+        - Key: IaCVersion
+          Value: InfraPlatform-rdssql-V6
+
+# SSM Parameter store for RDS Instance:
+  ParameterRDS:
+    Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
+    Properties:
+      Name: !Sub ${AppShortName}-${EnvName}-parameter-RDSInstanceName
+      Description: !Sub ${AppShortName}-${EnvName}-parameter-RDSInstanceName
+      Value: !Ref RDSInstance
+      Type: String
+      Tier: Standard
+      Tags:
+        IaCVersion: InfraPlatform-rdssql-V6

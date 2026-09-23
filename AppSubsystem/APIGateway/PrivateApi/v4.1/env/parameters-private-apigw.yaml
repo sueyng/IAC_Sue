@@ -1,0 +1,223 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+SwaggerBucket: "<edit_here>"            # 📝 e.g. myapp-nprd-cftemplates (bucket with Swagger/OpenAPI spec)
+SwaggerKey: "<edit_here>"               # 📝 e.g. api/v1/swagger.json, specs/fhir-api.yaml
+ApigwVpceId: "<edit_here>"              # 📝 e.g. vpce-00ecd727fe52de81e (execute-api VPC endpoint ID)
+APIName: "<edit_here>"                  # 📝 e.g. fhir, user-api, order-service
+StageName: "<edit_here>"                # 📝 e.g. dev, test, uat, prod
+AccessLogFormat: "<edit_here>"          # 📝 e.g. $context.requestId,$context.httpMethod,$context.resourcePath,$context.status (or "" to disable)
+ApiSecurityPolicy: "<edit_here>"        # 📝 eg. a Allow value: SecurityPolicy_TLS13_1_3_2025_09 / SecurityPolicy_TLS13_1_3_FIPS_2025_09 / SecurityPolicy_TLS13_1_2_2021_06 / SecurityPolicy_TLS13_1_2_PQ_2025_09 / SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 / SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09 (see reference below)
+# ========================================================================
+# OPTIONAL PARAMETERS (leave empty if not needed)
+# ========================================================================
+APIDescription: ""                      # e.g. "FHIR API for healthcare data exchange"
+ApiGatewayClientCertificateId: ""       # API Gateway client certificate ID for stage backend authentication (project-managed, optional)
+CustomDomainName: ""                    # e.g. api.example.com (requires SSLCertificateArn)
+SSLCertificateArn: ""                   # e.g. arn:aws:acm:region:account:certificate/xxx (same region as API)
+EndpointAccessMode: "BASIC"             # "BASIC" or "STRICT" — required by AWS when ApiSecurityPolicy is a SecurityPolicy_-prefixed (enhanced/TLS 1.3) value
+LambdaAuthorizerFunctionArn: ""         # e.g. arn:aws:lambda:region:account:function:myapp-nprd-LambdaAuthorizer
+LogRetentionInDays: "30"                  # e.g. 30, 90, 365 (default - 30)
+
+# API GATEWAY RESPONSE COMPRESSION (new in v4 — default "no"; verify consumer gzip handling before enabling)
+EnableCompression: "no"                   # "yes" or "no" — enable gzip response compression
+MinimumCompressionSize: "10240"           # Min response size in bytes for gzip (only used when EnableCompression=yes)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- REQUIRED PARAMETERS ---
+
+# SwaggerBucket
+#   Value: S3 bucket name with Swagger/OpenAPI specification (NOT ARN)
+#   Example: myapp-nprd-cftemplates, my-swagger-bucket
+#   Requirements:
+#     - Bucket in same region as API Gateway
+#     - API Gateway service has read permission (automatic)
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# SwaggerKey
+#   Value: S3 key path to Swagger/OpenAPI file
+#   Example: api/v1/swagger.json, specs/fhir-api.yaml
+#   Requirements:
+#     - Valid OpenAPI 2.0 (Swagger) or OpenAPI 3.0 specification
+#     - Include x-amazon-apigateway-integration for backend integrations
+#     - Reference Lambda authorizer in security definitions (if using)
+#   Finding: S3 Console → bucket → browse to file → copy key
+
+# ApigwVpceId
+#   Value: VPC endpoint ID for execute-api service
+#   Format: vpce-xxxxxxxxxxxxxxxxx
+#   Example: vpce-00ecd727fe52de81e
+#   Requirements:
+#     - Service: com.amazonaws.{region}.execute-api
+#     - Type: Interface
+#     - Private DNS: enabled (recommended)
+#     - Security group: Allow HTTPS (443) from clients
+#   Finding: VPC Console → Endpoints → filter by execute-api → copy VPC endpoint ID
+#
+#   API URL with Private DNS enabled:
+#     https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+#   Without Private DNS:
+#     https://{vpce-id}.execute-api.{region}.amazonaws.com/{stage}
+
+# APIName
+#   Value: API Gateway REST API name (e.g. fhir, user-api, order-service)
+#   Format: Lowercase alphanumeric, hyphens allowed
+#   Max length: 128 characters
+#   Recommendation: Use descriptive names indicating purpose
+
+# StageName
+#   Value: Deployment stage name
+#   Common values: dev, test, uat, prod, v1, beta
+#   Purpose: Logical environment separation, independent throttling/caching
+#   API URL format: https://{api-id}.execute-api.{region}.amazonaws.com/{StageName}
+
+# ApiGatewayClientCertificateId
+#   Value: API Gateway client certificate ID for REST API stage backend authentication
+#   Purpose: Addresses Security Hub APIGateway.2 by configuring the stage with ClientCertificateId
+#   Default: "" (clears/unsets ClientCertificateId on the API Gateway stage)
+#   Ownership: Project teams create and rotate the certificate in the API Gateway console
+#   Example: abc123
+#   Requirements:
+#     - Certificate must exist in the same AWS account/region as the API Gateway
+#     - Backend services must trust/validate the certificate for actual backend authentication
+
+# AccessLogFormat
+#   Value: CloudWatch Logs format for API requests (comma-separated $context variables)
+#   Leave empty ("") to disable access logging
+#
+#   Common format (CSV):
+#     Detailed: "$context.identity.sourceIp,$context.identity.caller,$context.identity.user,$context.requestTime,$context.httpMethod,$context.resourcePath,$context.protocol,$context.status,$context.responseLength,$context.requestId,$context.extendedRequestId"
+#
+#   Available variables:
+#     - $context.requestId: Unique request ID
+#     - $context.extendedRequestId: Extended request ID
+#     - $context.identity.sourceIp: Client IP
+#     - $context.requestTime: Request timestamp
+#     - $context.httpMethod: HTTP method (GET, POST, etc.)
+#     - $context.resourcePath: API resource path
+#     - $context.status: Response status code
+#     - $context.responseLength: Response size in bytes
+#     - $context.error.message: Error message (if any)
+
+# --- OPTIONAL PARAMETERS ---
+
+# APIDescription
+#   Value: Human-readable API description
+#   Example: "FHIR API for healthcare data exchange", "User management API with OAuth 2.0"
+#   Max length: 1024 characters
+#   Leave empty if not needed
+
+# CustomDomainName
+#   Value: Custom domain for API (e.g. api.example.com, fhir-api.mycompany.com)
+#   Requirements:
+#     - Domain must be owned
+#     - ACM certificate in same region (specify SSLCertificateArn)
+#     - Both CustomDomainName and SSLCertificateArn required together
+#     - DNS record created post-deployment (Route 53 A record alias to API Gateway domain)
+#   Leave empty to use default API Gateway domain
+#
+#   Default URL: https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+#   Custom URL: https://{CustomDomainName}/ (with base path mapping)
+
+# SSLCertificateArn
+#   Value: ACM certificate ARN for custom domain
+#   Format: arn:aws:acm:{region}:{account}:certificate/{id}
+#   Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/5e10a9f8-f3b4-4e6b-8dd7-cfc26a0eaf08
+#   Requirements:
+#     - Same region as API Gateway
+#     - Status: Issued
+#     - Domain name matches CustomDomainName
+#   Finding: Certificate Manager Console → select certificate → copy ARN
+#   Leave empty if not using custom domain
+
+# CustomDomainNameSecPolicy (v4: resource switched to AWS::ApiGateway::DomainName — the classic
+# "public custom domain" resource — NOT AWS::ApiGatewayV2::DomainName, which still only supports
+# TLS_1_0/TLS_1_2, and NOT AWS::ApiGateway::DomainNameV2, which is for private-endpoint-type domains)
+#   Value: TLS security policy applied to the REGIONAL custom domain name
+#   Allowed Values (CloudFormation AllowedValues-enforced):
+#     Legacy (TLS 1.3 NOT available under these):
+#       - TLS_1_0
+#       - TLS_1_2
+#     Enhanced (SecurityPolicy_-prefixed — TLS 1.3, plus optional FIPS/PFS/post-quantum cipher suites;
+#     REQUIRES EndpointAccessMode to also be set):
+#       - SecurityPolicy_TLS13_1_2_2021_06        TLS 1.2 and 1.3
+#       - SecurityPolicy_TLS13_1_2_PQ_2025_09      TLS 1.2/1.3 + post-quantum ciphers
+#       - SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 TLS 1.2/1.3 + FIPS + post-quantum ciphers
+#       - SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09  TLS 1.2/1.3 + perfect forward secrecy + post-quantum ciphers
+#       - SecurityPolicy_TLS13_1_3_2025_09         TLS 1.3 only (rejects TLS 1.0/1.2)
+#       - SecurityPolicy_TLS13_1_3_FIPS_2025_09    TLS 1.3 only + FIPS
+#   Default: TLS_1_2
+#   Recommendation: TLS_1_2 already satisfies PCI DSS 4.0 / NIST SP 800-52 Rev.2 / HIPAA baselines.
+#   Move to an enhanced SecurityPolicy_ value only when a specific compliance driver requires TLS 1.3
+#   or FIPS/post-quantum cipher suites.
+#   Only applies when CustomDomainName and SSLCertificateArn are both set
+
+# EndpointAccessMode (new in v4)
+#   Value: Endpoint access mode for the custom domain name (AWS::ApiGateway::DomainName)
+#   Allowed Values: BASIC | STRICT
+#   Default: BASIC
+#   Required by AWS whenever CustomDomainNameSecPolicy is set to an enhanced (SecurityPolicy_-prefixed)
+#   value. STRICT applies additional access validation; use it for production if unsure. Only applies
+#   when CustomDomainName and SSLCertificateArn are both set.
+
+# LambdaAuthorizerFunctionArn
+#   Value: Lambda authorizer function ARN
+#   Format: arn:aws:lambda:{region}:{account}:function:{function-name}
+#   Example: arn:aws:lambda:ap-southeast-1:123456789012:function:myapp-nprd-LambdaAuthorizer
+#   Purpose: Validates Authorization header (JWT token) on all API requests
+#   Finding:
+#     - Lambda Console → Functions → copy ARN
+#     - CloudFormation → Lambda Authorizer stack → Outputs → Lambda ARN
+#   Leave empty to disable authentication
+#
+#   Authorization flow:
+#     1. Client sends request with Authorization: Bearer {token}
+#     2. API Gateway invokes Lambda authorizer
+#     3. Lambda validates JWT token (Azure AD)
+#     4. Lambda returns IAM policy (Allow/Deny)
+#     5. If allowed, request forwarded to backend
+
+# LogRetentionInDays
+#   Allowed Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+#   Default: 30
+#   Recommendation: 90 days for production, 30 days for dev
+
+# EnableCompression + MinimumCompressionSize (new in v4)
+#   Purpose: Enables API Gateway to gzip response bodies above a configurable threshold.
+#            Addresses Checkmarx finding "API Gateway with invalid compression".
+#
+#   EnableCompression Allowed Values: "yes" | "no"
+#   Default: "no" — MinimumCompressionSize is OMITTED from the RestApi resource
+#                   (API Gateway performs NO auto-compression; Checkmarx finding
+#                   remains open and requires security team suppression approval).
+#
+#   MinimumCompressionSize Valid Range: 0 to 10485760 (bytes)
+#     0          : compress ALL responses (including small ones)
+#     10240      : default — compress responses >= 10 KB; smaller payloads pass through
+#     10485760   : compress only responses >= 10 MB (effectively disables for most)
+#
+#   Recommended rollout:
+#     1. Deploy v4 with EnableCompression="no" (default) — zero behavior change
+#     2. Verify API consumers can handle gzip-encoded responses correctly
+#     3. Follow-up deploy with EnableCompression="yes" after consumer verification
+#
+#   Behavior when "yes":
+#     - Responses with body size >= MinimumCompressionSize AND client sending
+#       "Accept-Encoding: gzip" → response is gzipped with "Content-Encoding: gzip" header
+#     - Smaller responses or clients not advertising gzip → response passes through uncompressed
+#
+#   Note: application layer already supports compression — gateway compression is
+#         defense-in-depth.
+

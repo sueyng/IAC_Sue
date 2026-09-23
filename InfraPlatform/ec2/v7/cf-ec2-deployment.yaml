@@ -1,0 +1,541 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Template v7 - Single Template Deployment (Security Group, IAM, Launch Template, Key Pair, and Instance)
+
+Parameters:
+  # General Parameters
+  AppShortName:
+    Type: String
+    Description: AppShortName
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  # VPC and Network Parameters
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+  EC2DeploymentSecurityGroupName:
+    Type: String
+    Description: Name for the EC2 Deployment Security Group (Primary SG)
+
+  # VPC CIDR Parameters (for egress rules)
+  VpcCidr1:
+    Description: VPC CIDR 1 IP Range
+    Type: String
+    Default: ""
+  VpcCidr2:
+    Description: VPC CIDR 2 IP Range
+    Type: String
+    Default: ""
+  VpcCidr3:
+    Description: VPC CIDR 3 IP Range
+    Type: String
+    Default: ""
+  VpcCidr4:
+    Description: VPC CIDR 4 IP Range
+    Type: String
+    Default: ""
+  VpcCidr5:
+    Description: VPC CIDR 5 IP Range
+    Type: String
+    Default: ""
+  S3PrefixListId:
+    Description: S3 PrefixList ID
+    Type: String
+    Default: ""
+  HCCVpceCidr:
+    Description: HCC VPC Endpoint Subnet, Fixed CIDR Range from HCC
+    Type: String
+    Default: ""
+
+  # Ansible Server IPs (for deployment access)
+  AnsibleServerIP1:
+    Type: String
+    Description: IP Address of the first Ansible server in x.x.x.x/32 format
+    Default: ""
+  AnsibleServerIP2:
+    Type: String
+    Description: IP Address of the second Ansible server in x.x.x.x/32 format
+    Default: ""
+
+  # Database Parameters (for egress rules)
+  VPCSubnetCidrDBAZ1:
+    Type: String
+    Description: AZ1 DB Subnet
+  VPCSubnetCidrDBAZ2:
+    Type: String
+    Description: AZ2 DB Subnet
+  VPCSubnetCidrDBAZ3:
+    Type: String
+    Description: AZ3 DB Subnet
+    Default: ""
+  ProdDBPort:
+    Type: String
+    Default: "53341"
+    NoEcho: true
+  NProdDBPort:
+    Type: String
+    Default: "53331"
+    NoEcho: true
+
+  # IAM Role Parameters
+  EC2IAMRoleName:
+    Type: String
+    Description: Name for the EC2 IAM Role
+  HasCustomEC2IAMRole:
+    Type: String
+    Description: Do you have a custom IAM role already created?
+    AllowedValues: ['yes', 'no']
+    Default: 'no'
+  CustomEC2IAMRoleName:
+    Type: String
+    Description: Enter the custom IAM Role name, if you have one created already
+    Default: ''
+  EC2InstanceProfileName:
+    Type: String
+    Description: Name for the EC2 Instance Profile
+
+  # Key Pair and Launch Template
+  EC2KeyPairName:
+    Type: String
+    Description: Name for the EC2 Key Pair
+  EC2LaunchTemplateName:
+    Type: String
+    Description: Name for the EC2 Launch Template
+
+  # EC2 Instance Parameters
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: AvailabilityZone
+    AllowedValues:
+      - ap-southeast-1a
+      - ap-southeast-1b
+      - ap-southeast-1c
+  SubnetIdappAZ1:
+    Type: AWS::EC2::Subnet::Id
+    Description: VPC Subnet id for App AZ1
+  AMIId:
+    Type: AWS::EC2::Image::Id
+    Description: HCC AMI Image ID
+  InstanceName:
+    Type: String
+    Description: EC2 Instance Name
+  InstanceType:
+    Type: String
+    Description: EC2 Instance Type
+  Function:
+    Type: String
+    Description: Server Function (eg, APP, UTL, DB)
+    AllowedValues:
+      - APP
+      - WEB
+      - DB
+      - UTL
+      - INT
+      - RPT
+      - SYS
+      - DBS
+  OSVolumeSize:
+    Type: String
+    Description: Size of the OS Volume in GiB
+    Default: "100"
+  DataVolumeSize:
+    Type: String
+    Description: Size of the Data Volume in GiB (leave empty to skip data volume)
+    Default: ""
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+
+  # Custom IAM Role Conditions
+  CreateCustomEC2IAMRole: !Equals [!Ref HasCustomEC2IAMRole, 'yes']
+  CustomRoleNameEmpty: !Equals [!Ref CustomEC2IAMRoleName, ""]
+  ShouldCreateEC2Role: !Equals [!Ref HasCustomEC2IAMRole, 'no']
+
+  # Data Volume Condition
+  AddDataVolume: !Not [!Equals [!Ref DataVolumeSize, '']]
+
+  # Network Conditions (for Security Group rules)
+  HasAnsibleServerIP1: !Not [!Equals [!Ref AnsibleServerIP1, ""]]
+  HasAnsibleServerIP2: !Not [!Equals [!Ref AnsibleServerIP2, ""]]
+  HasVpcCidr1: !Not [!Equals [!Ref VpcCidr1, ""]]
+  HasVpcCidr2: !Not [!Equals [!Ref VpcCidr2, ""]]
+  HasVpcCidr3: !Not [!Equals [!Ref VpcCidr3, ""]]
+  HasVpcCidr4: !Not [!Equals [!Ref VpcCidr4, ""]]
+  HasVpcCidr5: !Not [!Equals [!Ref VpcCidr5, ""]]
+  HasS3PrefixListId: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  HasHCCVpceCidr: !Not [!Equals [!Ref HCCVpceCidr, ""]]
+  HasVPCSubnetCidrDBAZ3: !Not [!Equals [!Ref VPCSubnetCidrDBAZ3, '']]
+
+Resources:
+  # ====== Security Group ======
+  EC2DeploymentSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      GroupDescription: Primary Deployment Security Group for EC2 (includes infrastructure rules)
+      GroupName: !Ref EC2DeploymentSecurityGroupName
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Ansible Server Access (Optional)
+        - !If
+          - HasAnsibleServerIP1
+          - IpProtocol: tcp
+            FromPort: 5986
+            ToPort: 5986
+            CidrIp: !Ref AnsibleServerIP1
+            Description: Access from Ansible Server 1
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasAnsibleServerIP2
+          - IpProtocol: tcp
+            FromPort: 5986
+            ToPort: 5986
+            CidrIp: !Ref AnsibleServerIP2
+            Description: Access from Ansible Server 2
+          - !Ref "AWS::NoValue"
+      SecurityGroupEgress:
+        # Infrastructure Egress Rules
+        - !If
+          - HasVpcCidr1
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr1
+            Description: VPC CIDR 1 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr2
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr2
+            Description: VPC CIDR 2 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr3
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr3
+            Description: VPC CIDR 3 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr4
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr4
+            Description: VPC CIDR 4 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasVpcCidr5
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref VpcCidr5
+            Description: VPC CIDR 5 IP Range
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasS3PrefixListId
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            DestinationPrefixListId: !Ref S3PrefixListId
+            Description: Allow access to Amazon S3 Endpoint
+          - !Ref "AWS::NoValue"
+        - !If
+          - HasHCCVpceCidr
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref HCCVpceCidr
+            Description: HCC VPC Endpoint Subnet
+          - !Ref "AWS::NoValue"
+        # Database Egress Rules
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrDBAZ1
+          Description: Allow DB AZ1 Subnet
+        - IpProtocol: tcp
+          FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+          CidrIp: !Ref VPCSubnetCidrDBAZ2
+          Description: Allow DB AZ2 Subnet
+        - !If
+          - HasVPCSubnetCidrDBAZ3
+          - IpProtocol: tcp
+            FromPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            ToPort: !If [IsProduction, !Ref ProdDBPort, !Ref NProdDBPort]
+            CidrIp: !Ref VPCSubnetCidrDBAZ3
+            Description: Allow DB Subnet AZ3
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v7
+
+  # ====== IAM Resources ======
+  EC2IAMRole:
+    Condition: ShouldCreateEC2Role
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      RoleName: !Ref EC2IAMRoleName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v7
+
+  EC2InstanceProfile:
+    Condition: ShouldCreateEC2Role
+    Type: AWS::IAM::InstanceProfile
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      InstanceProfileName: !Ref EC2InstanceProfileName
+      Roles:
+        - !Ref EC2IAMRole
+
+  CustomRoleInstanceProfile:
+    Condition: CreateCustomEC2IAMRole
+    Type: AWS::IAM::InstanceProfile
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      InstanceProfileName: !Ref CustomEC2IAMRoleName
+      Roles:
+        - !Ref CustomEC2IAMRoleName
+
+  # ====== Key Pair ======
+  EC2KeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      KeyName: !Ref EC2KeyPairName
+      Tags:
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v7
+
+  # ====== Launch Template ======
+  EC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LaunchTemplateName: !Ref EC2LaunchTemplateName
+      LaunchTemplateData:
+        KeyName: !Ref EC2KeyPairName
+        MetadataOptions:
+          HttpTokens: required
+        IamInstanceProfile:
+          Name: !If
+            - CreateCustomEC2IAMRole
+            - !If
+              - CustomRoleNameEmpty
+              - !Ref EC2InstanceProfile
+              - !Ref CustomRoleInstanceProfile
+            - !Ref EC2InstanceProfile
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: false
+            DeleteOnTermination: true
+            SubnetId: !Ref SubnetIdappAZ1
+            Groups:
+              - !Ref EC2DeploymentSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: FUNCTION
+                Value: TBC
+              - Key: EBS-SNAPSHOT
+                Value: 'YES'
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-EC2
+              - Key: BACKUP-DAILY
+                Value: 'YES'
+              - Key: BACKUP-WEEKLY
+                Value: 'YES'
+              - Key: BACKUP-MONTHLY
+                Value: 'YES'
+              - Key: BACKUP-YEARLY
+                Value: 'YES'
+              - Key: CW-CONFIG
+                Value: 'BASELINE'
+              - Key: CREATE-AUTO-ALARMS
+                Value: ''
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v7
+          - ResourceType: volume
+            Tags:
+              - Key: FUNCTION
+                Value: TBC
+              - Key: EBS-SNAPSHOT
+                Value: 'YES'
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-EBS
+              - Key: BACKUP-DAILY
+                Value: 'YES'
+              - Key: BACKUP-WEEKLY
+                Value: 'YES'
+              - Key: BACKUP-MONTHLY
+                Value: 'YES'
+              - Key: BACKUP-YEARLY
+                Value: 'YES'
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v7
+          - ResourceType: network-interface
+            Tags:
+              - Key: FUNCTION
+                Value: TBC
+              - Key: Name
+                Value: !Sub ${AppShortName}-${EnvName}-vNIC
+              - Key: IaCVersion
+                Value: InfraPlatform-EC2-v7
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: IaCVersion
+              Value: InfraPlatform-EC2-v7
+
+  # ====== Data Volume (Optional) ======
+  DataVolume:
+    Condition: AddDataVolume
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Type: AWS::EC2::Volume
+    Properties:
+      Size: !Ref DataVolumeSize
+      VolumeType: gp3
+      Encrypted: true
+      AvailabilityZone: !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: !Sub ${InstanceName}-Data
+        - Key: FUNCTION
+          Value: !Ref Function
+        - Key: EBS-SNAPSHOT
+          Value: 'YES'
+        - Key: BACKUP-DAILY
+          Value: 'YES'
+        - Key: BACKUP-WEEKLY
+          Value: 'YES'
+        - Key: BACKUP-MONTHLY
+          Value: 'YES'
+        - Key: BACKUP-YEARLY
+          Value: 'YES'
+        - Key: IaCVersion
+          Value: InfraPlatform-EC2-v7
+
+  DataVolumeMountPoint:
+    Condition: AddDataVolume
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref EC2Instance
+      VolumeId: !Ref DataVolume
+      Device: /dev/sdm
+
+  # ====== EC2 Instance ======
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      DisableApiTermination: !If [IsProduction, true, false]
+      AvailabilityZone: !Ref AvailabilityZone
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2LaunchTemplate
+        Version: !GetAtt EC2LaunchTemplate.LatestVersionNumber
+      ImageId: !Ref AMIId
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+        -
+          DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !Ref OSVolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
+      Tags:
+        -
+          Key: Name
+          Value: !Ref InstanceName
+        -
+          Key: FUNCTION
+          Value: !Ref Function
+        -
+          Key: PatchGroup
+          Value: 'BASELINE'
+        -
+          Key: IaCVersion
+          Value: InfraPlatform-EC2-v7
+
+Outputs:
+  EC2DeploymentSecurityGroupID:
+    Description: Deployment Security Group ID
+    Value: !Ref EC2DeploymentSecurityGroup
+
+  EC2InstanceID:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+
+  EC2LaunchTemplateID:
+    Description: Launch Template ID
+    Value: !Ref EC2LaunchTemplate
+
+  EC2InstanceProfileName:
+    Description: Instance Profile Name
+    Value: !If
+      - ShouldCreateEC2Role
+      - !Ref EC2InstanceProfile
+      - !If
+        - CustomRoleNameEmpty
+        - !Ref EC2InstanceProfile
+        - !Ref CustomEC2IAMRoleName
+
+  EC2KeyPairID:
+    Description: Key Pair ID (Private key stored in SSM Parameter Store at /ec2/keypair/{KeyPairId})
+    Value: !GetAtt EC2KeyPair.KeyPairId
