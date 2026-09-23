@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AWS CloudFormation template to provision and deploy a private API with swagger json file
+Description: AWS CloudFormation template to provision and deploy a private API with swagger json file v7.1
 Parameters:
   AppShortName:
     Description: Application name
@@ -138,7 +138,7 @@ Resources:
       RetentionInDays: !Ref LogRetentionInDays
       Tags:
         - Key: IaCVersion
-          Value: AppSubsystem-SPAIntranet-v7
+          Value: AppSubsystem-SPAIntranet-v7.1
 
   # ApiSecurityPolicy = TLS_1_2 -> v7-compatible custom domain (same logical ID and type as v7)
   ApiGatewayDomainName:
@@ -227,7 +227,7 @@ Resources:
                 aws:SourceVpce: !Ref ApigwVpceId
       Tags:
         - Key: IaCVersion
-          Value: AppSubsystem-SPAIntranet-v7
+          Value: AppSubsystem-SPAIntranet-v7.1
 
   ApiDeployment:
     Type: 'AWS::ApiGateway::Deployment'

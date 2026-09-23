@@ -35,19 +35,11 @@
     - Project teams create and rotate the API Gateway client certificate outside CloudFormation.
   - IaC Version Tag bumped to `AppSubsystem-PrivateApi-v4`.
 
-- **v4.1 Updates** (Security Enhancement — TLS 1.3 / Configurable Security Policy):
-  - **`SecurityPolicy` parameterized** (was hardcoded `TLS_1_2` on the custom domain name): new parameter `ApiSecurityPolicy` with `AllowedValues` enforced by CloudFormation:
-    - Legacy: `TLS_1_0`, `TLS_1_2`
-    - Enhanced (TLS 1.3, optional FIPS/PFS/post-quantum cipher suites): `SecurityPolicy_TLS13_1_2_2021_06`, `SecurityPolicy_TLS13_1_2_PQ_2025_09`, `SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09`, `SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09`, `SecurityPolicy_TLS13_1_3_2025_09`, `SecurityPolicy_TLS13_1_3_FIPS_2025_09`
-    - Default remains `TLS_1_2` — zero behavior change unless a project explicitly opts into an enhanced policy.
-  - **Custom Domain Name resource type changed**: `ApiGatewayDomainName` switched from `AWS::ApiGatewayV2::DomainName` to `AWS::ApiGateway::DomainName` (the classic REST API custom domain resource — not `AWS::ApiGateway::DomainNameV2`, which is scoped to private-endpoint-type domain names and was evaluated and rejected for this use case).
-    - `AWS::ApiGatewayV2::DomainName`'s `SecurityPolicy` only ever supported `TLS_1_0`/`TLS_1_2` per AWS's own CloudFormation resource schema — it cannot enable TLS 1.3 regardless of what value is supplied.
-    - `AWS::ApiGateway::DomainName` was extended by AWS (Nov 2025) with the enhanced `SecurityPolicy_*` values for `REGIONAL`/public custom domain names, which is what this template uses.
-    - Property shape changed accordingly: nested `DomainNameConfigurations` list → flat `RegionalCertificateArn` + `EndpointConfiguration.Types: [REGIONAL]`.
-  - **New `EndpointAccessMode` parameter** (`BASIC` | `STRICT`, default `BASIC`): required by AWS whenever `ApiSecurityPolicy` is set to an enhanced (`SecurityPolicy_`-prefixed) value. AWS recommends rolling out with `BASIC` first, verifying traffic/access logs, then moving to `STRICT`; mode changes can take up to 15 minutes to fully propagate.
-  - **`ApiSecurityPolicy`/`EndpointAccessMode` also applied directly to `PrivateApi`**: `AWS::ApiGateway::RestApi` carries its own independent `SecurityPolicy`/`EndpointAccessMode` properties, separate from the custom domain name's — these are two different TLS termination points. Both must be set for the chosen policy to take effect end-to-end; setting it only on the custom domain leaves the API's own native endpoint (reached directly via the VPC endpoint, bypassing the custom domain) on its default `TLS_1_2`.
-  - IaC Version Tag bumped to `AppSubsystem-PrivateApi-v4.1`.
-
+- **Version 4.1** (Configurable and support SecurityPolicy from harcoded TLS_1_2)
+  - Implemented configurable Security Policy on API Gateway and customDomain
+  - Support TLS1.3 (SecurityPolicy_*) by implemented new logical ID `ApiGatewayDomainNameEnhanced`, only apply for new project, required seek SEET Infra Team advise for existing project migration from TLS_1_2 to `SecurityPolicy_*`
+  - ⛔ **No direct migration from `TLS_1_2` to `SecurityPolicy_*`**: a v4 stack with a custom domain cannot be upgraded to v4.1 and switched from `TLS_1_2` to a `SecurityPolicy_*` value in the same or a later deployment — the update fails with "domain name already exists" and rolls back. Do not delete the custom domain or the stack to work around this; contact the **SEET Infra team** for assistance.
+  
 ### Lambda Authorizer (`cf-lambda-authorizer.yaml`)
 - **v2 Updates**:
   - Added support for **Azure AD integration**:
@@ -96,7 +88,7 @@
   - Improved deployment documentation for custom domain and logging configurations.
 
 - **v4.1 Updates**:
-  - Changing `ApiGatewayDomainName`'s resource `Type` (`AWS::ApiGatewayV2::DomainName` → `AWS::ApiGateway::DomainName`) means CloudFormation treats it as a resource replacement on an in-place `update-stack` from v4. Review the changeset before applying, and prefer a full stack delete/recreate where feasible — see `v4.1/README.md` for the recommended upgrade procedure.
+  - Adding new logical ID `ApiGatewayDomainNameEnhanced` to support SecurityPolicy_* by using `ApiGatewayDomainName` — see `v4.1/README.md` for the recommended upgrade procedure.
 
 ### Documentation Updates
 - **v2 Updates**:
@@ -116,7 +108,7 @@
 |---------------------------|---------------------------------------|---------------------------------------|---------------------------------------|---------------------------------------------------|------|
 | IaC Version               | PrivateApi-v1                        | PrivateApi-v2                        | PrivateApi-v3                        | PrivateApi-v4                                   | **PrivateApi-v4.1** |
 | Custom Domain Support     | Not supported                        | Supported                            | Supported                            | Supported                                       | Supported |
-| Custom Domain TLS Policy  | N/A                                   | Hardcoded `TLS_1_2`                  | Hardcoded `TLS_1_2`                  | Hardcoded `TLS_1_2`                             | **Parameterized: `TLS_1_0`/`TLS_1_2` + 6 enhanced TLS 1.3 policies (`ApiSecurityPolicy`)** |
+| Custom Domain TLS Policy  | N/A                                   | Hardcoded `TLS_1_2`                  | Hardcoded `TLS_1_2`                  | Hardcoded `TLS_1_2`                             | **Parameterized: `TLS_1_2` + 6 enhanced TLS 1.3 policies (`ApiSecurityPolicy`)** |
 | API's Own Endpoint TLS Policy | AWS default                      | AWS default                          | AWS default                          | AWS default                                     | **Parameterized (`ApiSecurityPolicy` on `PrivateApi` directly)** |
 | Logging                   | Basic logging                        | Detailed CloudWatch metrics          | Conditional access logging           | Conditional access logging                      | Conditional access logging |
 | Lambda Runtime            | .NET 6                               | .NET 6                               | .NET 8                               | .NET 8                                          | .NET 8 |

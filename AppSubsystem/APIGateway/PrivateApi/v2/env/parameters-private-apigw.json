@@ -1,0 +1,34 @@
+[
+    {
+        "ParameterKey": "SwaggerFile",
+        "ParameterValue": "fhir-apigw-swagger/swagger.json"
+    },
+    {
+        "ParameterKey": "ApigwVpceId",
+        "ParameterValue": "vpce-00ecd727fe52de81e"
+    },
+    {
+        "ParameterKey": "APIName",
+        "ParameterValue": "fhir"
+    },
+    {
+        "ParameterKey": "APIDescription",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "StageName",
+        "ParameterValue": "dev"
+    },
+    {
+        "ParameterKey": "CustomDomainName",
+        "ParameterValue": "api.seedideation.com"
+    },
+    {
+        "ParameterKey": "SSLCertificateArn",
+        "ParameterValue": "arn:aws:acm:ap-southeast-1:781576980265:certificate/5e10a9f8-f3b4-4e6b-8dd7-cfc26a0eaf08"
+    },
+    {
+        "ParameterKey": "LambdaAuthorizerFunctionArn",
+        "ParameterValue": "arn:aws:lambda:ap-southeast-1:781576980265:function:fhir-nprd-LambdaAuthorizer"
+    }
+]

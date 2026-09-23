@@ -1,0 +1,149 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+SwaggerBucket: "<edit_here>"            # 📝 e.g. myapp-nprd-cftemplates (bucket with Swagger/OpenAPI spec)
+SwaggerKey: "<edit_here>"               # 📝 e.g. api/v1/swagger.json, specs/fhir-api.yaml
+ApigwVpceId: "<edit_here>"              # 📝 e.g. vpce-00ecd727fe52de81e (execute-api VPC endpoint ID)
+APIName: "<edit_here>"                  # 📝 e.g. fhir, user-api, order-service
+StageName: "<edit_here>"                # 📝 e.g. dev, test, uat, prod
+AccessLogFormat: "<edit_here>"          # 📝 e.g. $context.requestId,$context.httpMethod,$context.resourcePath,$context.status (or "" to disable)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (leave empty if not needed)
+# ========================================================================
+APIDescription: ""                      # e.g. "FHIR API for healthcare data exchange"
+CustomDomainName: ""                    # e.g. api.example.com (requires SSLCertificateArn)
+SSLCertificateArn: ""                   # e.g. arn:aws:acm:region:account:certificate/xxx (same region as API)
+LambdaAuthorizerFunctionArn: ""         # e.g. arn:aws:lambda:region:account:function:myapp-nprd-LambdaAuthorizer
+LogRetentionInDays: "30"                  # e.g. 30, 90, 365 (default - 30)
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+# --- REQUIRED PARAMETERS ---
+
+# SwaggerBucket
+#   Value: S3 bucket name with Swagger/OpenAPI specification (NOT ARN)
+#   Example: myapp-nprd-cftemplates, my-swagger-bucket
+#   Requirements:
+#     - Bucket in same region as API Gateway
+#     - API Gateway service has read permission (automatic)
+#   Finding: S3 Console → Buckets → copy bucket name
+
+# SwaggerKey
+#   Value: S3 key path to Swagger/OpenAPI file
+#   Example: api/v1/swagger.json, specs/fhir-api.yaml
+#   Requirements:
+#     - Valid OpenAPI 2.0 (Swagger) or OpenAPI 3.0 specification
+#     - Include x-amazon-apigateway-integration for backend integrations
+#     - Reference Lambda authorizer in security definitions (if using)
+#   Finding: S3 Console → bucket → browse to file → copy key
+
+# ApigwVpceId
+#   Value: VPC endpoint ID for execute-api service
+#   Format: vpce-xxxxxxxxxxxxxxxxx
+#   Example: vpce-00ecd727fe52de81e
+#   Requirements:
+#     - Service: com.amazonaws.{region}.execute-api
+#     - Type: Interface
+#     - Private DNS: enabled (recommended)
+#     - Security group: Allow HTTPS (443) from clients
+#   Finding: VPC Console → Endpoints → filter by execute-api → copy VPC endpoint ID
+#
+#   API URL with Private DNS enabled:
+#     https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+#   Without Private DNS:
+#     https://{vpce-id}.execute-api.{region}.amazonaws.com/{stage}
+
+# APIName
+#   Value: API Gateway REST API name (e.g. fhir, user-api, order-service)
+#   Format: Lowercase alphanumeric, hyphens allowed
+#   Max length: 128 characters
+#   Recommendation: Use descriptive names indicating purpose
+
+# StageName
+#   Value: Deployment stage name
+#   Common values: dev, test, uat, prod, v1, beta
+#   Purpose: Logical environment separation, independent throttling/caching
+#   API URL format: https://{api-id}.execute-api.{region}.amazonaws.com/{StageName}
+
+# AccessLogFormat
+#   Value: CloudWatch Logs format for API requests (comma-separated $context variables)
+#   Leave empty ("") to disable access logging
+#
+#   Common format (CSV):
+#     Detailed: "$context.identity.sourceIp,$context.identity.caller,$context.identity.user,$context.requestTime,$context.httpMethod,$context.resourcePath,$context.protocol,$context.status,$context.responseLength,$context.requestId,$context.extendedRequestId"
+#
+#   Available variables:
+#     - $context.requestId: Unique request ID
+#     - $context.extendedRequestId: Extended request ID
+#     - $context.identity.sourceIp: Client IP
+#     - $context.requestTime: Request timestamp
+#     - $context.httpMethod: HTTP method (GET, POST, etc.)
+#     - $context.resourcePath: API resource path
+#     - $context.status: Response status code
+#     - $context.responseLength: Response size in bytes
+#     - $context.error.message: Error message (if any)
+
+# --- OPTIONAL PARAMETERS ---
+
+# APIDescription
+#   Value: Human-readable API description
+#   Example: "FHIR API for healthcare data exchange", "User management API with OAuth 2.0"
+#   Max length: 1024 characters
+#   Leave empty if not needed
+
+# CustomDomainName
+#   Value: Custom domain for API (e.g. api.example.com, fhir-api.mycompany.com)
+#   Requirements:
+#     - Domain must be owned
+#     - ACM certificate in same region (specify SSLCertificateArn)
+#     - Both CustomDomainName and SSLCertificateArn required together
+#     - DNS record created post-deployment (Route 53 A record alias to API Gateway domain)
+#   Leave empty to use default API Gateway domain
+#
+#   Default URL: https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+#   Custom URL: https://{CustomDomainName}/ (with base path mapping)
+
+# SSLCertificateArn
+#   Value: ACM certificate ARN for custom domain
+#   Format: arn:aws:acm:{region}:{account}:certificate/{id}
+#   Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/5e10a9f8-f3b4-4e6b-8dd7-cfc26a0eaf08
+#   Requirements:
+#     - Same region as API Gateway
+#     - Status: Issued
+#     - Domain name matches CustomDomainName
+#   Finding: Certificate Manager Console → select certificate → copy ARN
+#   Leave empty if not using custom domain
+
+# LambdaAuthorizerFunctionArn
+#   Value: Lambda authorizer function ARN
+#   Format: arn:aws:lambda:{region}:{account}:function:{function-name}
+#   Example: arn:aws:lambda:ap-southeast-1:123456789012:function:myapp-nprd-LambdaAuthorizer
+#   Purpose: Validates Authorization header (JWT token) on all API requests
+#   Finding:
+#     - Lambda Console → Functions → copy ARN
+#     - CloudFormation → Lambda Authorizer stack → Outputs → Lambda ARN
+#   Leave empty to disable authentication
+#
+#   Authorization flow:
+#     1. Client sends request with Authorization: Bearer {token}
+#     2. API Gateway invokes Lambda authorizer
+#     3. Lambda validates JWT token (Azure AD)
+#     4. Lambda returns IAM policy (Allow/Deny)
+#     5. If allowed, request forwarded to backend
+
+# LogRetentionInDays
+#   Allowed Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+#   Default: 30
+#   Recommendation: 90 days for production, 30 days for dev

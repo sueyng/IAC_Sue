@@ -1,0 +1,689 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+# 
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# APPLICATION BASICS
+AppShortName: "<edit_here>"             # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                  # 📝 e.g. nprd, nprd-dev, prod
+
+# LAMBDA S3 REVERSE PROXY
+LambdaS3bucket: "<edit_here>"           # 📝 e.g. myapp-lambda-artifact, myapp-nprd-deployment
+CodeZipFileName: "<edit_here>"          # 📝 e.g. s3ReverseProxy-v2.zip, lambda-proxy.zip
+FrontendSPABucketName: "<edit_here>"    # 📝 e.g. myapp-nprd-frontend, portal.example.com (S3 bucket containing frontend assets)
+
+# PRIVATE API GATEWAY
+SwaggerFile: "<edit_here>"              # 📝 e.g. swagger/api-spec.json, fhir-apigw-swagger/api-swagger.json (Swagger/OpenAPI spec in S3)
+ApigwVpceId: "<edit_here>"              # 📝 e.g. vpce-098e2a3947c5c353b (VPC Endpoint ID for execute-api)
+APIName: "<edit_here>"                  # 📝 e.g. myapp-api, fhir, portal-api
+StageName: "<edit_here>"                # 📝 e.g. dev, stg, uat, prod
+
+# SSL CERTIFICATES
+SSLCertificateArn: "<edit_here>"        # 📝 e.g. arn:aws:acm:ap-southeast-1:123456789012:certificate/abc123 (API Gateway custom domain)
+AdditionalCertArn: "<edit_here>"        # 📝 e.g. arn:aws:acm:ap-southeast-1:123456789012:certificate/def456 (ALB HTTPS listener)
+
+# APPLICATION LOAD BALANCER
+ALBName: "<edit_here>"                  # 📝 e.g. myapp-nprd-alb-portal, webapp-prod-alb-intranet
+ALBScheme: "<edit_here>"                # 📝 internet-facing or internal
+VpcId: "<edit_here>"                    # 📝 e.g. vpc-0d99a0c727b301d67
+IngressSubnetIds: "<edit_here>"         # 📝 e.g. subnet-abc123,subnet-def456 (comma-separated, at least 2 AZs)
+
+# VPC ENDPOINT IPs (API Gateway execute-api endpoint)
+VPCEndpointIP1: "<edit_here>"           # 📝 e.g. 10.1.154.147 (AZ1)
+VPCEndpointIP2: "<edit_here>"           # 📝 e.g. 10.1.138.43 (AZ2)
+
+# NETWORK SECURITY
+VpcCidr1: "<edit_here>"                 # 📝 e.g. 10.193.0.0/16 (primary VPC CIDR)
+HCCVpceCidr: "<edit_here>"              # 📝 e.g. 10.48.42.0/24 (HCC VPC Endpoint subnet)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+
+# ALB SSL/TLS POLICY
+ALBSslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06"  # TLS 1.2+1.3 (default). See parameter reference for other options.
+
+# CUSTOM DOMAIN (API Gateway)
+CustomDomainName: ""                    # e.g. api.example.com, portal.example.com (leave empty to use default API Gateway domain)
+
+# LAMBDA AUTHORIZER
+LambdaAuthorizerFunctionArn: ""         # e.g. arn:aws:lambda:ap-southeast-1:123456789012:function:myapp-authorizer (ARN of Lambda authorizer, optional)
+
+# ADDITIONAL NETWORK CIDRs
+VpcCidr2: ""                            # e.g. 10.194.0.0/16 (secondary VPC CIDR, optional)
+VpcCidr3: ""                            # e.g. 10.195.0.0/16 (tertiary VPC CIDR, optional)
+VpcCidr4: ""                            # e.g. 10.196.0.0/16 (quaternary VPC CIDR, optional)
+VpcCidr5: ""                            # e.g. 10.197.0.0/16 (quinary VPC CIDR, optional)
+S3PrefixListId: ""                      # e.g. pl-0abc123 (S3 prefix list for egress, optional)
+
+# ADDITIONAL VPC ENDPOINT IPs
+VPCEndpointIP3: ""                      # e.g. 10.1.140.50 (AZ3, if using 3 AZs)
+
+# PREFIX LIST (inbound traffic restriction)
+PrefixListIdIntranet: ""                # e.g. pl-0xyz789 (restrict inbound for internal ALB)
+PrefixListIdInternet: ""                # e.g. pl-0abc456 (restrict inbound for internet-facing ALB)
+
+# S3 UPLOAD FEATURE (optional)
+EnableS3Upload: "false"                 # Enable direct S3 upload through ALB (true/false)
+S3EndpointIP1: ""                       # e.g. 10.1.155.100 (S3 VPC Interface Endpoint IP - AZ1, required if EnableS3Upload=true)
+S3EndpointIP2: ""                       # e.g. 10.1.139.100 (S3 VPC Interface Endpoint IP - AZ2, required if EnableS3Upload=true)
+S3EndpointIP3: ""                       # e.g. 10.1.141.100 (S3 VPC Interface Endpoint IP - AZ3, optional)
+S3UploadPath: "/appartifacts/*"         # Path pattern for S3 upload routing (e.g., /uploads/*, /appartifacts/*)
+S3DownloadPath: "/Download/*"           # Path pattern for S3 download routing (e.g., /Download/*, /files/*)
+
+# LAMBDA CONFIGURATION (optional, has defaults)
+LambdaRuntime: "nodejs20.x"             # nodejs20.x, nodejs18.x, python3.12, python3.11, etc.
+LambdaHandler: "index.mjs.handler"      # Lambda function handler (e.g., index.mjs.handler, app.handler)
+LambdaLogRetentionInDays: "14"            # CloudWatch Logs retention (1, 3, 5, 7, 14, 30, 60, 90, 120, 180, 365, 400, 545, 731, 1827, 3653)
+
+# <<< PARAMETERS_END >>>
+
+# ================================================================================
+# 📖 PARAMETER REFERENCE
+# ================================================================================
+
+# --- APP SHORT NAME ---
+# AppShortName: Application identifier for resource naming
+#
+# Purpose:
+# - Creates nested stack names: {AppShortName}-{EnvName}-{stack-type}
+# - Creates S3 bucket pattern for nested templates: {AppShortName}-{EnvName}-cftemplates
+#
+# Format: Lowercase alphanumeric
+# Example: myapp, api, webapp
+#
+# Finding the value:
+# - Check with your team for the standard application identifier
+# - Must match AppShortName used in other infrastructure stacks
+#
+# --- ENVIRONMENT NAME ---
+# EnvName: Environment designation
+#
+# Purpose:
+# - Used in resource naming
+# - Determines configuration settings
+# - Part of nested template S3 path
+#
+# Common Values:
+# - nprd: Non-production
+# - nprd-dev: Development
+# - nprd-stg: Staging
+# - nprd-sit: System Integration Testing
+# - nprd-uat: User Acceptance Testing
+# - prod: Production
+# - prod-a, prod-b: Multi-region production
+#
+# --- LAMBDA S3 BUCKET ---
+# LambdaS3bucket: S3 bucket containing Lambda deployment package
+#
+# Purpose: Location of Lambda reverse proxy ZIP file
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-lambda-artifact, myapp-nprd-deployment
+#
+# Requirements:
+# - Bucket must exist before deployment
+# - Bucket must contain CodeZipFileName
+# - Lambda execution role must have s3:GetObject permission
+#
+# Finding Bucket Name:
+# AWS Console → S3 → Buckets
+# - Locate your Lambda deployment bucket
+# - Copy bucket name
+#
+# --- CODE ZIP FILE NAME ---
+# CodeZipFileName: S3 object key for Lambda deployment package
+#
+# Purpose: Path to Lambda reverse proxy ZIP file within S3 bucket
+#
+# Format: path/to/file.zip
+# Example: s3ReverseProxy-v2.zip, lambda/reverse-proxy.zip
+#
+# Requirements:
+# - File must exist in LambdaS3bucket
+# - Must be valid Lambda deployment package
+# - Must contain handler code (index.mjs, app.js, etc.)
+#
+# Lambda Package Contents:
+# - Handler file (e.g., index.mjs)
+# - Dependencies (node_modules/ for Node.js)
+# - Configuration files (if needed)
+#
+# --- FRONTEND SPA BUCKET NAME ---
+# FrontendSPABucketName: S3 bucket containing frontend assets
+#
+# Purpose: Source bucket for SPA files served by Lambda reverse proxy
+#
+# Format: Bucket name (no s3:// prefix)
+# Example: myapp-nprd-frontend, portal.example.com
+#
+# Requirements:
+# - Bucket must exist before deployment
+# - Bucket must contain frontend assets (index.html, app.js, CSS, etc.)
+# - Lambda will have read-only access to this bucket
+#
+# Frontend Assets Structure:
+# s3://bucket/
+# ├── index.html
+# ├── app.js
+# ├── styles.css
+# ├── assets/
+# │   ├── images/
+# │   └── fonts/
+# └── static/
+#
+# Lambda Reverse Proxy Behavior:
+# - Serves files from this bucket via ALB
+# - Handles SPA routing (fallback to index.html)
+# - Sets appropriate content types
+#
+# --- SWAGGER FILE ---
+# SwaggerFile: Swagger/OpenAPI specification file path in S3
+#
+# Purpose: API Gateway route and integration definitions
+#
+# Format: path/to/file.json (relative to LambdaS3bucket)
+# Example: swagger/api-spec.json, fhir-apigw-swagger/api-swagger.json
+#
+# File Location:
+# s3://{LambdaS3bucket}/{SwaggerFile}
+#
+# Requirements:
+# - File must exist in LambdaS3bucket
+# - Must be valid Swagger 2.0 or OpenAPI 3.0 specification
+# - Must include AWS API Gateway extensions
+#
+# Required Swagger Extensions:
+# - x-amazon-apigateway-integration: Backend integrations
+# - x-amazon-apigateway-request-validator: Request validation
+# - x-amazon-apigateway-policy: Resource policy (VPC Endpoint restriction)
+#
+# Example Swagger Structure:
+# {
+#   "swagger": "2.0",
+#   "info": { "title": "My API", "version": "1.0" },
+#   "paths": {
+#     "/api/users": {
+#       "get": {
+#         "x-amazon-apigateway-integration": {
+#           "type": "HTTP_PROXY",
+#           "uri": "http://nlb-dns/users",
+#           "connectionType": "VPC_LINK",
+#           "connectionId": "${stageVariables.vpcLinkId}"
+#         }
+#       }
+#     }
+#   }
+# }
+
+# --- APIGW VPCE ID ---
+# ApigwVpceId: VPC Endpoint ID for execute-api
+#
+# Purpose: Restricts API Gateway access to VPC only (no internet access)
+#
+# Format: vpce-xxxxxxxxxxxxxxxxx
+# Example: vpce-098e2a3947c5c353b
+#
+# Requirements:
+# - VPC Endpoint must exist before deployment
+# - VPC Endpoint service name: com.amazonaws.{region}.execute-api
+# - VPC Endpoint must be in same VPC as VpcId
+#
+# Finding VPC Endpoint ID:
+# AWS Console → VPC → Endpoints
+# - Filter by service name: "execute-api"
+# - Copy VPC Endpoint ID
+#
+# API Gateway Resource Policy:
+# Template automatically creates resource policy restricting access to this VPC Endpoint:
+# {
+#   "Effect": "Allow",
+#   "Principal": "*",
+#   "Action": "execute-api:Invoke",
+#   "Resource": "*",
+#   "Condition": {
+#     "StringEquals": {
+#       "aws:sourceVpce": "{ApigwVpceId}"
+#     }
+#   }
+# }
+
+# --- API NAME ---
+# APIName: API Gateway name
+#
+# Purpose: Identifies the API Gateway
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: myapp-api, fhir, portal-api
+#
+# Final API Name:
+# {AppShortName}-{EnvName}-{APIName}
+#
+# Example: myapp-nprd-fhir
+
+# --- STAGE NAME ---
+# StageName: API Gateway stage name
+#
+# Purpose: Deployment stage for API Gateway
+#
+# Format: Lowercase alphanumeric
+# Example: dev, stg, uat, prod
+#
+# Common Values:
+# - dev: Development
+# - stg: Staging
+# - uat: User Acceptance Testing
+# - prod: Production
+#
+# API Endpoint URL:
+# https://{api-id}.execute-api.{region}.amazonaws.com/{StageName}
+# Or with custom domain:
+# https://{CustomDomainName}/{StageName} (if base path mapping configured)
+
+# --- SSL CERTIFICATE ARN ---
+# SSLCertificateArn: ACM certificate for API Gateway custom domain
+#
+# Purpose: Enables HTTPS for API Gateway custom domain
+#
+# Format: arn:aws:acm:{region}:{account}:certificate/{id}
+# Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/abc123-def456-...
+#
+# Requirements:
+# - Certificate MUST be in same region as API Gateway
+# - Certificate status must be "Issued"
+# - Certificate must include CustomDomainName (if using custom domain)
+#
+# Use Cases:
+# - API Gateway custom domain: api.example.com
+# - Branded API endpoints
+# - Multi-domain support
+
+# --- ADDITIONAL CERT ARN ---
+# AdditionalCertArn: ACM certificate for ALB HTTPS listener
+#
+# Purpose: Enables HTTPS for ALB
+#
+# Format: arn:aws:acm:{region}:{account}:certificate/{id}
+# Example: arn:aws:acm:ap-southeast-1:123456789012:certificate/def456-ghi789-...
+#
+# Requirements:
+# - Certificate MUST be in same region as ALB
+# - Certificate status must be "Issued"
+# - Can be same as SSLCertificateArn if same domain
+#
+# Use Cases:
+# - ALB custom domain: portal.example.com
+# - Different certificate for ALB vs API Gateway
+# - Multi-domain support
+
+# --- ALB NAME ---
+# ALBName: Application Load Balancer name
+#
+# Purpose: Identifies the ALB resource
+#
+# Format: Lowercase alphanumeric with hyphens
+# Example: myapp-nprd-alb-portal, webapp-prod-alb-intranet
+#
+# Naming Convention:
+# {AppShortName}-{EnvName}-alb-{purpose}
+#
+# Common Purposes:
+# - portal: User-facing portal
+# - intranet: Internal applications
+# - api: API gateway access
+# - admin: Admin interface
+
+# --- ALB SCHEME ---
+# ALBScheme: ALB accessibility scheme
+#
+# Purpose: Determines whether ALB is publicly accessible or internal-only
+#
+# Options:
+#
+# internet-facing:
+# - Accessible from internet
+# - Public DNS name (*.elb.amazonaws.com)
+# - Requires public subnets (with IGW route)
+# - Use case: User-facing applications, public-facing portal
+#
+# internal:
+# - Accessible only within VPC or connected networks
+# - Private DNS name
+# - Requires private subnets
+# - Use case: Internal applications, VPN/Direct Connect access, intranet portal
+#
+# Subnet Selection:
+# - internet-facing: Use public subnets (route 0.0.0.0/0 → IGW)
+# - internal: Use private subnets (no internet route)
+#
+# ⚠️ Important:
+# IngressSubnetIds must match ALBScheme:
+# - internet-facing → public subnets
+# - internal → private subnets
+
+# --- VPC ID ---
+# VpcId: VPC identifier where resources are deployed
+#
+# Purpose: Specifies which VPC to create resources in
+#
+# Format: vpc-xxxxxxxxxxxxxxxxx
+# Example: vpc-0d99a0c727b301d67
+#
+# Requirements:
+# - VPC must exist before deployment
+# - VPC must have subnets in at least 2 Availability Zones
+# - VPC must have execute-api VPC Endpoint
+#
+# Finding VPC ID:
+# AWS Console → VPC → Your VPCs
+# - Locate the VPC for your environment
+# - Copy VPC ID from the list
+
+# --- INGRESS SUBNET IDS ---
+# IngressSubnetIds: Subnet IDs for ALB placement
+#
+# Purpose: Specifies which subnets the ALB uses
+#
+# Format: subnet-abc123,subnet-def456,subnet-ghi789 (comma-separated, no spaces)
+# Example: subnet-0abc123def456789a,subnet-0def456abc789123b
+#
+# Requirements:
+# - Minimum 2 subnets in different Availability Zones
+# - For internet-facing ALB: Use public subnets (with IGW route)
+# - For internal ALB: Use private subnets (no internet route)
+# - All subnets must be in same VPC as VpcId
+#
+# Finding Subnet IDs:
+# AWS Console → VPC → Subnets
+# - Filter by VPC ID
+# - Select appropriate subnets (public or private)
+# - Ensure subnets are in different AZs
+# - Copy subnet IDs (comma-separated, no spaces)
+
+# --- VPC ENDPOINT IP ---
+# VPCEndpointIP1, VPCEndpointIP2, VPCEndpointIP3: API Gateway VPC Endpoint IPs
+#
+# Purpose: IP addresses of API Gateway execute-api VPC Endpoint
+#
+# Format: x.x.x.x (IPv4 address)
+# Example: 10.1.154.147, 10.1.138.43
+#
+# Requirements:
+# - VPCEndpointIP1 and VPCEndpointIP2 are required (for 2 AZs)
+# - VPCEndpointIP3 is optional (for 3-AZ deployment)
+# - IPs must correspond to execute-api VPC Endpoint network interfaces
+# - One IP per AZ matching ALB subnets
+#
+# How to Get VPC Endpoint IPs:
+# AWS Console → VPC → Endpoints
+# - Select execute-api VPC Endpoint
+# - Go to "Subnets" or "Network interfaces" tab
+# - Note Private IP addresses for each subnet/AZ
+# - Map to VPCEndpointIP1, VPCEndpointIP2, VPCEndpointIP3
+
+# --- VPC CIDR RANGES ---
+# VpcCidr1, VpcCidr2, VpcCidr3, VpcCidr4, VpcCidr5: VPC CIDR blocks for security group rules
+#
+# Purpose: Allow inbound HTTPS traffic to ALB from VPC networks
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.193.0.0/16, 10.194.0.0/16
+#
+# VpcCidr1 (Required):
+# - Primary VPC CIDR block
+# - Used for security group ingress rules
+#
+# VpcCidr2, VpcCidr3, VpcCidr4, VpcCidr5 (Optional):
+# - Secondary/tertiary/quaternary/quinary VPC CIDR blocks
+# - Used for VPC peering, extended CIDR ranges, or multi-VPC architectures
+
+# --- HCC VPCE CIDR ---
+# HCCVpceCidr: HCC VPC Endpoint subnet CIDR
+#
+# Purpose: Allow inbound HTTPS traffic from HCC VPC Endpoint
+#
+# Format: x.x.x.x/xx (CIDR notation)
+# Example: 10.48.42.0/24
+#
+# Use Case:
+# - Corporate network access through HCC VPC Endpoint
+# - Centralized ingress point for on-premises connectivity
+# - VPN or Direct Connect access
+
+# --- CUSTOM DOMAIN NAME ---
+# CustomDomainName: Custom domain for API Gateway
+#
+# Purpose: User-friendly domain name for API Gateway (optional)
+#
+# Format: Fully qualified domain name
+# Example: api.example.com, portal.example.com
+#
+# Requirements (if provided):
+# - Domain must be owned or controlled
+# - ACM certificate (SSLCertificateArn) must include this domain
+# - DNS must be configured to point to API Gateway domain
+# - Leave empty ("") to use default API Gateway domain
+#
+# Default API Gateway Domain:
+# https://{api-id}.execute-api.{region}.amazonaws.com/{StageName}
+#
+# Custom Domain:
+# https://{CustomDomainName} (requires DNS configuration)
+
+# --- LAMBDA AUTHORIZER FUNCTION ARN ---
+# LambdaAuthorizerFunctionArn: ARN of Lambda authorizer function
+#
+# Purpose: Enables authentication for API Gateway (optional)
+#
+# Format: arn:aws:lambda:{region}:{account}:function:{function-name}
+# Example: arn:aws:lambda:ap-southeast-1:123456789012:function:myapp-authorizer
+#
+# Common Use Cases:
+# - Azure AD token validation
+# - Custom JWT validation
+# - API key validation
+# - OAuth 2.0 / OpenID Connect
+#
+# Requirements (if provided):
+# - Lambda function must exist before deployment
+# - Lambda must return proper authorizer response format
+# - Swagger spec must reference authorizer
+#
+# Leave empty ("") if no authentication needed
+
+# --- S3 PREFIX LIST ID ---
+# S3PrefixListId: Managed prefix list ID for S3 service
+#
+# Purpose: Allow ALB to access S3 via VPC endpoint (egress)
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0abc123def456789
+#
+# Finding S3 Prefix List ID:
+# AWS Console → VPC → Managed Prefix Lists
+# - Search for "s3" or "com.amazonaws.{region}.s3"
+# - Copy prefix list ID
+#
+# Leave empty ("") if not using S3 egress
+
+# --- PREFIX LIST ID INTRANET ---
+# PrefixListIdIntranet: Managed prefix list for inbound access restriction
+#
+# Purpose: Restrict inbound HTTPS traffic to specific IP ranges
+#
+# Format: pl-xxxxxxxxxxxxxxxxx
+# Example: pl-0xyz789abc123456
+#
+# Use Cases:
+# - Restrict access to corporate IP ranges
+# - Whitelist specific client networks
+# - Enhanced security for internal applications
+#
+# Leave empty ("") for no IP-based access restrictions
+
+# --- PREFIX LIST ID INTERNET ---
+# PrefixListIdInternet: Managed prefix list for inbound traffic restriction (internet-facing ALB)
+#
+# Purpose: Restrict inbound HTTPS on public ALB to specific IP ranges
+# Note: If empty, no ingress rules are created (ALB will have no inbound access)
+# Format: pl-xxxxxxxxxxxxxxxxx
+
+# --- ENABLE S3 UPLOAD ---
+# EnableS3Upload: Enable direct S3 access through ALB
+#
+# Purpose: Controls whether ALB routes S3 paths directly to S3 VPC Endpoint
+#
+# Values:
+# - true: Enable S3 direct access (requires S3EndpointIP1 and S3EndpointIP2)
+# - false: All traffic routes through Lambda reverse proxy
+#
+# When to use "true":
+# ✅ Large file uploads/downloads (> 10 MB)
+# ✅ Direct S3 access for better performance
+# ✅ Reduce Lambda execution time and cost
+# ✅ Support multipart uploads
+#
+# Requirements if EnableS3Upload=true:
+# - S3 VPC Interface Endpoint must exist
+# - S3EndpointIP1 and S3EndpointIP2 are required
+# - S3UploadPath and S3DownloadPath must be configured
+
+# --- S3 ENDPOINT IP ---
+# S3EndpointIP1, S3EndpointIP2, S3EndpointIP3: S3 VPC Interface Endpoint IPs
+#
+# Purpose: IP addresses of S3 VPC Interface Endpoint (only if EnableS3Upload=true)
+#
+# Format: x.x.x.x (IPv4 address)
+# Example: 10.1.155.100, 10.1.139.100
+#
+# Requirements (if EnableS3Upload=true):
+# - S3EndpointIP1 and S3EndpointIP2 are required
+# - S3EndpointIP3 is optional (for 3-AZ deployment)
+# - Must use S3 VPC Interface Endpoint (not gateway endpoint)
+# - Leave empty ("") if EnableS3Upload=false
+
+# --- S3 UPLOAD PATH / S3 DOWNLOAD PATH ---
+# S3UploadPath, S3DownloadPath: Path patterns for S3 routing
+#
+# Purpose: Defines which paths route to S3 (only if EnableS3Upload=true)
+#
+# Format: /path/* (CloudFront-style path pattern)
+# Example: /uploads/*, /appartifacts/*, /Download/*
+#
+# Common Patterns:
+# S3UploadPath: /uploads/*, /appartifacts/*, /documents/*
+# S3DownloadPath: /Download/*, /files/*, /exports/*
+#
+# ⚠️ Path Conflicts:
+# Ensure S3 paths don't overlap with:
+# - API routes (defined in Swagger spec)
+# - Frontend routes (handled by Lambda)
+
+# --- LAMBDA RUNTIME ---
+# LambdaRuntime: Lambda runtime for reverse proxy function
+#
+# Purpose: Specifies programming language and version
+#
+# Supported Runtimes:
+# - nodejs20.x: Node.js 20
+# - nodejs18.x: Node.js 18
+# - python3.12: Python 3.12
+# - python3.11: Python 3.11
+# - python3.10: Python 3.10
+#
+# Default: nodejs20.x
+
+# --- LAMBDA HANDLER ---
+# LambdaHandler: Entry point for Lambda function execution
+#
+# Purpose: Specifies which function Lambda should invoke
+#
+# Format by Runtime:
+# - Node.js: index.mjs.handler, app.handler
+# - Python: lambda_function.lambda_handler, app.main
+#
+# Example: index.mjs.handler
+# - File: index.mjs
+# - Export: handler
+#
+# Default: index.mjs.handler
+
+# --- LAMBDA LOG RETENTION IN DAYS ---
+# LambdaLogRetentionInDays: CloudWatch Logs retention period
+#
+# Purpose: How long to keep Lambda execution logs
+#
+# Valid Values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 180, 365, 400, 545, 731, 1827, 3653
+#
+# Recommendations:
+# - Development: 7-14 days
+# - Staging/UAT: 14-30 days
+# - Production: 30-90 days
+#
+# Default: 14 days
+# --- ALB SSL POLICY ---
+# ALBSslPolicy: ELB Security Policy for the HTTPS listener
+# Purpose: Controls the TLS protocol versions and cipher suites used by the ALB HTTPS listener
+# Default: ELBSecurityPolicy-TLS13-1-2-2021-06
+# Allowed Values:
+# - ELBSecurityPolicy-TLS13-1-2-2021-06        (TLS 1.2+1.3, default)
+# - ELBSecurityPolicy-TLS13-1-2-Res-2021-06    (TLS 1.2+1.3, restricted ciphers)
+# - ELBSecurityPolicy-TLS13-1-2-Ext1-2021-06   (TLS 1.2+1.3, extended ciphers set 1)
+# - ELBSecurityPolicy-TLS13-1-2-Ext2-2021-06   (TLS 1.2+1.3, extended ciphers set 2)
+# - ELBSecurityPolicy-TLS13-1-3-2021-06        (TLS 1.3 only)
+# - ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09 (TLS 1.2+1.3, restricted + post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-PQ-2025-09     (TLS 1.2+1.3, post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-Ext1-PQ-2025-09(TLS 1.2+1.3, extended set 1 + post-quantum)
+# - ELBSecurityPolicy-TLS13-1-2-Ext2-PQ-2025-09(TLS 1.2+1.3, extended set 2 + post-quantum)
+# - ELBSecurityPolicy-TLS13-1-3-PQ-2025-09     (TLS 1.3 only + post-quantum)
+# - ELBSecurityPolicy-TLS-1-2-Ext-2018-06       (TLS 1.2 only, extended ciphers)
+# - ELBSecurityPolicy-TLS-1-2-2017-01           (TLS 1.2 only, base ciphers)
+#
+# Recommendations:
+# - Standard workloads: Use default (ELBSecurityPolicy-TLS13-1-2-2021-06)
+# - TLS 1.3 only: Use ELBSecurityPolicy-TLS13-1-3-2021-06
+# - Post-quantum readiness: Use ELBSecurityPolicy-TLS13-1-2-PQ-2025-09
+#
+# Reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/describe-ssl-policies.html
+
+# --- NESTED STACK DEPLOYMENT ---
+# This is a nested stack template that creates 3 child stacks:
+#
+# 1. Lambda S3 Reverse Proxy Stack (cf-lambda-s3reverseproxy.yaml)
+#    - Lambda function to serve frontend assets from S3
+#    - IAM role with S3 read access
+#    - CloudWatch Logs
+#
+# 2. Private API Gateway Stack (cf-private-apigw.yaml)
+#    - API Gateway with VPC Endpoint restriction
+#    - Swagger/OpenAPI integration
+#    - Custom domain (optional)
+#    - Lambda authorizer (optional)
+#
+# 3. ALB with VPC Endpoint Targets Stack (cf-alb-vpce.yaml)
+#    - Application Load Balancer
+#    - Target groups for API Gateway, Lambda, S3
+#    - Listener rules with path-based routing
+#    - Security groups
+#
+# Template Upload Location:
+# All nested stack templates must be uploaded to S3:
+# https://{AppShortName}-{EnvName}-cftemplates.s3.amazonaws.com/
+#
+# Required Files:
+# - cf-lambda-s3reverseproxy.yaml
+# - cf-private-apigw.yaml
+# - cf-alb-vpce.yaml
+#
+# Stack Creation Order:
+# 1. Main stack creates Lambda reverse proxy stack
+# 2. Main stack creates Private API Gateway stack
+# 3. Main stack creates ALB stack (references Lambda and API Gateway outputs)
+

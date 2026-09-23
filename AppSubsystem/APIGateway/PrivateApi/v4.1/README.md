@@ -6,34 +6,37 @@ This CloudFormation template set deploys a private API Gateway infrastructure wi
 
 Five changes in v4.1, all scoped to `cf-private-apigw.yaml` (`cf-lambda-authorizer.yaml` is unchanged):
 
+  - ⛔ **No direct migration from `TLS_1_2` to `SecurityPolicy_*`**: a v4 stack with a custom domain cannot be upgraded to v4.1 and switched from `TLS_1_2` to a `SecurityPolicy_*` value in the same or a later deployment — the update fails with "domain name already exists" and rolls back. Do not delete the custom domain or the stack to work around this; contact the **SEET Infra team** for assistance.
+  - IaC Version Tag bumped to `AppSubsystem-PrivateApi-v4.1`.
+
 1. **`SecurityPolicy` parameterized** — was hardcoded `TLS_1_2` on the custom domain name in v4.
    - New optional param `ApiSecurityPolicy` (`Default: 'TLS_1_2'`), `AllowedValues`-enforced by CloudFormation:
-     - Legacy: `TLS_1_0`, `TLS_1_2`
+     - Legacy: `TLS_1_2`
      - Enhanced (TLS 1.3, optionally with FIPS/PFS/post-quantum cipher suites): `SecurityPolicy_TLS13_1_2_2021_06`, `SecurityPolicy_TLS13_1_2_PQ_2025_09`, `SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09`, `SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09`, `SecurityPolicy_TLS13_1_3_2025_09`, `SecurityPolicy_TLS13_1_3_FIPS_2025_09`
    - Default `TLS_1_2` already satisfies PCI DSS 4.0 / NIST SP 800-52 Rev.2 / HIPAA baselines — move to an enhanced value only when a specific compliance driver requires TLS 1.3 or FIPS/post-quantum ciphers.
 
-2. **Custom domain name resource type changed** — `ApiGatewayDomainName`: `AWS::ApiGatewayV2::DomainName` → `AWS::ApiGateway::DomainName`.
-   - `AWS::ApiGatewayV2::DomainName`'s `SecurityPolicy` only ever supports `TLS_1_0`/`TLS_1_2` per AWS's own CloudFormation resource schema — it cannot be made to support TLS 1.3.
-   - `AWS::ApiGateway::DomainName` (the classic REST API custom domain resource — **not** `AWS::ApiGateway::DomainNameV2`, which is scoped to private-endpoint-type domain names) was extended by AWS in Nov 2025 with the enhanced `SecurityPolicy_*` values for `REGIONAL`/public custom domain names, which is what this template uses.
-   - Property shape changed accordingly: nested `DomainNameConfigurations` list → flat `RegionalCertificateArn` + `EndpointConfiguration.Types: [REGIONAL]`. `Ref` on the resource still returns the domain name string, so `ApiGatewayBasePathMapping` (`AWS::ApiGateway::BasePathMapping`) is unchanged.
+2. **Custom domain name resource type selected by `ApiSecurityPolicy`** — two conditional resources, only one is ever created:
 
-3. **New optional `EndpointAccessMode` parameter** (`BASIC` | `STRICT`, default `BASIC`).
-   - Required by AWS whenever `ApiSecurityPolicy` is set to an enhanced (`SecurityPolicy_`-prefixed) value.
+   | `ApiSecurityPolicy` | Logical ID | Resource type | Condition |
+   |---|---|---|---|
+   | `TLS_1_2` | `ApiGatewayDomainName` | `AWS::ApiGatewayV2::DomainName` (same logical ID and type as v4) | `EnableCustomDomainLegacy` |
+   | `SecurityPolicy_*` | `ApiGatewayDomainNameEnhanced` | `AWS::ApiGateway::DomainName` | `EnableCustomDomainEnhanced` |
+
+   - `AWS::ApiGatewayV2::DomainName`'s `SecurityPolicy` only supports `TLS_1_0`/`TLS_1_2` per AWS's CloudFormation resource schema — it cannot enable TLS 1.3.
+   - `AWS::ApiGateway::DomainName` (the classic REST API custom domain resource — **not** `AWS::ApiGateway::DomainNameV2`, which is scoped to private-endpoint-type domain names) was extended by AWS in Nov 2025 with the enhanced `SecurityPolicy_*` values for `REGIONAL` custom domain names.
+   - CloudFormation does not allow a conditional `Type` or duplicate logical IDs, which is why two logical IDs are used.
+   - `ApiGatewayBasePathMapping` and the `PrivateApi` metadata select whichever domain resource exists via `!If [IsLegacyTlsPolicy, ...]`. `Ref` on either resource returns the domain name string.
+
+3. **New `EndpointAccessMode` parameter** (`BASIC` | `STRICT`, default `BASIC`).
+   - Applied only when `ApiSecurityPolicy` is an enhanced (`SecurityPolicy_`-prefixed) value; omitted entirely for `TLS_1_2`.
    - **BASIC**: standard behavior, no extra validation — use for first rollout of an enhanced policy on a live API.
    - **STRICT**: adds a check that the request arrived via the endpoint type the domain declares (`REGIONAL`); rejects otherwise — use for regulated/sensitive workloads once traffic under `BASIC` has been verified.
    - Recommended rollout: deploy with an enhanced `ApiSecurityPolicy` + `EndpointAccessMode: BASIC` first, verify traffic/access logs, then switch to `STRICT`. Mode changes can take up to 15 minutes to fully propagate.
 
-4. **`ApiSecurityPolicy` / `EndpointAccessMode` also applied directly to `PrivateApi`.**
+4. **New `ApiSecurityPolicy` / `EndpointAccessMode` also applied directly to `PrivateApi`.**
    - `AWS::ApiGateway::RestApi` carries its own independent `SecurityPolicy`/`EndpointAccessMode` properties, separate from the custom domain name's — these are two different TLS termination points.
    - Both must be set for the chosen policy to take effect end-to-end: setting it only on the custom domain leaves the API's own native endpoint (reached directly via the VPC endpoint, bypassing the custom domain) on its default `TLS_1_2`.
-   - `ApiSecurityPolicy` parameter is conditionally to the custom domain (only when `CustomDomainName`/`SSLCertificateArn` are set).
-
-### Breaking changes from v4
-
-- **Parameter rename**: `CustomDomainNameSecPolicy` no longer exists — update parameter files / deploy scripts to `ApiSecurityPolicy` before upgrading. CloudFormation rejects an unrecognized parameter name.
-- **Resource type change**: `ApiGatewayDomainName`'s `Type` changed (`AWS::ApiGatewayV2::DomainName` → `AWS::ApiGateway::DomainName`). CloudFormation cannot modify a resource's `Type` in place — an in-place `update-stack` from v4 will replace this resource (delete the old, create the new). See **Upgrading from v4 to v4.1** below for the recommended procedure.
-
-IaCVersion tag bumped to `AppSubsystem-PrivateApi-v4.1`.
+   - `SecurityPolicy` is always set on `PrivateApi`; `EndpointAccessMode` only for enhanced policies.
 
 ## v4 Changes (Checkmarx/Security Hub Remediation + TISO Compliance)
 

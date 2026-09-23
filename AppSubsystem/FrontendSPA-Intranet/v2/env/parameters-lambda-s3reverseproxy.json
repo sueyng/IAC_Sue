@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "AppShortName",
+        "ParameterValue": "apt"
+    },
+    {
+        "ParameterKey": "EnvName",
+        "ParameterValue": "nprd"
+    },
+    {
+        "ParameterKey": "LambdaS3bucket",
+        "ParameterValue": "apt-lambda-artifact"
+    },
+    {
+        "ParameterKey": "CodeZipFileName",
+        "ParameterValue": "s3ReverseProxy-v2.zip"
+    },
+    {
+        "ParameterKey": "FrontendPortalDNSName",
+        "ParameterValue": "frontend.seedideation.com"
+    }
+]

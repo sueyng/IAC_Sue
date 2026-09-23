@@ -16,7 +16,7 @@ ApigwVpceId: "<edit_here>"              # 📝 e.g. vpce-00ecd727fe52de81e (exec
 APIName: "<edit_here>"                  # 📝 e.g. fhir, user-api, order-service
 StageName: "<edit_here>"                # 📝 e.g. dev, test, uat, prod
 AccessLogFormat: "<edit_here>"          # 📝 e.g. $context.requestId,$context.httpMethod,$context.resourcePath,$context.status (or "" to disable)
-ApiSecurityPolicy: "<edit_here>"        # 📝 eg. a Allow value: SecurityPolicy_TLS13_1_3_2025_09 / SecurityPolicy_TLS13_1_3_FIPS_2025_09 / SecurityPolicy_TLS13_1_2_2021_06 / SecurityPolicy_TLS13_1_2_PQ_2025_09 / SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 / SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09 (see reference below)
+ApiSecurityPolicy: "<edit_here>"        # 📝 eg. a Allow value: TLS_1_2/SecurityPolicy_TLS13_1_3_2025_09 / SecurityPolicy_TLS13_1_3_FIPS_2025_09 / SecurityPolicy_TLS13_1_2_2021_06 / SecurityPolicy_TLS13_1_2_PQ_2025_09 / SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 / SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09
 # ========================================================================
 # OPTIONAL PARAMETERS (leave empty if not needed)
 # ========================================================================
@@ -24,7 +24,7 @@ APIDescription: ""                      # e.g. "FHIR API for healthcare data exc
 ApiGatewayClientCertificateId: ""       # API Gateway client certificate ID for stage backend authentication (project-managed, optional)
 CustomDomainName: ""                    # e.g. api.example.com (requires SSLCertificateArn)
 SSLCertificateArn: ""                   # e.g. arn:aws:acm:region:account:certificate/xxx (same region as API)
-EndpointAccessMode: "BASIC"             # "BASIC" or "STRICT" — required by AWS when ApiSecurityPolicy is a SecurityPolicy_-prefixed (enhanced/TLS 1.3) value
+EndpointAccessMode: "BASIC"             # Mandatory for SecurityPolicy_* "BASIC" or "STRICT" — required by AWS when ApiSecurityPolicy is a SecurityPolicy_-prefixed (enhanced/TLS 1.3) value
 LambdaAuthorizerFunctionArn: ""         # e.g. arn:aws:lambda:region:account:function:myapp-nprd-LambdaAuthorizer
 LogRetentionInDays: "30"                  # e.g. 30, 90, 365 (default - 30)
 

@@ -42,7 +42,7 @@ APIName: "<edit_here>"                  # 📝 e.g. myapp-api, fhir, portal-api
 StageName: "<edit_here>"                # 📝 e.g. dev, stg, uat, prod
 ApiGatewayClientCertificateId: ""       # API Gateway client certificate ID for stage backend authentication (project-managed, optional)
 # API GATEWAY SECURITY POLICY (applies to both PrivateApi's own endpoint and the custom domain, when set)
-ApiSecurityPolicy: "<edit_here>"        # 📝 eg. a Allow value: TLS_1_0 / TLS_1_2 / SecurityPolicy_TLS13_1_3_2025_09 / SecurityPolicy_TLS13_1_3_FIPS_2025_09 / SecurityPolicy_TLS13_1_2_2021_06 / SecurityPolicy_TLS13_1_2_PQ_2025_09 / SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 / SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09 (see reference below)
+ApiSecurityPolicy: "<edit_here>"        # 📝 eg. a Allow value: TLS_1_2/SecurityPolicy_TLS13_1_3_2025_09 / SecurityPolicy_TLS13_1_3_FIPS_2025_09 / SecurityPolicy_TLS13_1_2_2021_06 / SecurityPolicy_TLS13_1_2_PQ_2025_09 / SecurityPolicy_TLS13_1_2_FIPS_PQ_2025_09 / SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09
 EndpointAccessMode: "BASIC"             # 📝 "BASIC" or "STRICT" — required by AWS when ApiSecurityPolicy is a SecurityPolicy_-prefixed (enhanced/TLS 1.3) value
 
 # SSL CERTIFICATES

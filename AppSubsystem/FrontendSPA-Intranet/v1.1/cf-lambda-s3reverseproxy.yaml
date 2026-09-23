@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision and deploy a private API with swagger json file
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortName
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-stg
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c      
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  LambdaS3bucket:
+    Type: String
+    Description: The s3 bucket where Lambda code is stored
+
+  CodeZipFileName:
+    Type: String
+    Description: Zip file name for lambda function code
+
+  LambdaRuntime:
+    Type: String
+    Description: Runtime for Lambda
+    Default: 'nodejs20.x'
+
+  LambdaHandler:
+    Type: String
+    Description: Zip file name for lambda function code
+    Default: 'index.mjs.handler'
+
+  FrontendPortalDNSName:
+    Type: String
+    Description: DNS Name for Frontdend portal URL
+
+  LogRetentionInDays:
+    Type: Number
+    Description: No of days for Log Retention
+    Default: 14
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+
+Resources:
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      BucketName: !Sub "${FrontendPortalDNSName}"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: "BucketOwnerPreferred"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaS3Access
+            Effect: "Allow"
+            Principal:
+              AWS:
+                - !GetAtt LambdaExecutionRole.Arn  # Reference to the Lambda execution role
+            Action: 
+              - "s3:GetObject"
+              - "s3:PutObject"
+            Resource: !Sub "${S3Bucket.Arn}/*"
+          - Sid: EnforceTLSv12orHigher
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]                
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource: 
+              - !GetAtt S3Bucket.Arn
+              - !Join ['', [!GetAtt S3Bucket.Arn, '/*']]     
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AppShortName}-${EnvName}-s3ReverseProxy'
+      RetentionInDays: !Ref LogRetentionInDays  # Retain logs for xx days
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v1.1
+
+# FrontEnd Lamda Function
+  LambdaS3ReverseProxy:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      FunctionName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy
+      TracingConfig:
+        Mode: Active
+      Code:
+        S3Bucket: !Ref LambdaS3bucket  # Replace with your S3 bucket where Lambda code is stored
+        S3Key: !Ref CodeZipFileName # Replace with the key to your zipped Lambda function code
+      Handler: !Ref LambdaHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: !Ref LambdaRuntime
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref FrontendPortalDNSName
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v1.1
+
+  # Admin Portal FrontEnd Lamda Function Execution Role
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    DeletionPolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      RoleName: !Sub ${AppShortName}-${EnvName}-lambda-execution-s3ReverseProxy-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-SPAIntranet-v1.1
+      Policies:
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-cloudwatch-log-creation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppShortName}-${EnvName}-s3ReverseProxy:*"
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-BucketAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:GetObject
+              Resource:
+              - !Sub "arn:aws:s3:::${FrontendPortalDNSName}/*"
+              - !Sub "arn:aws:s3:::${LambdaS3bucket}/*"
+        - PolicyName: !Sub ${AppShortName}-${EnvName}-s3ReverseProxy-VPCAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                Resource: "*"
+
+  APIGatewayInvokeLambdaPolicy:
+    Type: AWS::Lambda::Permission
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: 'LambdaS3ReverseProxy'
+      Principal: 'apigateway.amazonaws.com'
+      # SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:{{resolve:ssm:/frontendspa/intranet/${AppShortName}/${EnvName}/apigw_id}}/*/*/${AppShortName}-${EnvName}-s3ReverseProxy"
+
+  ParameterLambdaArn:
+    Type: AWS::SSM::Parameter
+    DeletionPolicy: !If [IsProduction, Retain, Delete]  
+    Properties:
+      Name: !Sub "/${AppShortName}/${EnvName}/Lambda-s3ReverseProxy-Arn"
+      Type: String
+      Value: !GetAtt LambdaS3ReverseProxy.Arn
+      Description: Lambda Function Arn for S3 Reverse Proxy

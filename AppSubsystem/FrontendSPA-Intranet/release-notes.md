@@ -4,7 +4,7 @@
 
 ### General Updates
 - **IaC Version Tag**:
-  - Updated from `FrontendSPA-Intranet-v1` to `FrontendSPA-Intranet-v7`.
+  - Updated from `FrontendSPA-Intranet-v1` to `FrontendSPA-Intranet-v7.1`.
 
 ### Core Infrastructure (`cf-intranet-frontend-spa-main.yaml`)
 - **v1.1 Updates**:
@@ -92,6 +92,11 @@
   - **Parameter file hygiene**: env YAML file `parameters-intranet-frontend-spa-main.yaml` aligned with template — added missing keys `LambdaRuntime`, `LambdaHandler`, `LambdaLogRetentionInDays`, `ALBSslPolicy` (pre-existing drift from earlier versions; template defaults were being used silently).
   - IaC Version tag bumped to `AppSubsystem-SPAIntranet-v6`.
 
+- **Version 7.1** (Configurable and support SecurityPolicy from harcoded TLS_1_2)
+  - Implemented configurable Security Policy on API Gateway and customDomain
+  - Support TLS1.3 (SecurityPolicy_*) by implemented new logical ID `ApiGatewayDomainNameEnhanced`, only apply for new project, required seek SEET Infra Team advise for existing project migration from TLS_1_2 to `SecurityPolicy_*`
+  - ⛔ **No direct migration from `TLS_1_2` to `SecurityPolicy_*`**: a v7 stack with a custom domain cannot be upgraded to v7.1 and switched from `TLS_1_2` to a `SecurityPolicy_*` value in the same or a later deployment — the update fails with "domain name already exists" and rolls back. Do not delete the custom domain or the stack to work around this; contact the **SEET Infra team** for assistance.
+
 ### Security Enhancements
 - **v1.1 Updates**:
   - Replaced public ALB `0.0.0.0/0` ingress with managed prefix list (`PrefixListIdInternet`).
@@ -123,6 +128,9 @@
   - Lambda no longer has direct public internet egress — relies on VPC endpoints for S3/CloudWatch Logs/X-Ray.
   - Pre-deployment requirement: VPC must have S3 Gateway Endpoint, CloudWatch Logs Interface Endpoint, and X-Ray Interface Endpoint.
   - Optional API Gateway stage client certificate support via `ApiGatewayClientCertificateId` for APIGateway.2 backend authentication remediation. Empty default clears/unsets any certificate previously attached to the stage.
+
+- **v7.1 Updates**:
+  - `api gateway` + `customdomain` to support SecurityPolicy_* (TLS 1.3).
 
 ### Deployment Flow Updates
 - **v2 Updates**:

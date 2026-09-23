@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Main stack to deploy Intranet Frontend SPA (v7.1 - API Gateway TLS security policy configurable)
+Description: Main stack to deploy Intranet Frontend SPA (v7.1 - API Gateway TLS security policy configurable) v7.1
 
 Parameters:
   AppShortName:
@@ -112,13 +112,12 @@ Parameters:
   ApiSecurityPolicy:
     Type: String
     Description: >-
-      TLS security policy applied to both the private REST API's own native endpoint and, when
-      CustomDomainName/SSLCertificateArn are set, its custom domain name (forwarded to
-      cf-private-apigw.yaml). TLS_1_0/TLS_1_2 are legacy policies. Values prefixed SecurityPolicy_
-      are "enhanced" policies that enable TLS 1.3 (optionally with FIPS/PFS/post-quantum cipher
-      suites) and require EndpointAccessMode to also be set.
+      TLS security policy applied to both the REST API's own native endpoint (PrivateApi) and, when
+      CustomDomainName/SSLCertificateArn are set, the custom domain name - these are two separate
+      endpoints and both need this set to actually enforce the chosen policy end-to-end. 
+      Values prefixed SecurityPolicy_ are "enhanced" policies that enable TLS 1.3
+      (optionally with FIPS/PFS/post-quantum cipher suites) and require EndpointAccessMode to also be set.
     AllowedValues:
-      - 'TLS_1_0'
       - 'TLS_1_2'
       - 'SecurityPolicy_TLS13_1_2_2021_06'
       - 'SecurityPolicy_TLS13_1_2_PQ_2025_09'
@@ -126,7 +125,7 @@ Parameters:
       - 'SecurityPolicy_TLS13_1_2_PFS_PQ_2025_09'
       - 'SecurityPolicy_TLS13_1_3_2025_09'
       - 'SecurityPolicy_TLS13_1_3_FIPS_2025_09'
-    Default: 'TLS_1_2'
+    Default: 'SecurityPolicy_TLS13_1_3_2025_09'
 
   EndpointAccessMode:
     Type: String

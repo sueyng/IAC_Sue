@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to provision and deploy a private API with swagger json file
+Parameters:
+  SwaggerBucket:
+    Description: S3 bucket containing the Swagger file
+    Type: String
+  
+  SwaggerKey:
+    Description: Path to the Swagger file within the bucket
+    Type: String
+
+  ApigwVpceId:
+    Type: String
+    Description: VPC Endpoint ID for APIGW, execute-api
+
+  APIName:
+    Type: String
+    Description: API Name
+
+  APIDescription:
+    Type: String
+    Description: Description for the API (optional)
+    Default: ""
+    
+  StageName:
+    Description: Stage Name for api setup, Use dev for non-prod env and prod for production env
+    Type: String
+
+  CustomDomainName:
+    Type: String
+    Description: The custom domain name for the API Gateway (e.g., api.example.com).
+    Default: ""
+
+  SSLCertificateArn:
+    Type: String
+    Description: The ARN of the SSL certificate for the custom domain name.
+    Default: ""
+
+  LambdaAuthorizerFunctionArn:
+    Type: String
+    Description: The ARN of the Lambda Authorizer Function
+    Default: ""
+    
+  AccessLogFormat:
+    Type: String
+    Description: Format string for API Gateway access logs (leave empty to disable access logging)
+
+  LogRetentionInDays:
+    Type: Number
+    Description: Number of days to retain API Gateway access logs
+    Default: 30
+
+Conditions:
+  EnableCustomDomain: !And
+    - !Not [!Equals [!Ref CustomDomainName, ""]]
+    - !Not [!Equals [!Ref SSLCertificateArn, ""]]
+  EnableLambdaAuthorizer: !Not [!Equals [!Ref LambdaAuthorizerFunctionArn, ""]]
+  EnableAccessLogs: !Not [!Equals [!Ref AccessLogFormat, ""]]
+
+Resources:
+  # Create CloudWatch Log Group for API Gateway Access Logs (only if access logs are enabled)
+  ApiGatewayAccessLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Condition: EnableAccessLogs
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${APIName}-access-logs'
+      RetentionInDays: !Ref LogRetentionInDays
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-PrivateApi-v3
+
+  ApiGatewayDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref CustomDomainName
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+          CertificateArn: !Ref SSLCertificateArn
+
+  ApiGatewayBasePathMapping:
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref ApiGatewayDomainName
+      RestApiId: !Ref PrivateApi
+      Stage: !Ref StageName
+      BasePath: ''   # Leave empty for the root path
+    DependsOn:
+      - ApiGatewayStage
+
+  PrivateApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Metadata:
+      DependsOn: !If [EnableCustomDomain, !Ref ApiGatewayDomainName, !Ref 'AWS::NoValue']
+    Properties:
+      Name: !Ref APIName
+      Description: !Ref APIDescription
+      FailOnWarnings: false
+      BodyS3Location:
+        Bucket: !Ref SwaggerBucket
+        Key: !Ref SwaggerKey
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - !Ref ApigwVpceId
+      Tags:
+        - Key: IaCVersion
+          Value: AppSubsystem-PrivateApi-v3
+      Policy: 
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: 'execute-api:Invoke'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                aws:SourceVpce: !Ref ApigwVpceId
+
+  ApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn:
+      - PrivateApi
+    Properties:
+      RestApiId: !Ref PrivateApi
+
+  ApiGatewayStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      DeploymentId: !Ref ApiDeployment
+      RestApiId: !Ref PrivateApi
+      StageName: !Ref StageName
+      TracingEnabled: true
+      AccessLogSetting: !If 
+        - EnableAccessLogs
+        - DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+          Format: !Ref AccessLogFormat
+        - !Ref 'AWS::NoValue'
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          MetricsEnabled: true
+          DataTraceEnabled: true
+
+  ApiGatewayAuthorizer:
+    Type: 'AWS::ApiGateway::Authorizer'
+    Condition: EnableLambdaAuthorizer
+    Properties:
+      Name: 'LambdaAuthorizer'
+      Type: 'REQUEST'  # You can also use 'REQUEST' based on your use case
+      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizerFunctionArn}/invocations'
+      IdentitySource: 'method.request.header.Authorization'
+      RestApiId: !Ref PrivateApi
