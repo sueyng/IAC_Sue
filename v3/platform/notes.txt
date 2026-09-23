@@ -1,3 +1,0 @@
-Updating EKS CloudFormation Template:
-- Add entries in SSM Parameter Store to store Secret Manager and SQS policy ARNs for centralized management.
-- Migrate the pod service IAM role and combine the existing Fargate profile with a separate Fargate profile template. 
