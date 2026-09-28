@@ -102,7 +102,7 @@ GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabl
 #   NOTE: Once a bucket is Enabled, CloudFormation cannot set it back to Unversioned via template.
 #         Toggling from true → false on an already-versioned bucket is a no-op (bucket stays Enabled).
 #         Versioning alone does not meet the log-bucket Object Lock requirement.
-#         Use the v9 app template when Object Lock is required.
+#         Use the v10 app template when Object Lock is required.
 
 # S3CurrentVersionExpirationDays
 #   Auto-delete current (live) objects after N days.
