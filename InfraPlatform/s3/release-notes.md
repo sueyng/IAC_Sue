@@ -87,6 +87,15 @@
   - Generic and infra templates retain v8 behavior apart from v9 descriptions and `IaCVersion` tags.
   - Updated IaCVersion tag to `InfraPlatform-s3-v9`.
 
+- **v10**:
+  - Added v10 copy of generic `cf-s3bucket.yaml` with optional Glacier lifecycle transition.
+  - New `EnableGlacierTransition` toggle (default `false`) moves current objects to `GlacierStorageClass` after `GlacierTransitionDays` (default `90`).
+  - New `GlacierStorageClass` parameter: `GLACIER_IR`, `GLACIER` (default) or `DEEP_ARCHIVE`.
+  - New `GlacierNoncurrentTransitionDays` (default `0` - disabled) transitions noncurrent versions when versioning is enabled.
+  - Lifecycle consolidated into a single `BucketLifecycle` rule with conditional actions, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
+  - Transition days must be lower than the matching expiration days when expiration is set.
+  - Updated IaCVersion tag to `InfraPlatform-s3-v10`.
+
 ### Key Features by Template
 
 #### 1. cf-s3bucket.yaml (Basic S3 Bucket)
@@ -287,9 +296,3 @@
 - **Existing templates remain compatible** — the generic, batch job, and infra templates retain v8 behavior.
 
 For detailed changes, refer to the respective `README.md` files in each version directory.
-
-- **v10 (Glacier test)**:
-  - Added `cf-s3bucket-glacier-test.yaml`, based on the v9 generic `cf-s3bucket.yaml`, for testing Glacier lifecycle transitions.
-  - New `GlacierStorageClass` parameter (`GLACIER_IR` default, `GLACIER`, `DEEP_ARCHIVE`).
-  - New `S3CurrentVersionTransitionDays` (default `0`, `-1` to disable) and `S3NoncurrentVersionTransitionDays` (default `1`, `0` to disable).
-  - All other v9 generic behavior unchanged. IaCVersion tag `InfraPlatform-s3-v10-glaciertest`.

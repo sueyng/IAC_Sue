@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: 'AWS::LanguageExtensions'
-Description: 'S3 Bucket Template v10 (Glacier test) - v9 generic + Glacier lifecycle transitions'
+Description: 'S3 Bucket Template v10 - Bucket owner enforced object ownership with versioning toggle and optional Glacier transition'
 
 Parameters:
   AppShortName:
@@ -62,28 +62,36 @@ Parameters:
     MinValue: 0
     MaxValue: 365
 
+  EnableGlacierTransition:
+    Type: String
+    Description: Automatically transition current (live) objects to GlacierStorageClass after GlacierTransitionDays
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  GlacierTransitionDays:
+    Type: Number
+    Description: Days after object creation before current objects transition to GlacierStorageClass (only used when EnableGlacierTransition is true). Must be lower than S3CurrentVersionExpirationDays when expiration is set.
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
   GlacierStorageClass:
     Type: String
-    Description: Target Glacier storage class for lifecycle transitions
-    Default: GLACIER_IR
+    Description: "Target storage class - GLACIER_IR (Instant Retrieval, milliseconds), GLACIER (Flexible Retrieval, minutes to hours), DEEP_ARCHIVE (up to 48 hours)"
+    Default: GLACIER
     AllowedValues:
       - GLACIER_IR
       - GLACIER
       - DEEP_ARCHIVE
 
-  S3CurrentVersionTransitionDays:
+  GlacierNoncurrentTransitionDays:
     Type: Number
-    Description: Days before current objects transition to GlacierStorageClass (-1 to disable, 0 = next lifecycle run)
+    Description: Days after an object version becomes noncurrent before it transitions to GlacierStorageClass (0 to disable). Only used when EnableGlacierTransition and EnableS3Versioning are true. Must be lower than S3NoncurrentVersionExpirationDays when expiration is set.
     Default: 0
-    MinValue: -1
-    MaxValue: 3650
-
-  S3NoncurrentVersionTransitionDays:
-    Type: Number
-    Description: Days before noncurrent versions transition to GlacierStorageClass (0 to disable)
-    Default: 1
     MinValue: 0
-    MaxValue: 365
+    MaxValue: 3650
 
 Conditions:
   IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
@@ -92,15 +100,15 @@ Conditions:
   HasNoncurrentExpiration: !And
     - !Condition EnableVersioning
     - !Not [!Equals [!Ref S3NoncurrentVersionExpirationDays, 0]]
-  HasCurrentTransition: !Not [!Equals [!Ref S3CurrentVersionTransitionDays, -1]]
-  HasNoncurrentTransition: !And
+  HasGlacierTransition: !Equals [!Ref EnableGlacierTransition, "true"]
+  HasNoncurrentGlacierTransition: !And
+    - !Condition HasGlacierTransition
     - !Condition EnableVersioning
-    - !Not [!Equals [!Ref S3NoncurrentVersionTransitionDays, 0]]
+    - !Not [!Equals [!Ref GlacierNoncurrentTransitionDays, 0]]
   HasAnyLifecycleRule: !Or
     - !Condition HasCurrentExpiration
     - !Condition HasNoncurrentExpiration
-    - !Condition HasCurrentTransition
-    - !Condition HasNoncurrentTransition
+    - !Condition HasGlacierTransition
 
 Resources:
   'Fn::ForEach::Buckets':
@@ -130,40 +138,33 @@ Resources:
             - !Ref "AWS::NoValue"
           LifecycleConfiguration: !If
             - HasAnyLifecycleRule
+            # Single rule with conditional actions: AWS::LanguageExtensions turns a
+            # NoValue list item into null, so rules cannot be toggled individually.
             - Rules:
-                - !If
-                  - HasCurrentExpiration
-                  - Id: CurrentVersionExpiration
-                    Status: Enabled
-                    ExpirationInDays: !Ref S3CurrentVersionExpirationDays
-                  - !Ref "AWS::NoValue"
-                - !If
-                  - HasNoncurrentExpiration
-                  - Id: NoncurrentVersionCleanup
-                    Status: Enabled
-                    NoncurrentVersionExpiration:
-                      NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
-                  - !Ref "AWS::NoValue"
-                - !If
-                  - HasCurrentTransition
-                  - Id: CurrentVersionGlacierTransition
-                    Status: Enabled
-                    Transitions:
-                      - StorageClass: !Ref GlacierStorageClass
-                        TransitionInDays: !Ref S3CurrentVersionTransitionDays
-                  - !Ref "AWS::NoValue"
-                - !If
-                  - HasNoncurrentTransition
-                  - Id: NoncurrentVersionGlacierTransition
-                    Status: Enabled
-                    NoncurrentVersionTransitions:
-                      - StorageClass: !Ref GlacierStorageClass
-                        TransitionInDays: !Ref S3NoncurrentVersionTransitionDays
-                  - !Ref "AWS::NoValue"
+                - Id: BucketLifecycle
+                  Status: Enabled
+                  ExpirationInDays: !If
+                    - HasCurrentExpiration
+                    - !Ref S3CurrentVersionExpirationDays
+                    - !Ref "AWS::NoValue"
+                  NoncurrentVersionExpiration: !If
+                    - HasNoncurrentExpiration
+                    - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                    - !Ref "AWS::NoValue"
+                  Transitions: !If
+                    - HasGlacierTransition
+                    - - TransitionInDays: !Ref GlacierTransitionDays
+                        StorageClass: !Ref GlacierStorageClass
+                    - !Ref "AWS::NoValue"
+                  NoncurrentVersionTransitions: !If
+                    - HasNoncurrentGlacierTransition
+                    - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                        StorageClass: !Ref GlacierStorageClass
+                    - !Ref "AWS::NoValue"
             - !Ref "AWS::NoValue"
           Tags:
             - Key: IaCVersion
-              Value: InfraPlatform-s3-v10-glaciertest
+              Value: InfraPlatform-s3-v10
 
   'Fn::ForEach::BucketPolicies':
     - Bucket
