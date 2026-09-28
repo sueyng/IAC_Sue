@@ -287,3 +287,9 @@
 - **Existing templates remain compatible** — the generic, batch job, and infra templates retain v8 behavior.
 
 For detailed changes, refer to the respective `README.md` files in each version directory.
+
+- **v10 (Glacier test)**:
+  - Added `cf-s3bucket-glacier-test.yaml`, based on the v9 generic `cf-s3bucket.yaml`, for testing Glacier lifecycle transitions.
+  - New `GlacierStorageClass` parameter (`GLACIER_IR` default, `GLACIER`, `DEEP_ARCHIVE`).
+  - New `S3CurrentVersionTransitionDays` (default `0`, `-1` to disable) and `S3NoncurrentVersionTransitionDays` (default `1`, `0` to disable).
+  - All other v9 generic behavior unchanged. IaCVersion tag `InfraPlatform-s3-v10-glaciertest`.
