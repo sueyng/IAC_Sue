@@ -1,0 +1,20 @@
+# ========================================================================
+# 🧪 GLACIER TEST SAMPLE — InfraPlatform/s3/v10/cf-s3bucket.yaml
+# Stack: suev10gl-nprd-dev-s3-generic
+# Creates bucket: suev10gl-nprd-dev-s3-generic
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "suev10gl"
+EnvName: "nprd-dev"
+BucketNames: "generic"
+
+EnableS3Versioning: "true"                       # needed for the noncurrent-version transition test
+S3CurrentVersionExpirationDays: "0"              # keep live objects (no auto delete)
+S3NoncurrentVersionExpirationDays: "30"          # old versions deleted after 30 days
+EnableGlacierTransition: "true"                  # turn on Glacier transition
+GlacierTransitionDays: "1"                       # live objects -> Glacier after 1 day (lowest allowed)
+GlacierStorageClass: "GLACIER"                   # Flexible Retrieval, so you can test restore-object
+GlacierNoncurrentTransitionDays: "1"             # old versions -> Glacier 1 day after being replaced
+
+# <<< PARAMETERS_END >>>
