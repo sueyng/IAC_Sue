@@ -25,61 +25,83 @@ that the producer supports Object Lock and `BucketOwnerEnforced`.
 ## What's New in v10
 
 - Adds an optional Glacier lifecycle transition to all four templates, using
-  the same four parameters in each.
+  the same parameters in each.
 - Keeps Glacier transition disabled by default. With default parameters every
   template produces the same lifecycle rules as v9.
-- `cf-s3bucket.yaml` consolidates its lifecycle into a single `BucketLifecycle`
-  rule with conditional actions, because `AWS::LanguageExtensions` turns a
-  `NoValue` list item into null, so rules cannot be toggled individually.
-  Existing stacks see the lifecycle rule ID change on update; the behavior is
-  the same.
+- Supports up to 3 Glacier settings per stack. Each setting has its own list of
+  up to 5 object key prefixes, transition days and storage class, so prefixes
+  that need the same aging are grouped in one setting.
+- `cf-s3bucket.yaml` keeps a single whole-bucket `BucketLifecycle` rule when no
+  prefixes are set. `AWS::LanguageExtensions` turns a `NoValue` list item into
+  null, so rules cannot be toggled individually: when any prefix is set, the
+  template switches to one rule per prefix slot and keeps unused slots as
+  `Disabled` rules.
 - `cf-s3-buckets-infra.yaml` and `cf-s3buckets-batchjob.yaml` keep their v9
-  rules unchanged and add a separate `GlacierTransition` rule when enabled.
-- `cf-s3bucket-app.yaml` adds a separate `GlacierTransition` rule and leaves
-  its v9 `ExpirationRule` unchanged.
-- Glacier can apply to the whole bucket or to one object key prefix
-  (`GlacierTransitionPrefix`, e.g. `archive/`). An empty prefix (the default)
-  means the whole bucket. In `cf-s3bucket.yaml`, a prefix adds a separate
-  `GlacierTransition` rule; with an empty prefix the template keeps its single
-  `BucketLifecycle` rule.
+  rules unchanged and add one Glacier rule per prefix in use.
+- `cf-s3bucket-app.yaml` adds one Glacier rule per prefix in use and leaves its
+  v9 `ExpirationRule` unchanged.
 - The app and Batch Job templates reject `EnableGlacierTransition: "true"` when
   `EnableLifecycle` is `false`. Glacier transition therefore cannot be combined
   with Object Lock in those templates.
 
 ## Optional Glacier Transition Parameters
 
-| Parameter | Default | Description |
-| --- | --- | --- |
-| `EnableGlacierTransition` | `false` | Moves current (live) objects to `GlacierStorageClass` after `GlacierTransitionDays` |
-| `GlacierTransitionDays` | `90` | Days after object creation before current objects transition; 1 to 3650 |
-| `GlacierStorageClass` | `GLACIER` | `GLACIER_IR` (Instant Retrieval), `GLACIER` (Flexible Retrieval) or `DEEP_ARCHIVE` |
-| `GlacierNoncurrentTransitionDays` | `0` | Days after a version becomes noncurrent before it transitions; `0` disables; requires versioning |
-| `GlacierTransitionPrefix` | `""` | Object key prefix the transition applies to, e.g. `archive/`; empty means the whole bucket |
+`EnableGlacierTransition` (default `false`) turns on all Glacier settings.
+
+| Setting | Prefixes | Days (default `90`) | Storage class (default `GLACIER`) | Old versions (default `0` = off) |
+| --- | --- | --- | --- | --- |
+| 1 | `GlacierTransitionPrefix` (empty = whole bucket) | `GlacierTransitionDays` | `GlacierStorageClass` | `GlacierNoncurrentTransitionDays` |
+| 2 | `Glacier2TransitionPrefix` (empty = not used) | `Glacier2TransitionDays` | `Glacier2StorageClass` | `Glacier2NoncurrentTransitionDays` |
+| 3 | `Glacier3TransitionPrefix` (empty = not used) | `Glacier3TransitionDays` | `Glacier3StorageClass` | `Glacier3NoncurrentTransitionDays` |
+
+- Prefix lists are comma-separated, up to 5 prefixes, no spaces, for example
+  `archive/,backup/`. CloudFormation rejects other formats.
+- Storage classes: `GLACIER_IR` (Instant Retrieval), `GLACIER` (Flexible
+  Retrieval) or `DEEP_ARCHIVE`.
+- Old-version transitions require versioning.
+- A prefix list for setting 2 or 3 is rejected unless
+  `EnableGlacierTransition` is `true`.
+
+Example: move `archive/` and `backup/` to `GLACIER` after 30 days, and `logs/`
+to `DEEP_ARCHIVE` after 90 days:
+
+```yaml
+EnableGlacierTransition: "true"
+GlacierTransitionPrefix: "archive/,backup/"
+GlacierTransitionDays: "30"
+GlacierStorageClass: "GLACIER"
+Glacier2TransitionPrefix: "logs/"
+Glacier2TransitionDays: "90"
+Glacier2StorageClass: "DEEP_ARCHIVE"
+```
 
 Where the Glacier transition applies:
 
 | Template | Scope | Extra requirement |
 | --- | --- | --- |
 | `cf-s3bucket.yaml` | Every bucket in `BucketNames` | None |
-| `cf-s3bucket-app.yaml` | The app bucket; `GlacierTransitionPrefix` is separate from `LifecyclePrefix` | `EnableLifecycle: "true"` |
-| `cf-s3buckets-batchjob.yaml` | Dataload and data-extraction buckets (same prefix for both) | `EnableLifecycle: "true"` |
+| `cf-s3bucket-app.yaml` | The app bucket; Glacier prefixes are separate from `LifecyclePrefix` | `EnableLifecycle: "true"` |
+| `cf-s3buckets-batchjob.yaml` | Dataload and data-extraction buckets (same settings for both) | `EnableLifecycle: "true"` |
 | `cf-s3-buckets-infra.yaml` | EC2 file repository bucket only | None; the Inspector bucket lifecycle stays fixed |
 
-In every template the transition covers the whole bucket, or only objects whose
-key starts with `GlacierTransitionPrefix` when one is set. Expiration rules keep
-their existing scope (whole bucket, or `LifecyclePrefix` in the app template).
+Expiration rules keep their existing scope (whole bucket, or `LifecyclePrefix`
+in the app template).
 
 Things to know before enabling it:
 
-- Transition days must be lower than the matching expiration days when
-  expiration is set; S3 rejects the lifecycle configuration otherwise.
+- Keep transition days lower than the expiration days that apply to the same
+  objects. Within one rule S3 rejects the configuration; across rules the
+  objects are deleted before they move.
 - Prefix matching is case-sensitive; include the trailing slash for a folder
   (`archive/`, not `archive`, which would also match `archive-old/`).
-- In the app template, where `GlacierTransitionPrefix` overlaps
-  `LifecyclePrefix`, objects are still deleted at `LifecycleExpirationDays`.
-  If the `STANDARD_IA` noncurrent transition is also enabled, set
-  `GlacierNoncurrentTransitionDays` at least 30 days after
-  `NoncurrentVersionTransitionDays`.
+- Use separate prefixes in each setting. Overlapping prefixes, including an
+  empty setting 1 (whole bucket) next to settings 2 or 3, make S3 apply more
+  than one rule to the same objects.
+- In the app template, if the `STANDARD_IA` noncurrent transition is also
+  enabled for the same objects, set the Glacier old-version days at least 30
+  days after `NoncurrentVersionTransitionDays`.
+- In `cf-s3bucket.yaml`, when any prefix is set, `get-bucket-lifecycle-configuration`
+  shows all 15 prefix slots; unused ones have `Status: Disabled` and do nothing.
 - S3 runs lifecycle rules about once a day (midnight UTC), so objects
   transition 24 to 48 hours after they become eligible.
 - By default S3 does not transition objects smaller than 128 KB.
