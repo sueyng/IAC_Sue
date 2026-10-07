@@ -16,14 +16,5 @@ EnableGlacierTransition: "true"                  # turn on Glacier transition
 GlacierTransitionDays: "1"                       # live objects -> Glacier after 1 day (lowest allowed)
 GlacierStorageClass: "GLACIER"                   # Flexible Retrieval, so you can test restore-object
 GlacierNoncurrentTransitionDays: "1"             # old versions -> Glacier 1 day after being replaced
-GlacierTransitionPrefix: ""                      # whole bucket; e.g. "glacier-test/" to limit to that folder
-Glacier2TransitionPrefix: ""                     # not used; e.g. "logs/" for a second aging
-Glacier2TransitionDays: "90"                     # only used when Glacier2TransitionPrefix is set
-Glacier2StorageClass: "GLACIER"                  # only used when Glacier2TransitionPrefix is set
-Glacier2NoncurrentTransitionDays: "0"            # only used when Glacier2TransitionPrefix is set
-Glacier3TransitionPrefix: ""                     # not used
-Glacier3TransitionDays: "90"                     # only used when Glacier3TransitionPrefix is set
-Glacier3StorageClass: "GLACIER"                  # only used when Glacier3TransitionPrefix is set
-Glacier3NoncurrentTransitionDays: "0"            # only used when Glacier3TransitionPrefix is set
 
 # <<< PARAMETERS_END >>>

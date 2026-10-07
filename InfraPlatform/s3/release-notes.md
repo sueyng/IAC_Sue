@@ -4,7 +4,7 @@
 
 ### General Updates
 - **IaC Version Tag**:
-  - Updated from `InfraPlatform-s3-v1` through `InfraPlatform-s3-v9`.
+  - Updated from `InfraPlatform-s3-v1` through `InfraPlatform-s3-v10.1`.
 
 ### Templates Evolution
 - **v1**:
@@ -89,19 +89,32 @@
 
 - **v10**:
   - Added v10 copies of all four S3 templates and their parameter guides, plus a v10 `README.md`.
-  - Added optional Glacier lifecycle transitions to every template, disabled by default (`EnableGlacierTransition`, default `false`).
-  - Up to 3 Glacier settings per stack, each with a comma-separated list of up to 5 prefixes, its own transition days (default `90`), storage class (`GLACIER_IR`, `GLACIER` default, or `DEEP_ARCHIVE`) and old-version transition days (default `0` - disabled):
-    - Setting 1: `GlacierTransitionPrefix` (empty = whole bucket), `GlacierTransitionDays`, `GlacierStorageClass`, `GlacierNoncurrentTransitionDays`.
-    - Settings 2 and 3: `Glacier2...` / `Glacier3...` equivalents; used only when the prefix list is not empty, and rejected unless `EnableGlacierTransition` is `true`.
-    - Prefix lists are validated by `AllowedPattern` (up to 5, no spaces, empty items or duplicates within a setting).
-  - Added `check-glacier-prefixes.py`, a pre-deployment check for parameter files that also catches the same prefix in two settings, which CloudFormation cannot validate, and warns about overlapping prefixes and transition days not lower than expiration days.
-  - `cf-s3bucket.yaml`: with no prefixes, a single whole-bucket `BucketLifecycle` rule with conditional actions. With any prefix set, one rule per prefix slot, unused slots kept as `Disabled` rules, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
-  - `cf-s3-buckets-infra.yaml`: one Glacier rule per prefix in use, ec2FileRepo bucket only; Inspector bucket lifecycle stays fixed.
-  - `cf-s3buckets-batchjob.yaml`: one Glacier rule per prefix in use on both buckets; requires `EnableLifecycle: "true"` (enforced by a template rule), so it cannot be combined with Object Lock.
-  - `cf-s3bucket-app.yaml`: one Glacier rule per prefix in use, independent of `LifecyclePrefix`; v9 `ExpirationRule` unchanged; requires `EnableLifecycle: "true"` (enforced by a template rule); new `GlacierTransitionStatus` output.
+  - Added an optional Glacier lifecycle transition to every template, disabled by default:
+    - `EnableGlacierTransition` (default `false`) moves current objects to `GlacierStorageClass` after `GlacierTransitionDays` (default `90`).
+    - `GlacierStorageClass`: `GLACIER_IR`, `GLACIER` (default) or `DEEP_ARCHIVE`.
+    - `GlacierNoncurrentTransitionDays` (default `0` - disabled) transitions noncurrent versions when versioning is enabled.
+  - `cf-s3bucket.yaml`: lifecycle consolidated into a single `BucketLifecycle` rule with conditional actions, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
+  - `cf-s3-buckets-infra.yaml`: new `GlacierTransition` rule for the ec2FileRepo bucket only; Inspector bucket lifecycle stays fixed.
+  - `cf-s3buckets-batchjob.yaml`: new `GlacierTransition` rule on both buckets; requires `EnableLifecycle: "true"` (enforced by a template rule), so it cannot be combined with Object Lock.
+  - `cf-s3bucket-app.yaml`: Glacier added to the existing `ExpirationRule` (objects under `LifecyclePrefix`); requires `EnableLifecycle: "true"` (enforced by a template rule); new `GlacierTransitionStatus` output.
   - App parameter guide: corrected the `NoncurrentVersionTransitionDays` description, which transitions to `STANDARD_IA`, not Glacier.
   - Added `env/parameters-s3bucket-glacier-sample.yaml` with test values for the generic template.
   - Updated IaCVersion tag to `InfraPlatform-s3-v10`.
+
+- **v10.1**:
+  - Added v10.1 copies of all four S3 templates, their parameter guides and a v10.1 `README.md`; v10 is retained unchanged.
+  - Glacier transition can now apply to object key prefixes as well as the whole bucket.
+  - Up to 3 Glacier settings per stack, each with a comma-separated list of up to 5 prefixes and its own transition days (default `90`), storage class (`GLACIER_IR`, `GLACIER` default, or `DEEP_ARCHIVE`) and old-version transition days (default `0` - disabled):
+    - Setting 1 keeps the v10 parameters; `GlacierTransitionPrefix` is new and takes a prefix list (empty = whole bucket).
+    - Settings 2 and 3: new `Glacier2...` / `Glacier3...` parameters, used only when the prefix list is not empty, and rejected unless `EnableGlacierTransition` is `true`.
+    - Prefix lists are validated by `AllowedPattern` (up to 5, no spaces, empty items or duplicates within a setting).
+  - `cf-s3bucket.yaml`: with no prefixes, the same single whole-bucket `BucketLifecycle` rule as v10. With any prefix set, one rule per prefix slot, unused slots kept as `Disabled` rules, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
+  - `cf-s3-buckets-infra.yaml` and `cf-s3buckets-batchjob.yaml`: one Glacier rule per prefix in use (`GlacierSet<n>Prefix<m>`), replacing the v10 `GlacierTransition` rule.
+  - `cf-s3bucket-app.yaml`: Glacier moved out of `ExpirationRule` into its own rules scoped by the Glacier prefixes instead of `LifecyclePrefix`; `ExpirationRule` is back to its v9 form; `GlacierTransitionStatus` output now reports `Enabled`/`Disabled`.
+  - Added `check-glacier-prefixes.py`, a pre-deployment check for parameter files that also catches the same prefix in two settings, which CloudFormation cannot validate, and warns about overlapping prefixes and transition days not lower than expiration days.
+  - Glacier sample parameters now target the whole-bucket test stack `suev10gl-nprd-dev-s3-wholebucket`.
+  - Updated IaCVersion tag to `InfraPlatform-s3-v10.1`.
+  - Upgrading from v10: no breaking parameter changes. App stacks with a non-empty `LifecyclePrefix` should set `GlacierTransitionPrefix` to the same value to keep the v10 Glacier scope. See `v10.1/README.md`.
 
 ### Key Features by Template
 

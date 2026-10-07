@@ -1,0 +1,30 @@
+# ========================================================================
+# 🧪 GLACIER TEST SAMPLE — InfraPlatform/s3/v10.1/cf-s3bucket.yaml
+# Whole-bucket Glacier test (use case 1)
+# Stack: suev10gl-nprd-dev-s3-wholebucket
+# Creates bucket: suev10gl-nprd-dev-s3-wholebucket
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+AppShortName: "suev10gl"
+EnvName: "nprd-dev"
+BucketNames: "wholebucket"
+
+EnableS3Versioning: "true"                       # needed for the noncurrent-version transition test
+S3CurrentVersionExpirationDays: "0"              # keep live objects (no auto delete)
+S3NoncurrentVersionExpirationDays: "30"          # old versions deleted after 30 days
+EnableGlacierTransition: "true"                  # turn on Glacier transition
+GlacierTransitionDays: "1"                       # live objects -> Glacier after 1 day (lowest allowed)
+GlacierStorageClass: "GLACIER"                   # Flexible Retrieval, so you can test restore-object
+GlacierNoncurrentTransitionDays: "1"             # old versions -> Glacier 1 day after being replaced
+GlacierTransitionPrefix: ""                      # whole bucket; e.g. "glacier-test/" to limit to that folder
+Glacier2TransitionPrefix: ""                     # not used; e.g. "logs/" for a second aging
+Glacier2TransitionDays: "90"                     # only used when Glacier2TransitionPrefix is set
+Glacier2StorageClass: "GLACIER"                  # only used when Glacier2TransitionPrefix is set
+Glacier2NoncurrentTransitionDays: "0"            # only used when Glacier2TransitionPrefix is set
+Glacier3TransitionPrefix: ""                     # not used
+Glacier3TransitionDays: "90"                     # only used when Glacier3TransitionPrefix is set
+Glacier3StorageClass: "GLACIER"                  # only used when Glacier3TransitionPrefix is set
+Glacier3NoncurrentTransitionDays: "0"            # only used when Glacier3TransitionPrefix is set
+
+# <<< PARAMETERS_END >>>

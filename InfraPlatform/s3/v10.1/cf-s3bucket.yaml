@@ -1,0 +1,692 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: 'AWS::LanguageExtensions'
+Description: 'S3 Bucket Template v10.1 - Bucket owner enforced object ownership with versioning toggle and optional Glacier transition by whole bucket or prefix lists'
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: AppShortNameBucket
+
+  EnvName:
+    Type: String
+    Description: Environment
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  BucketNames:
+    Type: CommaDelimitedList
+    Description: S3 bucket name suffixes (comma-separated, creates one bucket per name). Each name MUST be alphanumeric only - NO hyphens, underscores, or dots (Fn::ForEach generates resource logical IDs which must be alphanumeric).
+
+  EnableS3Versioning:
+    Type: String
+    Description: Enable S3 bucket versioning for all buckets
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  S3CurrentVersionExpirationDays:
+    Type: Number
+    Description: Days before current (live) objects are deleted (0 to disable lifecycle rule, keep objects forever)
+    Default: 0
+    MinValue: 0
+    MaxValue: 3650
+
+  S3NoncurrentVersionExpirationDays:
+    Type: Number
+    Description: Days to retain noncurrent object versions before deletion (0 to disable lifecycle rule)
+    Default: 30
+    MinValue: 0
+    MaxValue: 365
+
+  EnableGlacierTransition:
+    Type: String
+    Description: Automatically transition current (live) objects to GlacierStorageClass after GlacierTransitionDays
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  GlacierTransitionDays:
+    Type: Number
+    Description: Days after object creation before current objects transition to GlacierStorageClass (only used when EnableGlacierTransition is true). Must be lower than S3CurrentVersionExpirationDays when expiration is set.
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
+  GlacierStorageClass:
+    Type: String
+    Description: "Target storage class - GLACIER_IR (Instant Retrieval, milliseconds), GLACIER (Flexible Retrieval, minutes to hours), DEEP_ARCHIVE (up to 48 hours)"
+    Default: GLACIER
+    AllowedValues:
+      - GLACIER_IR
+      - GLACIER
+      - DEEP_ARCHIVE
+
+  GlacierNoncurrentTransitionDays:
+    Type: Number
+    Description: Days after an object version becomes noncurrent before it transitions to GlacierStorageClass (0 to disable). Only used when EnableGlacierTransition and EnableS3Versioning are true. Must be lower than S3NoncurrentVersionExpirationDays when expiration is set.
+    Default: 0
+    MinValue: 0
+    MaxValue: 3650
+
+  GlacierTransitionPrefix:
+    Type: String
+    Description: "Glacier setting 1 - comma-separated object key prefixes, up to 5, no spaces (e.g. archive/,backup/). Leave empty to apply setting 1 to the whole bucket. Only used when EnableGlacierTransition is true."
+    Default: ""
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
+
+  Glacier2TransitionPrefix:
+    Type: String
+    Description: "Glacier setting 2 - comma-separated object key prefixes, up to 5, no spaces (e.g. logs/,reports/). Leave empty to not use setting 2. Requires EnableGlacierTransition to be true."
+    Default: ""
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
+
+  Glacier2TransitionDays:
+    Type: Number
+    Description: Glacier setting 2 - days after object creation before current objects under Glacier2TransitionPrefix transition to Glacier2StorageClass.
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
+  Glacier2StorageClass:
+    Type: String
+    Description: "Glacier setting 2 - target storage class: GLACIER_IR, GLACIER or DEEP_ARCHIVE"
+    Default: GLACIER
+    AllowedValues:
+      - GLACIER_IR
+      - GLACIER
+      - DEEP_ARCHIVE
+
+  Glacier2NoncurrentTransitionDays:
+    Type: Number
+    Description: Glacier setting 2 - days after an object version becomes noncurrent before it transitions to Glacier2StorageClass (0 to disable). Requires versioning.
+    Default: 0
+    MinValue: 0
+    MaxValue: 3650
+
+  Glacier3TransitionPrefix:
+    Type: String
+    Description: "Glacier setting 3 - comma-separated object key prefixes, up to 5, no spaces (e.g. logs/,reports/). Leave empty to not use setting 3. Requires EnableGlacierTransition to be true."
+    Default: ""
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
+
+  Glacier3TransitionDays:
+    Type: Number
+    Description: Glacier setting 3 - days after object creation before current objects under Glacier3TransitionPrefix transition to Glacier3StorageClass.
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
+  Glacier3StorageClass:
+    Type: String
+    Description: "Glacier setting 3 - target storage class: GLACIER_IR, GLACIER or DEEP_ARCHIVE"
+    Default: GLACIER
+    AllowedValues:
+      - GLACIER_IR
+      - GLACIER
+      - DEEP_ARCHIVE
+
+  Glacier3NoncurrentTransitionDays:
+    Type: Number
+    Description: Glacier setting 3 - days after an object version becomes noncurrent before it transitions to Glacier3StorageClass (0 to disable). Requires versioning.
+    Default: 0
+    MinValue: 0
+    MaxValue: 3650
+
+Rules:
+  Glacier2RequiresGlacierTransition:
+    RuleCondition: !Not [!Equals [!Ref "Glacier2TransitionPrefix", ""]]
+    Assertions:
+      - Assert: !Equals [!Ref "EnableGlacierTransition", "true"]
+        AssertDescription: "EnableGlacierTransition must be true when Glacier2TransitionPrefix is set."
+  Glacier3RequiresGlacierTransition:
+    RuleCondition: !Not [!Equals [!Ref "Glacier3TransitionPrefix", ""]]
+    Assertions:
+      - Assert: !Equals [!Ref "EnableGlacierTransition", "true"]
+        AssertDescription: "EnableGlacierTransition must be true when Glacier3TransitionPrefix is set."
+
+Conditions:
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+  EnableVersioning: !Equals [!Ref EnableS3Versioning, "true"]
+  HasCurrentExpiration: !Not [!Equals [!Ref S3CurrentVersionExpirationDays, 0]]
+  HasNoncurrentExpiration: !And
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref S3NoncurrentVersionExpirationDays, 0]]
+  HasGlacierTransition: !Equals [!Ref EnableGlacierTransition, "true"]
+  HasNoncurrentGlacierTransition: !And
+    - !Condition HasGlacierTransition
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref GlacierNoncurrentTransitionDays, 0]]
+  HasGlacierSet1Prefix2: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [1, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet1Prefix3: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [2, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet1Prefix4: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [3, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet1Prefix5: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [4, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet2Prefix1: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [0, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet2Prefix2: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [1, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet2Prefix3: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [2, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet2Prefix4: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [3, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet2Prefix5: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [4, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet3Prefix1: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [0, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet3Prefix2: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [1, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet3Prefix3: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [2, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet3Prefix4: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [3, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]], ""]]
+  HasGlacierSet3Prefix5: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Select [4, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]], ""]]
+  HasNoncurrentGlacier2Transition: !And
+    - !Condition HasGlacierTransition
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref Glacier2NoncurrentTransitionDays, 0]]
+  HasNoncurrentGlacier3Transition: !And
+    - !Condition HasGlacierTransition
+    - !Condition EnableVersioning
+    - !Not [!Equals [!Ref Glacier3NoncurrentTransitionDays, 0]]
+  HasGlacierPrefixMode: !And
+    - !Condition HasGlacierTransition
+    - !Or
+      - !Not [!Equals [!Ref GlacierTransitionPrefix, ""]]
+      - !Not [!Equals [!Ref Glacier2TransitionPrefix, ""]]
+      - !Not [!Equals [!Ref Glacier3TransitionPrefix, ""]]
+  HasAnyExpiration: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
+  HasAnyLifecycleRule: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
+    - !Condition HasGlacierTransition
+
+Resources:
+  'Fn::ForEach::Buckets':
+    - BucketName
+    - !Ref BucketNames
+    - 'S3Bucket${BucketName}':
+        Type: 'AWS::S3::Bucket'
+        DeletionPolicy: !If [IsProduction, Retain, Delete]
+        UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+        Properties:
+          BucketName: !Sub ${AppShortName}-${EnvName}-s3-${BucketName}
+          BucketEncryption:
+            ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+          OwnershipControls:
+            Rules:
+              - ObjectOwnership: BucketOwnerEnforced
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: true
+            BlockPublicPolicy: true
+            IgnorePublicAcls: true
+            RestrictPublicBuckets: true
+          VersioningConfiguration: !If
+            - EnableVersioning
+            - Status: Enabled
+            - !Ref "AWS::NoValue"
+          LifecycleConfiguration: !If
+            - HasAnyLifecycleRule
+            # AWS::LanguageExtensions turns a NoValue list item into null, so rules
+            # cannot be toggled individually:
+            # - No prefixes: one whole-bucket rule with conditional actions (last branch).
+            # - Any prefix set: one rule per prefix slot (3 settings x 5 prefixes). Unused
+            #   slots stay in the list with Status Disabled, and the whole Rules list is
+            #   chosen with Fn::If.
+            - Rules: !If
+                - HasGlacierPrefixMode
+                - !If
+                  - HasAnyExpiration
+                  - - Id: BucketLifecycle
+                      Status: Enabled
+                      ExpirationInDays: !If
+                        - HasCurrentExpiration
+                        - !Ref S3CurrentVersionExpirationDays
+                        - !Ref "AWS::NoValue"
+                      NoncurrentVersionExpiration: !If
+                        - HasNoncurrentExpiration
+                        - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix1
+                      Status: Enabled
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix2
+                      Status: !If [HasGlacierSet1Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix3
+                      Status: !If [HasGlacierSet1Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix4
+                      Status: !If [HasGlacierSet1Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix5
+                      Status: !If [HasGlacierSet1Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix1
+                      Status: !If [HasGlacierSet2Prefix1, Enabled, Disabled]
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix2
+                      Status: !If [HasGlacierSet2Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix3
+                      Status: !If [HasGlacierSet2Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix4
+                      Status: !If [HasGlacierSet2Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix5
+                      Status: !If [HasGlacierSet2Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix1
+                      Status: !If [HasGlacierSet3Prefix1, Enabled, Disabled]
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix2
+                      Status: !If [HasGlacierSet3Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix3
+                      Status: !If [HasGlacierSet3Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix4
+                      Status: !If [HasGlacierSet3Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix5
+                      Status: !If [HasGlacierSet3Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                  -
+                    - Id: GlacierSet1Prefix1
+                      Status: Enabled
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix2
+                      Status: !If [HasGlacierSet1Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix3
+                      Status: !If [HasGlacierSet1Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix4
+                      Status: !If [HasGlacierSet1Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet1Prefix5
+                      Status: !If [HasGlacierSet1Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref GlacierTransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix1
+                      Status: !If [HasGlacierSet2Prefix1, Enabled, Disabled]
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix2
+                      Status: !If [HasGlacierSet2Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix3
+                      Status: !If [HasGlacierSet2Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix4
+                      Status: !If [HasGlacierSet2Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet2Prefix5
+                      Status: !If [HasGlacierSet2Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref Glacier2TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier2TransitionDays
+                          StorageClass: !Ref Glacier2StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier2Transition
+                        - - TransitionInDays: !Ref Glacier2NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier2StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix1
+                      Status: !If [HasGlacierSet3Prefix1, Enabled, Disabled]
+                      Prefix: !Select [0, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix2
+                      Status: !If [HasGlacierSet3Prefix2, Enabled, Disabled]
+                      Prefix: !Select [1, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix3
+                      Status: !If [HasGlacierSet3Prefix3, Enabled, Disabled]
+                      Prefix: !Select [2, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix4
+                      Status: !If [HasGlacierSet3Prefix4, Enabled, Disabled]
+                      Prefix: !Select [3, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierSet3Prefix5
+                      Status: !If [HasGlacierSet3Prefix5, Enabled, Disabled]
+                      Prefix: !Select [4, !Split [",", !Join ["", [!Ref Glacier3TransitionPrefix, ",,,,"]]]]
+                      Transitions:
+                        - TransitionInDays: !Ref Glacier3TransitionDays
+                          StorageClass: !Ref Glacier3StorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacier3Transition
+                        - - TransitionInDays: !Ref Glacier3NoncurrentTransitionDays
+                            StorageClass: !Ref Glacier3StorageClass
+                        - !Ref "AWS::NoValue"
+                - - Id: BucketLifecycle
+                    Status: Enabled
+                    ExpirationInDays: !If
+                      - HasCurrentExpiration
+                      - !Ref S3CurrentVersionExpirationDays
+                      - !Ref "AWS::NoValue"
+                    NoncurrentVersionExpiration: !If
+                      - HasNoncurrentExpiration
+                      - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                      - !Ref "AWS::NoValue"
+                    Transitions: !If
+                      - HasGlacierTransition
+                      - - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      - !Ref "AWS::NoValue"
+                    NoncurrentVersionTransitions: !If
+                      - HasNoncurrentGlacierTransition
+                      - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      - !Ref "AWS::NoValue"
+            - !Ref "AWS::NoValue"
+          Tags:
+            - Key: IaCVersion
+              Value: InfraPlatform-s3-v10.1
+
+  'Fn::ForEach::BucketPolicies':
+    - Bucket
+    - !Ref BucketNames
+    - 'S3BucketPolicy${Bucket}':
+        Type: AWS::S3::BucketPolicy
+        DeletionPolicy: !If [IsProduction, Retain, Delete]
+        UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+        Properties:
+          Bucket: !Sub ${AppShortName}-${EnvName}-s3-${Bucket}
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: EnforceTLSv12orHigher
+                Effect: Deny
+                Principal: '*'
+                Action: s3:*
+                Resource:
+                  - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                  - !Join
+                      - ''
+                      - - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                        - '/*'
+                Condition:
+                  NumericLessThan:
+                    s3:TlsVersion: 1.2
+              - Sid: AllowSSLRequestsOnly
+                Effect: Deny
+                Principal: '*'
+                Action: s3:*
+                Resource:
+                  - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                  - !Join
+                      - ''
+                      - - !GetAtt [!Sub "S3Bucket${Bucket}", Arn]
+                        - '/*'
+                Condition:
+                  Bool:
+                    aws:SecureTransport: 'false'

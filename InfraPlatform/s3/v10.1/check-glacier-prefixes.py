@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-deployment check for the Glacier prefix settings in a v10 S3 parameter file.
+"""Pre-deployment check for the Glacier prefix settings in a v10.1 S3 parameter file.
 
 CloudFormation already rejects a single prefix list that is badly formatted or
 repeats a prefix. It cannot compare lists across settings, so run this before
