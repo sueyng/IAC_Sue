@@ -93,7 +93,8 @@
   - Up to 3 Glacier settings per stack, each with a comma-separated list of up to 5 prefixes, its own transition days (default `90`), storage class (`GLACIER_IR`, `GLACIER` default, or `DEEP_ARCHIVE`) and old-version transition days (default `0` - disabled):
     - Setting 1: `GlacierTransitionPrefix` (empty = whole bucket), `GlacierTransitionDays`, `GlacierStorageClass`, `GlacierNoncurrentTransitionDays`.
     - Settings 2 and 3: `Glacier2...` / `Glacier3...` equivalents; used only when the prefix list is not empty, and rejected unless `EnableGlacierTransition` is `true`.
-    - Prefix lists are validated by `AllowedPattern` (up to 5, no spaces or empty items).
+    - Prefix lists are validated by `AllowedPattern` (up to 5, no spaces, empty items or duplicates within a setting).
+  - Added `check-glacier-prefixes.py`, a pre-deployment check for parameter files that also catches the same prefix in two settings, which CloudFormation cannot validate, and warns about overlapping prefixes and transition days not lower than expiration days.
   - `cf-s3bucket.yaml`: with no prefixes, a single whole-bucket `BucketLifecycle` rule with conditional actions. With any prefix set, one rule per prefix slot, unused slots kept as `Disabled` rules, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
   - `cf-s3-buckets-infra.yaml`: one Glacier rule per prefix in use, ec2FileRepo bucket only; Inspector bucket lifecycle stays fixed.
   - `cf-s3buckets-batchjob.yaml`: one Glacier rule per prefix in use on both buckets; requires `EnableLifecycle: "true"` (enforced by a template rule), so it cannot be combined with Object Lock.

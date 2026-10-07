@@ -199,7 +199,9 @@ Glacier3NoncurrentTransitionDays: "0"            # setting 3: old versions, e.g.
 # Setting 3: Glacier3TransitionPrefix + Glacier3... (same as setting 2)
 #
 # Prefix lists:
-# - Comma-separated, up to 5 prefixes per setting, no spaces: archive/,backup/
+# - Comma-separated, up to 5 prefixes per setting, no spaces or duplicates: archive/,backup/
+# - Before deploying, run: python3 check-glacier-prefixes.py <this parameter file>
+#   It also catches the same prefix in two settings, which CloudFormation cannot check.
 # - Include the trailing slash for a folder; matching is case-sensitive
 #   (archive would also match archive-old/).
 # - Setting 1 with an empty list applies to the whole bucket.

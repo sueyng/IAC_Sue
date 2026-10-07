@@ -97,15 +97,15 @@ Parameters:
     Type: String
     Description: "Glacier setting 1 - comma-separated object key prefixes, up to 5, no spaces (e.g. archive/,backup/). Leave empty to apply setting 1 to the whole bucket. Only used when EnableGlacierTransition is true."
     Default: ""
-    AllowedPattern: '^$|^[^,\s]+(,[^,\s]+){0,4}$'
-    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces or empty items.
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
 
   Glacier2TransitionPrefix:
     Type: String
     Description: "Glacier setting 2 - comma-separated object key prefixes, up to 5, no spaces (e.g. logs/,reports/). Leave empty to not use setting 2. Requires EnableGlacierTransition to be true."
     Default: ""
-    AllowedPattern: '^$|^[^,\s]+(,[^,\s]+){0,4}$'
-    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces or empty items.
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
 
   Glacier2TransitionDays:
     Type: Number
@@ -134,8 +134,8 @@ Parameters:
     Type: String
     Description: "Glacier setting 3 - comma-separated object key prefixes, up to 5, no spaces (e.g. logs/,reports/). Leave empty to not use setting 3. Requires EnableGlacierTransition to be true."
     Default: ""
-    AllowedPattern: '^$|^[^,\s]+(,[^,\s]+){0,4}$'
-    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces or empty items.
+    AllowedPattern: '^(?!(?:.*,)?([^,]+),(?:.*,)?\1(?:,|$))(?:$|[^,\s]+(?:,[^,\s]+){0,4})$'
+    ConstraintDescription: Up to 5 comma-separated prefixes with no spaces, empty items or duplicates.
 
   Glacier3TransitionDays:
     Type: Number

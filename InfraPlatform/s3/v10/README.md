@@ -55,7 +55,8 @@ that the producer supports Object Lock and `BucketOwnerEnforced`.
 | 3 | `Glacier3TransitionPrefix` (empty = not used) | `Glacier3TransitionDays` | `Glacier3StorageClass` | `Glacier3NoncurrentTransitionDays` |
 
 - Prefix lists are comma-separated, up to 5 prefixes, no spaces, for example
-  `archive/,backup/`. CloudFormation rejects other formats.
+  `archive/,backup/`. CloudFormation rejects other formats and a prefix listed
+  twice in the same setting.
 - Storage classes: `GLACIER_IR` (Instant Retrieval), `GLACIER` (Flexible
   Retrieval) or `DEEP_ARCHIVE`.
 - Old-version transitions require versioning.
@@ -74,6 +75,23 @@ Glacier2TransitionPrefix: "logs/"
 Glacier2TransitionDays: "90"
 Glacier2StorageClass: "DEEP_ARCHIVE"
 ```
+
+### Checking prefixes before deployment
+
+CloudFormation cannot compare one parameter with another, so it cannot detect
+the same prefix in two settings. Run the check script against the parameter
+file before deploying:
+
+```bash
+python3 InfraPlatform/s3/v10/check-glacier-prefixes.py InfraPlatform/s3/v10/env/parameters-s3bucket.yaml
+```
+
+It exits with code 1 on errors (bad format, a duplicate within a setting, the
+same prefix in two settings, setting 2 or 3 used while
+`EnableGlacierTransition` is not `true`). It prints warnings for overlapping
+prefixes (`logs/` and `logs/app/`), an empty setting 1 next to settings 2 or 3,
+prefixes without a trailing slash, and transition days not lower than
+expiration days.
 
 Where the Glacier transition applies:
 
@@ -239,5 +257,6 @@ Run focused validation from the `IaC-Templates` repository root:
 
 ```bash
 cfn-lint InfraPlatform/s3/v10/*.yaml
+python3 InfraPlatform/s3/v10/check-glacier-prefixes.py <parameter file>
 git diff --check -- InfraPlatform/s3/v10 InfraPlatform/s3/release-notes.md
 ```
