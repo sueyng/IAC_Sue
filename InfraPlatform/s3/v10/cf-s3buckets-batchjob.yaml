@@ -119,6 +119,11 @@ Parameters:
     MinValue: 0
     MaxValue: 3650
 
+  GlacierTransitionPrefix:
+    Type: String
+    Description: Object key prefix the Glacier transition applies to (e.g. archive/ or logs/2026/). Leave empty to apply to the whole bucket. Only used when EnableGlacierTransition is true.
+    Default: ""
+
 Rules:
   ObjectLockLifecycleCompatibility:
     RuleCondition: !Equals [!Ref "EnableObjectLock", "true"]
@@ -217,6 +222,7 @@ Resources:
               - HasGlacierTransition
               - Id: GlacierTransition
                 Status: Enabled
+                Prefix: !Ref GlacierTransitionPrefix
                 Transitions:
                   - TransitionInDays: !Ref GlacierTransitionDays
                     StorageClass: !Ref GlacierStorageClass
@@ -326,6 +332,7 @@ Resources:
               - HasGlacierTransition
               - Id: GlacierTransition
                 Status: Enabled
+                Prefix: !Ref GlacierTransitionPrefix
                 Transitions:
                   - TransitionInDays: !Ref GlacierTransitionDays
                     StorageClass: !Ref GlacierStorageClass

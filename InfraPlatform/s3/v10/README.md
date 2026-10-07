@@ -35,8 +35,13 @@ that the producer supports Object Lock and `BucketOwnerEnforced`.
   the same.
 - `cf-s3-buckets-infra.yaml` and `cf-s3buckets-batchjob.yaml` keep their v9
   rules unchanged and add a separate `GlacierTransition` rule when enabled.
-- `cf-s3bucket-app.yaml` adds Glacier to its existing `ExpirationRule`, so the
-  transition applies to objects under `LifecyclePrefix` only.
+- `cf-s3bucket-app.yaml` adds a separate `GlacierTransition` rule and leaves
+  its v9 `ExpirationRule` unchanged.
+- Glacier can apply to the whole bucket or to one object key prefix
+  (`GlacierTransitionPrefix`, e.g. `archive/`). An empty prefix (the default)
+  means the whole bucket. In `cf-s3bucket.yaml`, a prefix adds a separate
+  `GlacierTransition` rule; with an empty prefix the template keeps its single
+  `BucketLifecycle` rule.
 - The app and Batch Job templates reject `EnableGlacierTransition: "true"` when
   `EnableLifecycle` is `false`. Glacier transition therefore cannot be combined
   with Object Lock in those templates.
@@ -49,22 +54,31 @@ that the producer supports Object Lock and `BucketOwnerEnforced`.
 | `GlacierTransitionDays` | `90` | Days after object creation before current objects transition; 1 to 3650 |
 | `GlacierStorageClass` | `GLACIER` | `GLACIER_IR` (Instant Retrieval), `GLACIER` (Flexible Retrieval) or `DEEP_ARCHIVE` |
 | `GlacierNoncurrentTransitionDays` | `0` | Days after a version becomes noncurrent before it transitions; `0` disables; requires versioning |
+| `GlacierTransitionPrefix` | `""` | Object key prefix the transition applies to, e.g. `archive/`; empty means the whole bucket |
 
 Where the Glacier transition applies:
 
 | Template | Scope | Extra requirement |
 | --- | --- | --- |
 | `cf-s3bucket.yaml` | Every bucket in `BucketNames` | None |
-| `cf-s3bucket-app.yaml` | Objects under `LifecyclePrefix` | `EnableLifecycle: "true"` |
-| `cf-s3buckets-batchjob.yaml` | Dataload and data-extraction buckets | `EnableLifecycle: "true"` |
+| `cf-s3bucket-app.yaml` | The app bucket; `GlacierTransitionPrefix` is separate from `LifecyclePrefix` | `EnableLifecycle: "true"` |
+| `cf-s3buckets-batchjob.yaml` | Dataload and data-extraction buckets (same prefix for both) | `EnableLifecycle: "true"` |
 | `cf-s3-buckets-infra.yaml` | EC2 file repository bucket only | None; the Inspector bucket lifecycle stays fixed |
+
+In every template the transition covers the whole bucket, or only objects whose
+key starts with `GlacierTransitionPrefix` when one is set. Expiration rules keep
+their existing scope (whole bucket, or `LifecyclePrefix` in the app template).
 
 Things to know before enabling it:
 
 - Transition days must be lower than the matching expiration days when
   expiration is set; S3 rejects the lifecycle configuration otherwise.
-- In the app template, when the existing `STANDARD_IA` noncurrent transition is
-  also enabled, set `GlacierNoncurrentTransitionDays` at least 30 days after
+- Prefix matching is case-sensitive; include the trailing slash for a folder
+  (`archive/`, not `archive`, which would also match `archive-old/`).
+- In the app template, where `GlacierTransitionPrefix` overlaps
+  `LifecyclePrefix`, objects are still deleted at `LifecycleExpirationDays`.
+  If the `STANDARD_IA` noncurrent transition is also enabled, set
+  `GlacierNoncurrentTransitionDays` at least 30 days after
   `NoncurrentVersionTransitionDays`.
 - S3 runs lifecycle rules about once a day (midnight UTC), so objects
   transition 24 to 48 hours after they become eligible.

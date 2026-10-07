@@ -24,6 +24,7 @@ EnableGlacierTransition: "false"                 # true or false (default is fal
 GlacierTransitionDays: "90"                      # e.g. 90 (default is 90, min 1)
 GlacierStorageClass: "GLACIER"                   # GLACIER_IR, GLACIER or DEEP_ARCHIVE (default is GLACIER)
 GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabled)
+GlacierTransitionPrefix: ""                      # e.g. archive/ (default is "" - whole bucket)
 
 # <<< PARAMETERS_END >>>
 # ========================================================================
@@ -153,6 +154,13 @@ GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabl
 #   NOTE: Lifecycle rules run about once a day (midnight UTC); allow 24-48h for
 #   transitions. For an immediate test, upload with --storage-class GLACIER.
 
+# GlacierTransitionPrefix
+#   Object key prefix the Glacier transition applies to.
+#   Values: any key prefix, e.g. archive/ or logs/2026/ (default: "" - whole bucket)
+#   Only used when EnableGlacierTransition = true.
+#   Include the trailing slash for a folder; matching is case-sensitive.
+#   Expiration rules still apply to the whole bucket.
+
 # --- BUCKET FEATURES (AUTOMATICALLY CONFIGURED) ---
 #   - Encryption: AES256 server-side encryption
 #   - Public Access: Fully blocked (all 4 settings enabled)
@@ -161,4 +169,4 @@ GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabl
 #   - Object Ownership: BucketOwnerEnforced (S3 ACLs disabled)
 #   - Versioning: Enabled by default (can be disabled via EnableS3Versioning)
 #   - Lifecycle: Noncurrent version cleanup after 30 days by default
-#   - Glacier: Optional transition of current/noncurrent objects (disabled by default)
+#   - Glacier: Optional transition of current/noncurrent objects, whole bucket or one prefix (disabled by default)

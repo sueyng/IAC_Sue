@@ -144,7 +144,7 @@ Parameters:
   # Glacier Transition Parameters
   EnableGlacierTransition:
     Type: String
-    Description: Automatically transition current (live) objects to GlacierStorageClass after GlacierTransitionDays for objects under LifecyclePrefix. Requires EnableLifecycle to be true.
+    Description: Automatically transition current (live) objects to GlacierStorageClass after GlacierTransitionDays, for objects under GlacierTransitionPrefix. Requires EnableLifecycle to be true.
     Default: "false"
     AllowedValues:
       - "true"
@@ -172,6 +172,11 @@ Parameters:
     Default: 0
     MinValue: 0
     MaxValue: 3650
+
+  GlacierTransitionPrefix:
+    Type: String
+    Description: Object key prefix the Glacier transition applies to (e.g. archive/ or logs/2026/). Leave empty to apply to the whole bucket. Only used when EnableGlacierTransition is true.
+    Default: ""
 
 Rules:
   ObjectLockLifecycleCompatibility:
@@ -275,30 +280,29 @@ Resources:
               Status: Enabled
               Prefix: !Ref LifecyclePrefix
               ExpirationInDays: !Ref LifecycleExpirationDays
-              Transitions: !If
-                - HasGlacierTransition
-                - - TransitionInDays: !Ref GlacierTransitionDays
-                    StorageClass: !Ref GlacierStorageClass
-                - !Ref "AWS::NoValue"
               NoncurrentVersionTransitions: !If
                 - IsNoncurrentVersionExpirationEnabled
-                - !If
-                  - HasNoncurrentGlacierTransition
-                  - - TransitionInDays: !Ref NoncurrentVersionTransitionDays
-                      StorageClass: STANDARD_IA
-                    - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
-                      StorageClass: !Ref GlacierStorageClass
-                  - - TransitionInDays: !Ref NoncurrentVersionTransitionDays
-                      StorageClass: STANDARD_IA
-                - !If
-                  - HasNoncurrentGlacierTransition
-                  - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
-                      StorageClass: !Ref GlacierStorageClass
-                  - !Ref "AWS::NoValue"
+                - - TransitionInDays: !Ref NoncurrentVersionTransitionDays
+                    StorageClass: STANDARD_IA
+                - !Ref "AWS::NoValue"
               NoncurrentVersionExpirationInDays: !If
                 - IsNoncurrentVersionExpirationEnabled
                 - !Ref NoncurrentVersionExpirationDays
                 - !Ref "AWS::NoValue"
+            - !If
+              - HasGlacierTransition
+              - Id: GlacierTransition
+                Status: Enabled
+                Prefix: !Ref GlacierTransitionPrefix
+                Transitions:
+                  - TransitionInDays: !Ref GlacierTransitionDays
+                    StorageClass: !Ref GlacierStorageClass
+                NoncurrentVersionTransitions: !If
+                  - HasNoncurrentGlacierTransition
+                  - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                      StorageClass: !Ref GlacierStorageClass
+                  - !Ref "AWS::NoValue"
+              - !Ref "AWS::NoValue"
         - !Ref "AWS::NoValue"
       Tags:
         - Key: IaCVersion

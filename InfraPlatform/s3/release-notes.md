@@ -93,10 +93,11 @@
     - `EnableGlacierTransition` (default `false`) moves current objects to `GlacierStorageClass` after `GlacierTransitionDays` (default `90`).
     - `GlacierStorageClass`: `GLACIER_IR`, `GLACIER` (default) or `DEEP_ARCHIVE`.
     - `GlacierNoncurrentTransitionDays` (default `0` - disabled) transitions noncurrent versions when versioning is enabled.
-  - `cf-s3bucket.yaml`: lifecycle consolidated into a single `BucketLifecycle` rule with conditional actions, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually.
+    - `GlacierTransitionPrefix` (default `""` - whole bucket) limits the transition to one object key prefix, e.g. `archive/`.
+  - `cf-s3bucket.yaml`: whole-bucket lifecycle consolidated into a single `BucketLifecycle` rule with conditional actions, because `AWS::LanguageExtensions` turns a `NoValue` list item into null so rules cannot be toggled individually. When `GlacierTransitionPrefix` is set, the template selects a rule list with a separate `GlacierTransition` rule.
   - `cf-s3-buckets-infra.yaml`: new `GlacierTransition` rule for the ec2FileRepo bucket only; Inspector bucket lifecycle stays fixed.
   - `cf-s3buckets-batchjob.yaml`: new `GlacierTransition` rule on both buckets; requires `EnableLifecycle: "true"` (enforced by a template rule), so it cannot be combined with Object Lock.
-  - `cf-s3bucket-app.yaml`: Glacier added to the existing `ExpirationRule` (objects under `LifecyclePrefix`); requires `EnableLifecycle: "true"` (enforced by a template rule); new `GlacierTransitionStatus` output.
+  - `cf-s3bucket-app.yaml`: new separate `GlacierTransition` rule using `GlacierTransitionPrefix` (independent of `LifecyclePrefix`); v9 `ExpirationRule` unchanged; requires `EnableLifecycle: "true"` (enforced by a template rule); new `GlacierTransitionStatus` output.
   - App parameter guide: corrected the `NoncurrentVersionTransitionDays` description, which transitions to `STANDARD_IA`, not Glacier.
   - Added `env/parameters-s3bucket-glacier-sample.yaml` with test values for the generic template.
   - Updated IaCVersion tag to `InfraPlatform-s3-v10`.

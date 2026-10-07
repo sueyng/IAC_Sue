@@ -93,6 +93,11 @@ Parameters:
     MinValue: 0
     MaxValue: 3650
 
+  GlacierTransitionPrefix:
+    Type: String
+    Description: Object key prefix the Glacier transition applies to (e.g. archive/ or logs/2026/). Leave empty to apply to the whole bucket. Only used when EnableGlacierTransition is true.
+    Default: ""
+
 Conditions:
   IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
   EnableVersioning: !Equals [!Ref EnableS3Versioning, "true"]
@@ -105,6 +110,12 @@ Conditions:
     - !Condition HasGlacierTransition
     - !Condition EnableVersioning
     - !Not [!Equals [!Ref GlacierNoncurrentTransitionDays, 0]]
+  HasGlacierPrefix: !And
+    - !Condition HasGlacierTransition
+    - !Not [!Equals [!Ref GlacierTransitionPrefix, ""]]
+  HasAnyExpiration: !Or
+    - !Condition HasCurrentExpiration
+    - !Condition HasNoncurrentExpiration
   HasAnyLifecycleRule: !Or
     - !Condition HasCurrentExpiration
     - !Condition HasNoncurrentExpiration
@@ -138,29 +149,67 @@ Resources:
             - !Ref "AWS::NoValue"
           LifecycleConfiguration: !If
             - HasAnyLifecycleRule
-            # Single rule with conditional actions: AWS::LanguageExtensions turns a
-            # NoValue list item into null, so rules cannot be toggled individually.
-            - Rules:
-                - Id: BucketLifecycle
-                  Status: Enabled
-                  ExpirationInDays: !If
-                    - HasCurrentExpiration
-                    - !Ref S3CurrentVersionExpirationDays
-                    - !Ref "AWS::NoValue"
-                  NoncurrentVersionExpiration: !If
-                    - HasNoncurrentExpiration
-                    - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
-                    - !Ref "AWS::NoValue"
-                  Transitions: !If
-                    - HasGlacierTransition
-                    - - TransitionInDays: !Ref GlacierTransitionDays
-                        StorageClass: !Ref GlacierStorageClass
-                    - !Ref "AWS::NoValue"
-                  NoncurrentVersionTransitions: !If
-                    - HasNoncurrentGlacierTransition
-                    - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
-                        StorageClass: !Ref GlacierStorageClass
-                    - !Ref "AWS::NoValue"
+            # AWS::LanguageExtensions turns a NoValue list item into null, so rules
+            # cannot be toggled individually. Whole-bucket settings use one rule with
+            # conditional actions; a Glacier prefix needs its own rule, so the whole
+            # Rules list is chosen with Fn::If instead.
+            - Rules: !If
+                - HasGlacierPrefix
+                - !If
+                  - HasAnyExpiration
+                  - - Id: BucketLifecycle
+                      Status: Enabled
+                      ExpirationInDays: !If
+                        - HasCurrentExpiration
+                        - !Ref S3CurrentVersionExpirationDays
+                        - !Ref "AWS::NoValue"
+                      NoncurrentVersionExpiration: !If
+                        - HasNoncurrentExpiration
+                        - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                        - !Ref "AWS::NoValue"
+                    - Id: GlacierTransition
+                      Status: Enabled
+                      Prefix: !Ref GlacierTransitionPrefix
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                  -
+                    - Id: GlacierTransition
+                      Status: Enabled
+                      Prefix: !Ref GlacierTransitionPrefix
+                      Transitions:
+                        - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      NoncurrentVersionTransitions: !If
+                        - HasNoncurrentGlacierTransition
+                        - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                            StorageClass: !Ref GlacierStorageClass
+                        - !Ref "AWS::NoValue"
+                - - Id: BucketLifecycle
+                    Status: Enabled
+                    ExpirationInDays: !If
+                      - HasCurrentExpiration
+                      - !Ref S3CurrentVersionExpirationDays
+                      - !Ref "AWS::NoValue"
+                    NoncurrentVersionExpiration: !If
+                      - HasNoncurrentExpiration
+                      - NoncurrentDays: !Ref S3NoncurrentVersionExpirationDays
+                      - !Ref "AWS::NoValue"
+                    Transitions: !If
+                      - HasGlacierTransition
+                      - - TransitionInDays: !Ref GlacierTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      - !Ref "AWS::NoValue"
+                    NoncurrentVersionTransitions: !If
+                      - HasNoncurrentGlacierTransition
+                      - - TransitionInDays: !Ref GlacierNoncurrentTransitionDays
+                          StorageClass: !Ref GlacierStorageClass
+                      - !Ref "AWS::NoValue"
             - !Ref "AWS::NoValue"
           Tags:
             - Key: IaCVersion

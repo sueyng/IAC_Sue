@@ -24,6 +24,7 @@ EnableGlacierTransition: "false"                 # true or false (default is fal
 GlacierTransitionDays: "90"                      # e.g. 90 (default is 90, min 1)
 GlacierStorageClass: "GLACIER"                   # GLACIER_IR, GLACIER or DEEP_ARCHIVE (default is GLACIER)
 GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabled)
+GlacierTransitionPrefix: ""                      # e.g. archive/ (default is "" - whole bucket)
 EnableInspectorFindingsExportScheduler: "false"  # true or false (default is false)
 
 # <<< PARAMETERS_END >>>
@@ -110,6 +111,13 @@ EnableInspectorFindingsExportScheduler: "false"  # true or false (default is fal
 #   effect 24-48h after the objects become eligible. By default, objects smaller
 #   than 128 KB are not transitioned.
 
+# GlacierTransitionPrefix
+#   Object key prefix the Glacier transition applies to.
+#   Values: any key prefix, e.g. archive/ or logs/2026/ (default: "" - whole bucket)
+#   Only used when EnableGlacierTransition = true.
+#   Include the trailing slash for a folder; matching is case-sensitive.
+#   Applies to the ec2FileRepo bucket; expiration rules still apply to the whole bucket.
+
 # EnableInspectorFindingsExportScheduler
 #   Toggle native Inspector findings report export schedule.
 #   Values: true | false (default: false)
@@ -139,7 +147,7 @@ EnableInspectorFindingsExportScheduler: "false"  # true or false (default is fal
 #   Lifecycle (current): Configurable via S3CurrentVersionExpirationDays (default: 365 days)
 #   Lifecycle (noncurrent): Configurable via S3NoncurrentVersionExpirationDays (default: 30 days)
 #   Versioning: Configurable (default: enabled)
-#   Glacier transition: Optional via EnableGlacierTransition (default: disabled)
+#   Glacier transition: Optional via EnableGlacierTransition, whole bucket or GlacierTransitionPrefix (default: disabled)
 #   Public Access: Fully blocked
 
 # Inspector Report Bucket

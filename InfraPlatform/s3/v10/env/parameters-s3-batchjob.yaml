@@ -26,6 +26,7 @@ EnableGlacierTransition: "false"                 # true or false (default is fal
 GlacierTransitionDays: "90"                      # e.g. 90 (default is 90, min 1)
 GlacierStorageClass: "GLACIER"                   # GLACIER_IR, GLACIER or DEEP_ARCHIVE (default is GLACIER)
 GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabled)
+GlacierTransitionPrefix: ""                      # e.g. archive/ (default is "" - whole bucket)
 
 # <<< PARAMETERS_END >>>
 # ========================================================================
@@ -179,6 +180,14 @@ GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabl
 # effect 24-48h after the objects become eligible. By default, objects smaller
 # than 128 KB are not transitioned.
 
+# --- GLACIER TRANSITION PREFIX ---
+# GlacierTransitionPrefix:
+# Object key prefix the Glacier transition applies to.
+# Values: any key prefix, e.g. archive/ or logs/2026/ (default: "" - whole bucket)
+# Only used when EnableGlacierTransition = true.
+# Include the trailing slash for a folder; matching is case-sensitive.
+# Same prefix is used for both buckets; expiration rules still apply to the whole bucket.
+
 # --- BUCKETS CREATED ---
 # - {AppShortName}-{EnvName}-s3-dataload           (input data)
 # - {AppShortName}-{EnvName}-s3-data-extraction    (output data)
@@ -192,4 +201,4 @@ GlacierNoncurrentTransitionDays: "0"             # e.g. 7 (default is 0 - disabl
 # - Object Lock COMPLIANCE retention (optional, disabled by default)
 # - Current-version lifecycle (configurable, default 365 days)
 # - Noncurrent-version lifecycle (configurable, default 14 days)
-# - Glacier transition (optional, disabled by default)
+# - Glacier transition, whole bucket or one prefix (optional, disabled by default)
