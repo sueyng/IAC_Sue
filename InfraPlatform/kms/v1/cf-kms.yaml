@@ -1,0 +1,396 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS KMS customer managed key with configurable key spec, key usage and key policy (root, administrators, users)'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General
+        Parameters:
+          - AppShortName
+          - EnvName
+          - KeyName
+          - KeyDescription
+      - Label:
+          default: Key Type and Usage
+        Parameters:
+          - KeySpec
+          - KeyUsage
+          - MultiRegion
+          - EnableKeyRotation
+          - RotationPeriodInDays
+          - PendingWindowInDays
+      - Label:
+          default: Key Policy - Root Statement
+        Parameters:
+          - RootPrincipalArn
+          - RootActions
+      - Label:
+          default: Key Policy - Key Administrators Statement
+        Parameters:
+          - KeyAdminPrincipals
+          - KeyAdminActions
+      - Label:
+          default: Key Policy - Key Users Statement
+        Parameters:
+          - KeyUserPrincipals
+          - KeyUserActions
+          - KeyUserResource
+          - KeyUserViaServices
+          - EnableGrantForAwsResources
+
+Parameters:
+  AppShortName:
+    Type: String
+    Description: Application short name
+
+  EnvName:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - nprd
+      - nprd-dev
+      - nprd-dev1
+      - nprd-dev2
+      - nprd-sit1
+      - nprd-sit2
+      - nprd-sit3
+      - nprd-sit
+      - nprd-sit-a
+      - nprd-sit-b
+      - nprd-sit-c
+      - nprd-uat
+      - nprd-uat-a
+      - nprd-uat-b
+      - nprd-uat-c
+      - nprd-pt
+      - nprd-pp
+      - nprd-pp-a
+      - nprd-pp-b
+      - nprd-pp-c
+      - prod
+      - prod-a
+      - prod-b
+      - prod-c
+
+  KeyName:
+    Type: String
+    Description: Key name suffix, alias becomes alias/{AppShortName}-{EnvName}-kms-{KeyName}
+    AllowedPattern: '^[a-zA-Z0-9/_-]+$'
+    ConstraintDescription: Only letters, numbers, slash, underscore and hyphen are allowed
+
+  KeyDescription:
+    Type: String
+    Description: Description of the KMS key
+    Default: 'Customer managed KMS key'
+
+  # Key Type and Usage
+  KeySpec:
+    Type: String
+    Description: Key type (key spec). SYMMETRIC_DEFAULT = AES-256-GCM symmetric key
+    Default: SYMMETRIC_DEFAULT
+    AllowedValues:
+      - SYMMETRIC_DEFAULT
+      - RSA_2048
+      - RSA_3072
+      - RSA_4096
+      - ECC_NIST_P256
+      - ECC_NIST_P384
+      - ECC_NIST_P521
+      - ECC_SECG_P256K1
+      - HMAC_224
+      - HMAC_256
+      - HMAC_384
+      - HMAC_512
+      - SM2
+
+  KeyUsage:
+    Type: String
+    Description: Cryptographic operations the key is used for
+    Default: ENCRYPT_DECRYPT
+    AllowedValues:
+      - ENCRYPT_DECRYPT
+      - SIGN_VERIFY
+      - GENERATE_VERIFY_MAC
+      - KEY_AGREEMENT
+
+  MultiRegion:
+    Type: String
+    Description: Create a multi-Region primary key
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  EnableKeyRotation:
+    Type: String
+    Description: Enable automatic key rotation (only applied when KeySpec is SYMMETRIC_DEFAULT)
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  RotationPeriodInDays:
+    Type: Number
+    Description: Number of days between automatic key rotations
+    Default: 365
+    MinValue: 90
+    MaxValue: 2560
+
+  PendingWindowInDays:
+    Type: Number
+    Description: Waiting period in days before the key is deleted after stack deletion
+    Default: 30
+    MinValue: 7
+    MaxValue: 30
+
+  # Key Policy - Root Statement
+  RootPrincipalArn:
+    Type: String
+    Description: Principal for the root statement (leave empty to use arn:aws:iam::{AccountId}:root of this account)
+    Default: ''
+
+  RootActions:
+    Type: CommaDelimitedList
+    Description: Actions allowed for the root principal
+    Default: 'kms:*'
+
+  # Key Policy - Key Administrators Statement
+  KeyAdminPrincipals:
+    Type: CommaDelimitedList
+    Description: IAM role/user ARNs that administer the key (leave empty to skip this statement)
+    Default: ''
+
+  KeyAdminActions:
+    Type: CommaDelimitedList
+    Description: Actions allowed for key administrators (leave empty to use the standard administrator actions)
+    Default: ''
+
+  # Key Policy - Key Users Statement
+  KeyUserPrincipals:
+    Type: CommaDelimitedList
+    Description: IAM role/user ARNs or account ARNs that use the key (leave empty to skip this statement)
+    Default: ''
+
+  KeyUserActions:
+    Type: CommaDelimitedList
+    Description: Actions allowed for key users (leave empty to use the default actions for the selected KeyUsage)
+    Default: ''
+
+  KeyUserResource:
+    Type: String
+    Description: Resource for the key users statement. In a key policy "*" means this key
+    Default: '*'
+
+  KeyUserViaServices:
+    Type: CommaDelimitedList
+    Description: Restrict key users to requests made through these services via kms:ViaService, e.g. s3.ap-southeast-1.amazonaws.com (leave empty for no restriction)
+    Default: ''
+
+  EnableGrantForAwsResources:
+    Type: String
+    Description: Allow key users to create grants for AWS services such as EBS and RDS (kms:GrantIsForAWSResource)
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Rules:
+  EncryptDecryptKeySpec:
+    RuleCondition: !Equals [!Ref KeyUsage, ENCRYPT_DECRYPT]
+    Assertions:
+      - Assert: !Contains [[SYMMETRIC_DEFAULT, RSA_2048, RSA_3072, RSA_4096, SM2], !Ref KeySpec]
+        AssertDescription: 'ENCRYPT_DECRYPT supports KeySpec SYMMETRIC_DEFAULT, RSA_2048, RSA_3072, RSA_4096 or SM2'
+
+  SignVerifyKeySpec:
+    RuleCondition: !Equals [!Ref KeyUsage, SIGN_VERIFY]
+    Assertions:
+      - Assert: !Contains [[RSA_2048, RSA_3072, RSA_4096, ECC_NIST_P256, ECC_NIST_P384, ECC_NIST_P521, ECC_SECG_P256K1, SM2], !Ref KeySpec]
+        AssertDescription: 'SIGN_VERIFY supports KeySpec RSA_*, ECC_* or SM2'
+
+  GenerateVerifyMacKeySpec:
+    RuleCondition: !Equals [!Ref KeyUsage, GENERATE_VERIFY_MAC]
+    Assertions:
+      - Assert: !Contains [[HMAC_224, HMAC_256, HMAC_384, HMAC_512], !Ref KeySpec]
+        AssertDescription: 'GENERATE_VERIFY_MAC supports KeySpec HMAC_224, HMAC_256, HMAC_384 or HMAC_512'
+
+  KeyAgreementKeySpec:
+    RuleCondition: !Equals [!Ref KeyUsage, KEY_AGREEMENT]
+    Assertions:
+      - Assert: !Contains [[ECC_NIST_P256, ECC_NIST_P384, ECC_NIST_P521, SM2], !Ref KeySpec]
+        AssertDescription: 'KEY_AGREEMENT supports KeySpec ECC_NIST_P256, ECC_NIST_P384, ECC_NIST_P521 or SM2'
+
+Conditions:
+  # Production environment condition
+  IsProduction: !Or [!Equals [!Ref "EnvName", "prod"], !Equals [!Ref "EnvName", "prod-a"], !Equals [!Ref "EnvName", "prod-b"], !Equals [!Ref "EnvName", "prod-c"]]
+
+  # Key type conditions
+  IsSymmetric: !Equals [!Ref KeySpec, SYMMETRIC_DEFAULT]
+  EnableRotation: !And [!Condition IsSymmetric, !Equals [!Ref EnableKeyRotation, 'true']]
+  IsMultiRegion: !Equals [!Ref MultiRegion, 'true']
+
+  # Key usage conditions (drive the default key user actions)
+  IsEncryptDecrypt: !Equals [!Ref KeyUsage, ENCRYPT_DECRYPT]
+  IsSignVerify: !Equals [!Ref KeyUsage, SIGN_VERIFY]
+  IsGenerateVerifyMac: !Equals [!Ref KeyUsage, GENERATE_VERIFY_MAC]
+
+  # Key policy conditions
+  UseDefaultRootPrincipal: !Equals [!Ref RootPrincipalArn, '']
+  HasKeyAdmins: !Not [!Equals [!Join ['', !Ref KeyAdminPrincipals], '']]
+  UseDefaultKeyAdminActions: !Equals [!Join ['', !Ref KeyAdminActions], '']
+  HasKeyUsers: !Not [!Equals [!Join ['', !Ref KeyUserPrincipals], '']]
+  UseDefaultKeyUserActions: !Equals [!Join ['', !Ref KeyUserActions], '']
+  HasViaServices: !Not [!Equals [!Join ['', !Ref KeyUserViaServices], '']]
+  CreateGrantStatement: !And [!Condition HasKeyUsers, !Equals [!Ref EnableGrantForAwsResources, 'true']]
+
+Resources:
+  KmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: !If [IsProduction, Retain, Delete]
+    UpdateReplacePolicy: !If [IsProduction, Retain, Delete]
+    Properties:
+      Description: !Ref KeyDescription
+      Enabled: true
+      KeySpec: !Ref KeySpec
+      KeyUsage: !Ref KeyUsage
+      MultiRegion: !If [IsMultiRegion, true, false]
+      EnableKeyRotation: !If [EnableRotation, true, false]
+      RotationPeriodInDays: !If [EnableRotation, !Ref RotationPeriodInDays, !Ref 'AWS::NoValue']
+      PendingWindowInDays: !Ref PendingWindowInDays
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: !Sub "${AppShortName}-${EnvName}-kms-${KeyName}-policy"
+        Statement:
+          - Sid: Enable IAM Root Permissions
+            Effect: Allow
+            Principal:
+              AWS: !If
+                - UseDefaultRootPrincipal
+                - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                - !Ref RootPrincipalArn
+            Action: !Ref RootActions
+            Resource: '*'
+
+          - !If
+            - HasKeyAdmins
+            - Sid: Allow administration of the key
+              Effect: Allow
+              Principal:
+                AWS: !Ref KeyAdminPrincipals
+              Action: !If
+                - UseDefaultKeyAdminActions
+                - - kms:Create*
+                  - kms:Describe*
+                  - kms:Enable*
+                  - kms:List*
+                  - kms:Put*
+                  - kms:Update*
+                  - kms:Revoke*
+                  - kms:Disable*
+                  - kms:Get*
+                  - kms:Delete*
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
+                  - kms:RotateKeyOnDemand
+                - !Ref KeyAdminActions
+              Resource: '*'
+            - !Ref 'AWS::NoValue'
+
+          - !If
+            - HasKeyUsers
+            - Sid: Allow use of the key
+              Effect: Allow
+              Principal:
+                AWS: !Ref KeyUserPrincipals
+              Action: !If
+                - UseDefaultKeyUserActions
+                - !If
+                  - IsEncryptDecrypt
+                  - - kms:Encrypt
+                    - kms:Decrypt
+                    - kms:ReEncrypt*
+                    - kms:DescribeKey
+                    - kms:GenerateDataKey*
+                  - !If
+                    - IsSignVerify
+                    - - kms:Sign
+                      - kms:Verify
+                      - kms:GetPublicKey
+                      - kms:DescribeKey
+                    - !If
+                      - IsGenerateVerifyMac
+                      - - kms:GenerateMac
+                        - kms:VerifyMac
+                        - kms:DescribeKey
+                      # KEY_AGREEMENT
+                      - - kms:DeriveSharedSecret
+                        - kms:GetPublicKey
+                        - kms:DescribeKey
+                - !Ref KeyUserActions
+              Resource: !Ref KeyUserResource
+              Condition: !If
+                - HasViaServices
+                - StringEquals:
+                    kms:ViaService: !Ref KeyUserViaServices
+                - !Ref 'AWS::NoValue'
+            - !Ref 'AWS::NoValue'
+
+          - !If
+            - CreateGrantStatement
+            - Sid: Allow attachment of persistent resources
+              Effect: Allow
+              Principal:
+                AWS: !Ref KeyUserPrincipals
+              Action:
+                - kms:CreateGrant
+                - kms:ListGrants
+                - kms:RevokeGrant
+              Resource: '*'
+              Condition:
+                Bool:
+                  kms:GrantIsForAWSResource: 'true'
+            - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppShortName}-${EnvName}-kms-${KeyName}"
+        - Key: AppShortName
+          Value: !Ref AppShortName
+        - Key: Environment
+          Value: !Ref EnvName
+        - Key: IaCVersion
+          Value: "InfraPlatform-kms-v1"
+
+  KmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${AppShortName}-${EnvName}-kms-${KeyName}"
+      TargetKeyId: !Ref KmsKey
+
+Outputs:
+  KmsKeyId:
+    Description: ID of the KMS key
+    Value: !Ref KmsKey
+    Export:
+      Name: !Sub "${AWS::StackName}-KmsKeyId"
+
+  KmsKeyArn:
+    Description: ARN of the KMS key
+    Value: !GetAtt KmsKey.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-KmsKeyArn"
+
+  KmsKeyAliasName:
+    Description: Alias name of the KMS key
+    Value: !Ref KmsKeyAlias
+    Export:
+      Name: !Sub "${AWS::StackName}-KmsKeyAliasName"
+
+  KmsKeySpec:
+    Description: Key spec of the KMS key
+    Value: !Ref KeySpec
+
+  KmsKeyUsage:
+    Description: Key usage of the KMS key
+    Value: !Ref KeyUsage
