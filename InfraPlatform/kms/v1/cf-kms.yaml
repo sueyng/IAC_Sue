@@ -16,7 +16,6 @@ Metadata:
         Parameters:
           - KeySpec
           - KeyUsage
-          - MultiRegion
           - EnableKeyRotation
           - RotationPeriodInDays
           - PendingWindowInDays
@@ -114,14 +113,6 @@ Parameters:
       - GENERATE_VERIFY_MAC
       - KEY_AGREEMENT
 
-  MultiRegion:
-    Type: String
-    Description: Create a multi-Region primary key
-    Default: 'false'
-    AllowedValues:
-      - 'true'
-      - 'false'
-
   EnableKeyRotation:
     Type: String
     Description: Enable automatic key rotation (only applied when KeySpec is SYMMETRIC_DEFAULT)
@@ -196,6 +187,12 @@ Parameters:
       - 'false'
 
 Rules:
+  # Only Singapore region is allowed; keys are single-Region so they cannot be replicated elsewhere
+  SingaporeRegionOnly:
+    Assertions:
+      - Assert: !Equals [!Ref 'AWS::Region', ap-southeast-1]
+        AssertDescription: 'KMS keys can only be created in ap-southeast-1 (Singapore)'
+
   EncryptDecryptKeySpec:
     RuleCondition: !Equals [!Ref KeyUsage, ENCRYPT_DECRYPT]
     Assertions:
@@ -227,7 +224,6 @@ Conditions:
   # Key type conditions
   IsSymmetric: !Equals [!Ref KeySpec, SYMMETRIC_DEFAULT]
   EnableRotation: !And [!Condition IsSymmetric, !Equals [!Ref EnableKeyRotation, 'true']]
-  IsMultiRegion: !Equals [!Ref MultiRegion, 'true']
 
   # Key usage conditions (drive the default key user actions)
   IsEncryptDecrypt: !Equals [!Ref KeyUsage, ENCRYPT_DECRYPT]
@@ -253,7 +249,8 @@ Resources:
       Enabled: true
       KeySpec: !Ref KeySpec
       KeyUsage: !Ref KeyUsage
-      MultiRegion: !If [IsMultiRegion, true, false]
+      # Single-Region key only, cross-Region replication is not allowed
+      MultiRegion: false
       EnableKeyRotation: !If [EnableRotation, true, false]
       RotationPeriodInDays: !If [EnableRotation, !Ref RotationPeriodInDays, !Ref 'AWS::NoValue']
       PendingWindowInDays: !Ref PendingWindowInDays

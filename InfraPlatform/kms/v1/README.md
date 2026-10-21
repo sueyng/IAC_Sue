@@ -28,7 +28,6 @@ The KMS template (`cf-kms.yaml`) creates one customer managed KMS key and its al
 |-----------|---------|-------------|
 | `KeySpec` | `SYMMETRIC_DEFAULT` | Key type |
 | `KeyUsage` | `ENCRYPT_DECRYPT` | Cryptographic operations of the key |
-| `MultiRegion` | `false` | Multi-Region primary key |
 | `EnableKeyRotation` | `true` | Automatic rotation (symmetric keys only) |
 | `RotationPeriodInDays` | `365` | Rotation period (90-2560) |
 | `PendingWindowInDays` | `30` | Deletion waiting period (7-30) |
@@ -157,7 +156,8 @@ aws cloudformation deploy \
 
 ## ⚠️ Notes
 
-- `KeySpec`, `KeyUsage` and `MultiRegion` cannot be changed on an existing key. Changing them replaces the key, and data encrypted with the old key can no longer be decrypted with the new one.
+- Only `ap-southeast-1` (Singapore) is allowed. The `SingaporeRegionOnly` rule rejects a stack in any other Region before the key is created, and keys are always single-Region (`MultiRegion: false`), so they cannot be replicated to other Regions.
+- `KeySpec` and `KeyUsage` cannot be changed on an existing key. Changing them replaces the key, and data encrypted with the old key can no longer be decrypted with the new one.
 - Principals must be ARNs. A unique ID such as `AIDA...` (user) or `AROA...` (role) in an existing policy means the original user or role was deleted, and KMS rejects it in a new policy.
 - Every principal in the key policy must exist when the stack is deployed, or KMS rejects the policy.
 - Production environments (`prod*`) use `DeletionPolicy: Retain`. Non-prod keys are scheduled for deletion after `PendingWindowInDays` when the stack is deleted.

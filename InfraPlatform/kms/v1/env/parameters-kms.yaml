@@ -28,7 +28,6 @@ PendingWindowInDays: "30"                        # e.g. 7, 14, 30 (default is 30
 
 # FEATURE TOGGLES (DELETE the value you don't need)
 EnableKeyRotation: "true/false"                  # 📝 Automatic key rotation (default is true, ignored for non-symmetric keys)
-MultiRegion: "true/false"                        # 📝 Multi-Region primary key (default is false)
 EnableGrantForAwsResources: "true/false"         # 📝 Allow key users to create grants for EBS/RDS etc. (default is false)
 
 # KEY POLICY - ROOT STATEMENT
@@ -90,9 +89,9 @@ KeyUserViaServices: ""                           # e.g. s3.ap-southeast-1.amazon
 #   Range: 7-30 days
 #   Waiting period before the key is deleted when the stack (non-prod) is deleted
 
-# MultiRegion
-#   true: creates a multi-Region primary key that can be replicated to other Regions
-#   Note: cannot be changed after creation
+# Region
+#   Deploy in ap-southeast-1 (Singapore) only, any other Region is rejected by template Rules
+#   Keys are always single-Region (MultiRegion: false), so they cannot be replicated to other Regions
 
 # --- KEY POLICY ---
 
