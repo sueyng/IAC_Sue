@@ -264,7 +264,6 @@ Resources:
           # The key policy is built as a JSON string. Inside Fn::ForEach an optional
           # statement written as !If [..., !Ref 'AWS::NoValue'] becomes null instead of
           # being removed, so each optional statement adds ",{...}" or "" to the list.
-          # Same statements and default actions as cf-kms.yaml.
           KeyPolicy: !Sub
             - '{"Version":"2012-10-17","Id":"${AppShortName}-${EnvName}-kms-${KeyName}-policy","Statement":[${RootStatement}${AdminStatement}${UserStatement}${GrantStatement}]}'
             - RootStatement:
@@ -385,7 +384,7 @@ Resources:
             - Key: Environment
               Value: !Ref EnvName
             - Key: IaCVersion
-              Value: "InfraPlatform-kms-v1.1"
+              Value: "InfraPlatform-kms-v1"
 
       'KmsKeyAlias&{KeyName}':
         Type: AWS::KMS::Alias

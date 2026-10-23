@@ -5,7 +5,7 @@
 # 1. Fill in all fields marked with 📝 (these are required)
 # 2. Only edit values between PARAMETERS_START and PARAMETERS_END
 # 3. All keys in KeyNames share the same key type, usage and key policy.
-#    Use cf-kms.yaml (one key per stack) when a key needs its own settings.
+#    Deploy a separate stack when a key needs its own settings or policy.
 #
 # ========================================================================
 # REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
