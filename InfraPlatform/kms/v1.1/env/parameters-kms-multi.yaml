@@ -1,0 +1,129 @@
+# ========================================================================
+# 📋 QUICK START GUIDE
+#
+# Before deployment:
+# 1. Fill in all fields marked with 📝 (these are required)
+# 2. Only edit values between PARAMETERS_START and PARAMETERS_END
+# 3. All keys in KeyNames share the same key type, usage and key policy.
+#    Use cf-kms.yaml (one key per stack) when a key needs its own settings.
+#
+# ========================================================================
+# REQUIRED PARAMETERS (FILL THESE BEFORE DEPLOYMENT)
+# ========================================================================
+# <<< PARAMETERS_START >>>
+
+# REQUIRED PARAMETERS
+AppShortName: "<edit_here>"                      # 📝 e.g. myapp, api, webapp
+EnvName: "<edit_here>"                           # 📝 e.g. nprd, nprd-dev, prod
+KeyNames: "<edit_here>"                          # 📝 e.g. ec2,s3,rds (one key per name)
+
+# ========================================================================
+# OPTIONAL PARAMETERS (adjust based on workload or use defaults)
+# ========================================================================
+KeyDescription: "Customer managed KMS key"       # e.g. KMS key for app data (key name is appended per key)
+
+# KEY TYPE AND USAGE
+KeySpec: "SYMMETRIC_DEFAULT"                     # e.g. SYMMETRIC_DEFAULT, RSA_2048, ECC_NIST_P256, HMAC_256 (default is SYMMETRIC_DEFAULT)
+KeyUsage: "ENCRYPT_DECRYPT"                      # e.g. ENCRYPT_DECRYPT, SIGN_VERIFY, GENERATE_VERIFY_MAC, KEY_AGREEMENT (default is ENCRYPT_DECRYPT)
+RotationPeriodInDays: "365"                      # e.g. 90, 180, 365 (default is 365, symmetric keys only)
+PendingWindowInDays: "30"                        # e.g. 7, 14, 30 (default is 30)
+
+# FEATURE TOGGLES (DELETE the value you don't need)
+EnableKeyRotation: "true/false"                  # 📝 Automatic key rotation (default is true, ignored for non-symmetric keys)
+EnableGrantForAwsResources: "true/false"         # 📝 Allow key users to create grants for EBS/RDS etc. (default is false)
+
+# KEY POLICY - ROOT STATEMENT
+RootPrincipalArn: ""                             # e.g. arn:aws:iam::123456789012:root (default "" = this account root)
+RootActions: "kms:*"                             # e.g. kms:* (default is kms:*)
+
+# KEY POLICY - KEY ADMINISTRATORS STATEMENT (leave "" to skip)
+KeyAdminPrincipals: ""                           # e.g. arn:aws:iam::123456789012:role/abc-admin-role
+KeyAdminActions: ""                              # e.g. kms:Describe*,kms:Enable*,kms:Disable* (default "" = standard admin actions)
+
+# KEY POLICY - KEY USERS STATEMENT (leave "" to skip)
+KeyUserPrincipals: ""                            # e.g. arn:aws:iam::123456789012:role/abc-ec2-role,arn:aws:iam::123456789012:user/abc-user
+KeyUserActions: ""                               # e.g. kms:Encrypt,kms:Decrypt (default "" = actions for selected KeyUsage)
+KeyUserResource: "*"                             # e.g. * (default is *, which means this key in a key policy)
+KeyUserViaServices: ""                           # e.g. s3.ap-southeast-1.amazonaws.com,ec2.ap-southeast-1.amazonaws.com
+
+# <<< PARAMETERS_END >>>
+# ========================================================================
+# 📖 PARAMETER REFERENCE — DO NOT EDIT BELOW THIS LINE
+# ========================================================================
+
+# --- REQUIRED PARAMETERS ---
+
+# AppShortName
+#   Value: Application short name (e.g. myapp, api, webapp)
+#   Creates one alias per key: alias/{AppShortName}-{EnvName}-kms-{KeyName}
+
+# EnvName
+#   Allowed Values (Non-Prod):
+#     nprd, nprd-dev, nprd-dev1, nprd-dev2, nprd-sit, nprd-sit1, nprd-sit2, nprd-sit3,
+#     nprd-sit-a, nprd-sit-b, nprd-sit-c,
+#     nprd-uat, nprd-uat-a, nprd-uat-b, nprd-uat-c,
+#     nprd-pt, nprd-pp, nprd-pp-a, nprd-pp-b, nprd-pp-c
+#   Allowed Values (Production):
+#     prod, prod-a, prod-b, prod-c
+#   Production (prod*): DeletionPolicy Retain (keys preserved on removal or stack deletion)
+#   Non-Prod (nprd*): DeletionPolicy Delete (key scheduled for deletion after PendingWindowInDays)
+
+# KeyNames
+#   Value: Comma separated key name suffixes (letters, numbers, -), e.g. ec2,s3,rds
+#   One KMS key + alias per entry: alias/{AppShortName}-{EnvName}-kms-{KeyName}
+#   Adding a name: creates one more key, existing keys are not changed
+#   Removing a name: DELETES that key (non-prod, after PendingWindowInDays) / keeps it (prod, Retain)
+#   Underscore is not allowed (CloudFormation export names only allow letters, numbers and -)
+#   Names must stay unique after removing "-" (e.g. "rds-data" and "rdsdata" collide)
+
+# --- KEY TYPE AND USAGE ---
+
+# KeySpec / KeyUsage (valid combinations, checked by template Rules)
+#   ENCRYPT_DECRYPT     : SYMMETRIC_DEFAULT, RSA_2048, RSA_3072, RSA_4096, SM2
+#   SIGN_VERIFY         : RSA_2048, RSA_3072, RSA_4096, ECC_NIST_P256, ECC_NIST_P384,
+#                         ECC_NIST_P521, ECC_SECG_P256K1, SM2
+#   GENERATE_VERIFY_MAC : HMAC_224, HMAC_256, HMAC_384, HMAC_512
+#   KEY_AGREEMENT       : ECC_NIST_P256, ECC_NIST_P384, ECC_NIST_P521, SM2
+#   Note: SM2 is only available in China Regions
+#   Note: KeySpec and KeyUsage cannot be changed after creation (change = ALL keys in the stack replaced)
+
+# EnableKeyRotation / RotationPeriodInDays
+#   Only applied when KeySpec is SYMMETRIC_DEFAULT (asymmetric/HMAC keys do not support automatic rotation)
+#   RotationPeriodInDays range: 90-2560
+
+# PendingWindowInDays
+#   Range: 7-30 days
+#   Waiting period before a key is deleted (removed from KeyNames, or stack deleted in non-prod)
+
+# Region
+#   Deploy in ap-southeast-1 (Singapore) only, any other Region is rejected by template Rules
+#   Keys are always single-Region (MultiRegion: false), so they cannot be replicated to other Regions
+
+# --- KEY POLICY (same policy applied to every key) ---
+
+# RootPrincipalArn / RootActions
+#   Statement "Enable IAM Root Permissions" is always created
+#   Default principal: arn:aws:iam::{AccountId}:root, default action: kms:*
+
+# KeyAdminPrincipals / KeyAdminActions
+#   Statement "Allow administration of the key", created only if KeyAdminPrincipals is not ""
+#   Default actions: kms:Create*, kms:Describe*, kms:Enable*, kms:List*, kms:Put*, kms:Update*,
+#     kms:Revoke*, kms:Disable*, kms:Get*, kms:Delete*, kms:TagResource, kms:UntagResource,
+#     kms:ScheduleKeyDeletion, kms:CancelKeyDeletion, kms:RotateKeyOnDemand
+
+# KeyUserPrincipals / KeyUserActions / KeyUserResource
+#   Statement "Allow use of the key", created only if KeyUserPrincipals is not ""
+#   Principals: comma separated IAM role/user/account ARNs. Use ARNs, not unique IDs (AIDA.../AROA...)
+#   Default actions when KeyUserActions is "":
+#     ENCRYPT_DECRYPT     : kms:Encrypt, kms:Decrypt, kms:ReEncrypt*, kms:DescribeKey, kms:GenerateDataKey*
+#     SIGN_VERIFY         : kms:Sign, kms:Verify, kms:GetPublicKey, kms:DescribeKey
+#     GENERATE_VERIFY_MAC : kms:GenerateMac, kms:VerifyMac, kms:DescribeKey
+#     KEY_AGREEMENT       : kms:DeriveSharedSecret, kms:GetPublicKey, kms:DescribeKey
+
+# KeyUserViaServices
+#   Adds Condition StringEquals kms:ViaService to the key users statement
+#   Format: {service}.{region}.amazonaws.com
+
+# EnableGrantForAwsResources
+#   Statement "Allow attachment of persistent resources" for KeyUserPrincipals
+#   Actions: kms:CreateGrant, kms:ListGrants, kms:RevokeGrant with kms:GrantIsForAWSResource = true
